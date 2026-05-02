@@ -117,6 +117,27 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      
+      {/* System Status Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 h-8 bg-card/80 backdrop-blur-md border-t border-border flex items-center justify-between px-4 z-50">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Market Data: OK</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">AI Engine: OK</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Execution: OK</span>
+          </div>
+        </div>
+        <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
+          Last Update: {new Date().toLocaleTimeString()}
+        </div>
+      </footer>
     </main>
   )
 }

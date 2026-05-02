@@ -46,9 +46,18 @@ export function AIFeed() {
 
   const executeTradeMutation = useMutation({
     mutationFn: async (signal: Signal) => {
-      // In a real scenario, this would call the /execute-trade endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-      return { status: 'success', symbol: signal.symbol }
+      const response = await axios.post('http://127.0.0.1:5000/api/v1/execute-signal', {
+        symbol: signal.symbol,
+        decision: signal.decision || signal.signal,
+        confidence: signal.confidence,
+        exchange: 'NSE', // Default for this demo
+        quantity: '1'
+      })
+      return response.data
+    },
+    onSuccess: (data) => {
+      // In a real app, we'd show a success toast here
+      console.log('Trade executed successfully:', data)
     },
   })
 
