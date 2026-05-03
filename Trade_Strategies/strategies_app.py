@@ -54,6 +54,15 @@ def get_decision():
         "data": decision_payload
     })
 
+@app.route('/')
+def status():
+    return jsonify({
+        "status": "online",
+        "service": "SilverTrade AI Decision Engine",
+        "version": "1.0.0",
+        "model": "SilverTrade-v1-Mock"
+    })
+
 if __name__ == '__main__':
     port = int(os.getenv('STRATEGY_PORT', 5007))
     print(f"Trade Strategies (AI Engine) starting on port {port}")
