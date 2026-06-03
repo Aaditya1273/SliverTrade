@@ -1,1 +1,1 @@
-OpenAlgo Go SDK Examples
+SilverTrade Go SDK Examples

@@ -1,21 +1,21 @@
-# OpenAlgo MCP Server
+# SilverTrade MCP Server
 
-This is a Model Context Protocol (MCP) server that provides trading and market data functionality through the OpenAlgo platform. It enables AI assistants to execute trades, manage positions, and retrieve market data directly from supported brokers.
+This is a Model Context Protocol (MCP) server that provides trading and market data functionality through the SilverTrade AI platform. It enables AI assistants to execute trades, manage positions, and retrieve market data directly from supported brokers.
 
 ## Prerequisites
 
-### 1. OpenAlgo Server Setup
+### 1. SilverTrade AI Server Setup
 
-Ensure your OpenAlgo server is running and properly configured:
+Ensure your SilverTrade AI server is running and properly configured:
 
-1. **Start OpenAlgo Server**: Your OpenAlgo server should be running (e.g., on `http://127.0.0.1:5000`)
+1. **Start SilverTrade AI Server**: Your SilverTrade AI server should be running (e.g., on `http://127.0.0.1:5000`)
 2. **Verify Connection**: Test that the server is accessible by visiting the web interface.
-3. **Broker Authentication**: Ensure your broker credentials are properly configured in OpenAlgo.
+3. **Broker Authentication**: Ensure your broker credentials are properly configured in SilverTrade AI.
 
 ### 2. API Key
 
-To get your OpenAlgo API key:
-1. Open your OpenAlgo web interface (e.g., `http://127.0.0.1:5000`)
+To get your SilverTrade AI API key:
+1. Open your SilverTrade AI web interface (e.g., `http://127.0.0.1:5000`)
 2. Navigate to **Settings → API Keys**.
 3. Generate or copy your existing API key.
 
@@ -29,10 +29,10 @@ Add the following configuration to your MCP client, replacing the placeholder pa
 ```json
 {
   "mcpServers": {
-    "openalgo": {
-      "command": "D:\\openalgo-mcp\\openalgo\\.venv\\Scripts\\python.exe",
+    "silvertrade": {
+      "command": "D:\\silvertrade-mcp\\silvertrade\\.venv\\Scripts\\python.exe",
       "args": [
-        "D:\\openalgo-mcp\\openalgo\\mcp\\mcpserver.py",
+        "D:\\silvertrade-mcp\\silvertrade\\mcp\\mcpserver.py",
         "YOUR_API_KEY_HERE",
         "http://127.0.0.1:5000"
       ]
@@ -52,10 +52,10 @@ Add the following configuration to your MCP client, replacing the placeholder pa
 ```json
 {
   "mcpServers": {
-    "openalgo": {
-      "command": "/Users/your_username/openalgo/.venv/bin/python3",
+    "silvertrade": {
+      "command": "/Users/your_username/silvertrade/.venv/bin/python3",
       "args": [
-        "/Users/your_username/openalgo/mcp/mcpserver.py",
+        "/Users/your_username/silvertrade/mcp/mcpserver.py",
         "YOUR_API_KEY_HERE",
         "http://127.0.0.1:5000"
       ]
@@ -75,10 +75,10 @@ Add the following configuration to your MCP client, replacing the placeholder pa
 ```json
 {
   "mcpServers": {
-    "openalgo": {
-      "command": "/home/your_username/openalgo/.venv/bin/python3",
+    "silvertrade": {
+      "command": "/home/your_username/silvertrade/.venv/bin/python3",
       "args": [
-        "/home/your_username/openalgo/mcp/mcpserver.py",
+        "/home/your_username/silvertrade/mcp/mcpserver.py",
         "YOUR_API_KEY_HERE",
         "http://127.0.0.1:5000"
       ]
@@ -96,7 +96,7 @@ Add the following configuration to your MCP client, replacing the placeholder pa
 
 **Important**: Replace the paths in the examples above with your actual installation paths:
 
-- **Windows**: Replace `D:\\openalgo-zerodha\\openalgo` with your actual OpenAlgo installation path
+- **Windows**: Replace `D:\\silvertrade-zerodha\\silvertrade` with your actual SilverTrade AI installation path
 - **macOS/Linux**: Replace `/Users/your_username` or `/home/your_username` with your actual home directory path
 
 To find your Python virtual environment path:
@@ -153,7 +153,7 @@ The MCP server provides the following categories of tools:
 - `get_index_symbols` - Get common index symbols for NSE or BSE
 
 ### Utilities
-- `get_openalgo_version` - Check OpenAlgo version
+- `get_silvertrade_version` - Check SilverTrade AI version
 - `validate_order_constants` - Display valid order parameters
 - `send_telegram_alert` - Send Telegram notifications
 - `get_holidays` - Get trading holidays for a year (year is optional — defaults to current year)
@@ -200,15 +200,15 @@ Once configured, you can ask your AI assistant to:
 
 ## Troubleshooting
 
-1. **Connection Issues**: Verify OpenAlgo server is running on `http://127.0.0.1:5000`
+1. **Connection Issues**: Verify SilverTrade AI server is running on `http://127.0.0.1:5000`
 2. **Authentication Errors**: Check your API key is correct and valid
 3. **Permission Errors**: Ensure the Python virtual environment has proper permissions
 4. **Order Failures**: Verify your broker connection and trading permissions
-4. **Order Failures**: Verify broker credentials in OpenAlgo are valid and active
+4. **Order Failures**: Verify broker credentials in SilverTrade AI are valid and active
 
 ## Support
 
 For issues related to:
-- **OpenAlgo Platform**: Visit the OpenAlgo documentation
+- **SilverTrade Platform**: Visit the SilverTrade AI documentation
 - **MCP Protocol**: Check the Model Context Protocol specifications
 - **Trading Errors**: Verify your broker connection and trading permissions

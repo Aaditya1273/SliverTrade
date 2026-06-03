@@ -1,5 +1,5 @@
 """
-Shoonya WebSocket Adapter for OpenAlgo
+Shoonya WebSocket Adapter for SilverTrade
 Handles market data streaming from Shoonya broker
 """
 

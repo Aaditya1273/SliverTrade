@@ -1,6 +1,6 @@
-# OpenAlgo API Documentation
+# SilverTrade AI API Documentation
 
-Welcome to the OpenAlgo REST API Documentation. This comprehensive guide covers all API endpoints available for algorithmic trading operations.
+Welcome to the SilverTrade AI REST API Documentation. This comprehensive guide covers all API endpoints available for algorithmic trading operations.
 
 ## Base URL
 
@@ -210,7 +210,7 @@ All API responses follow a consistent JSON format:
 
 ## Rate Limits
 
-OpenAlgo implements differentiated rate limiting for various API operations:
+SilverTrade implements differentiated rate limiting for various API operations:
 
 | API Type | Rate Limit |
 |----------|------------|
@@ -223,14 +223,14 @@ For detailed rate limiting information including configuration options, see [Rat
 
 ## SDK Support
 
-OpenAlgo provides official SDKs for popular programming languages:
+SilverTrade provides official SDKs for popular programming languages:
 
-- **Python**: `pip install openalgo`
+- **Python**: `pip install silvertrade`
 - **Node.js**: Coming soon
 - **Java**: Coming soon
 
 ## Support
 
-- Documentation: https://docs.openalgo.in
-- GitHub: https://github.com/marketcalls/openalgo
-- Discord: https://www.openalgo.in/discord
+- Documentation: https://docs.silvertrade.ai
+- GitHub: https://github.com/silvertrade/silvertrade
+- Discord: https://www.silvertrade.ai/discord

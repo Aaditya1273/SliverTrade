@@ -1,14 +1,14 @@
 #!/bin/bash
 # ============================================================================
-# OpenAlgo Docker Runner for macOS/Linux
+# SilverTrade AI Docker Runner for macOS/Linux
 # ============================================================================
 #
 # Quick Start (2 commands):
-#   1. Download: curl -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.sh && chmod +x docker-run.sh
+#   1. Download: curl -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.sh && chmod +x docker-run.sh
 #   2. Run:      ./docker-run.sh
 #
 # Commands:
-#   start    - Start OpenAlgo container (default, runs setup if needed)
+#   start    - Start SilverTrade AI container (default, runs setup if needed)
 #   stop     - Stop and remove container
 #   restart  - Restart container
 #   logs     - View container logs (live)
@@ -32,13 +32,13 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-IMAGE="marketcalls/openalgo:latest"
-CONTAINER="openalgo"
+IMAGE="marketcalls/silvertrade:latest"
+CONTAINER="silvertrade"
 ENV_FILE=".env"
-SAMPLE_ENV_URL="https://raw.githubusercontent.com/marketcalls/openalgo/main/.sample.env"
+SAMPLE_ENV_URL="https://raw.githubusercontent.com/marketcalls/silvertrade/main/.sample.env"
 # Use the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-OPENALGO_DIR="$SCRIPT_DIR"
+SILVERTRADE_DIR="$SCRIPT_DIR"
 
 # XTS Brokers that require market data credentials
 XTS_BROKERS="fivepaisaxts,compositedge,ibulls,iifl,jainamxts,rmoney,wisdom"
@@ -49,7 +49,7 @@ VALID_BROKERS="fivepaisa,fivepaisaxts,aliceblue,angel,compositedge,definedge,del
 # Banner
 echo ""
 echo -e "${BLUE}  ========================================${NC}"
-echo -e "${BLUE}       OpenAlgo Docker Runner${NC}"
+echo -e "${BLUE}       SilverTrade AI Docker Runner${NC}"
 echo -e "${BLUE}       Desktop Edition (macOS/Linux)${NC}"
 echo -e "${BLUE}  ========================================${NC}"
 echo ""
@@ -116,13 +116,13 @@ is_xts_broker() {
 
 # Setup function
 do_setup() {
-    log_info "Setting up OpenAlgo in $OPENALGO_DIR..."
+    log_info "Setting up SilverTrade AI in $SILVERTRADE_DIR..."
     echo ""
 
     # Create db directory
-    if [ ! -d "$OPENALGO_DIR/db" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/db" ]; then
         log_info "Creating database directory..."
-        mkdir -p "$OPENALGO_DIR/db"
+        mkdir -p "$SILVERTRADE_DIR/db"
         if [ $? -ne 0 ]; then
             log_error "Failed to create database directory"
             return 1
@@ -130,8 +130,8 @@ do_setup() {
     fi
 
     # Check if .env already exists
-    if [ -f "$OPENALGO_DIR/$ENV_FILE" ]; then
-        log_warn ".env file already exists at $OPENALGO_DIR/$ENV_FILE"
+    if [ -f "$SILVERTRADE_DIR/$ENV_FILE" ]; then
+        log_warn ".env file already exists at $SILVERTRADE_DIR/$ENV_FILE"
         read -p "Do you want to overwrite it? (y/n): " OVERWRITE
         if [[ ! "$OVERWRITE" =~ ^[Yy]$ ]]; then
             log_info "Setup cancelled. Using existing .env file."
@@ -141,7 +141,7 @@ do_setup() {
 
     # Download sample.env from GitHub
     log_info "Downloading configuration template from GitHub..."
-    if ! curl -sL "$SAMPLE_ENV_URL" -o "$OPENALGO_DIR/$ENV_FILE"; then
+    if ! curl -sL "$SAMPLE_ENV_URL" -o "$SILVERTRADE_DIR/$ENV_FILE"; then
         log_error "Failed to download configuration template!"
         echo "Please check your internet connection."
         return 1
@@ -175,12 +175,12 @@ do_setup() {
     log_info "Updating configuration with secure keys..."
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS sed syntax
-        sed -i '' "s/OPENALGO_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE/$APP_KEY/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i '' "s/OPENALGO_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE/$API_KEY_PEPPER/g" "$OPENALGO_DIR/$ENV_FILE"
+        sed -i '' "s/SILVERTRADE_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE/$APP_KEY/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i '' "s/SILVERTRADE_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE/$API_KEY_PEPPER/g" "$SILVERTRADE_DIR/$ENV_FILE"
     else
         # Linux sed syntax
-        sed -i "s/OPENALGO_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE/$APP_KEY/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i "s/OPENALGO_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE/$API_KEY_PEPPER/g" "$OPENALGO_DIR/$ENV_FILE"
+        sed -i "s/SILVERTRADE_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE/$APP_KEY/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i "s/SILVERTRADE_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE/$API_KEY_PEPPER/g" "$SILVERTRADE_DIR/$ENV_FILE"
     fi
     # .env is now bind-mounted read+write into the container so auto-rotation
     # of compromised APP_KEY/API_KEY_PEPPER (utils/env_check.py) can run.
@@ -190,14 +190,14 @@ do_setup() {
     # Docker Desktop handles UID mapping in its VM so chown is a no-op.
     if [ "$(uname)" = "Linux" ]; then
         if [ "$EUID" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
-            sudo chown 1000:1000 "$OPENALGO_DIR/$ENV_FILE" 2>/dev/null || true
-            sudo chmod 600 "$OPENALGO_DIR/$ENV_FILE" 2>/dev/null || true
+            sudo chown 1000:1000 "$SILVERTRADE_DIR/$ENV_FILE" 2>/dev/null || true
+            sudo chmod 600 "$SILVERTRADE_DIR/$ENV_FILE" 2>/dev/null || true
         else
-            chown 1000:1000 "$OPENALGO_DIR/$ENV_FILE" 2>/dev/null || true
-            chmod 600 "$OPENALGO_DIR/$ENV_FILE" 2>/dev/null || true
+            chown 1000:1000 "$SILVERTRADE_DIR/$ENV_FILE" 2>/dev/null || true
+            chmod 600 "$SILVERTRADE_DIR/$ENV_FILE" 2>/dev/null || true
         fi
     else
-        chmod 600 "$OPENALGO_DIR/$ENV_FILE" 2>/dev/null || true
+        chmod 600 "$SILVERTRADE_DIR/$ENV_FILE" 2>/dev/null || true
     fi
     log_ok "Secure keys generated and saved."
 
@@ -269,23 +269,23 @@ do_setup() {
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS sed syntax
-        sed -i '' "s/BROKER_API_KEY = 'YOUR_BROKER_API_KEY'/BROKER_API_KEY = '$BROKER_API_KEY'/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i '' "s/BROKER_API_SECRET = 'YOUR_BROKER_API_SECRET'/BROKER_API_SECRET = '$BROKER_API_SECRET'/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i '' "s|<broker>|$BROKER_NAME|g" "$OPENALGO_DIR/$ENV_FILE"
+        sed -i '' "s/BROKER_API_KEY = 'YOUR_BROKER_API_KEY'/BROKER_API_KEY = '$BROKER_API_KEY'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i '' "s/BROKER_API_SECRET = 'YOUR_BROKER_API_SECRET'/BROKER_API_SECRET = '$BROKER_API_SECRET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i '' "s|<broker>|$BROKER_NAME|g" "$SILVERTRADE_DIR/$ENV_FILE"
 
         if [ "$IS_XTS" -eq 1 ]; then
-            sed -i '' "s/BROKER_API_KEY_MARKET = 'YOUR_BROKER_MARKET_API_KEY'/BROKER_API_KEY_MARKET = '$BROKER_API_KEY_MARKET'/g" "$OPENALGO_DIR/$ENV_FILE"
-            sed -i '' "s/BROKER_API_SECRET_MARKET = 'YOUR_BROKER_MARKET_API_SECRET'/BROKER_API_SECRET_MARKET = '$BROKER_API_SECRET_MARKET'/g" "$OPENALGO_DIR/$ENV_FILE"
+            sed -i '' "s/BROKER_API_KEY_MARKET = 'YOUR_BROKER_MARKET_API_KEY'/BROKER_API_KEY_MARKET = '$BROKER_API_KEY_MARKET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+            sed -i '' "s/BROKER_API_SECRET_MARKET = 'YOUR_BROKER_MARKET_API_SECRET'/BROKER_API_SECRET_MARKET = '$BROKER_API_SECRET_MARKET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
         fi
     else
         # Linux sed syntax
-        sed -i "s/BROKER_API_KEY = 'YOUR_BROKER_API_KEY'/BROKER_API_KEY = '$BROKER_API_KEY'/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i "s/BROKER_API_SECRET = 'YOUR_BROKER_API_SECRET'/BROKER_API_SECRET = '$BROKER_API_SECRET'/g" "$OPENALGO_DIR/$ENV_FILE"
-        sed -i "s|<broker>|$BROKER_NAME|g" "$OPENALGO_DIR/$ENV_FILE"
+        sed -i "s/BROKER_API_KEY = 'YOUR_BROKER_API_KEY'/BROKER_API_KEY = '$BROKER_API_KEY'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i "s/BROKER_API_SECRET = 'YOUR_BROKER_API_SECRET'/BROKER_API_SECRET = '$BROKER_API_SECRET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+        sed -i "s|<broker>|$BROKER_NAME|g" "$SILVERTRADE_DIR/$ENV_FILE"
 
         if [ "$IS_XTS" -eq 1 ]; then
-            sed -i "s/BROKER_API_KEY_MARKET = 'YOUR_BROKER_MARKET_API_KEY'/BROKER_API_KEY_MARKET = '$BROKER_API_KEY_MARKET'/g" "$OPENALGO_DIR/$ENV_FILE"
-            sed -i "s/BROKER_API_SECRET_MARKET = 'YOUR_BROKER_MARKET_API_SECRET'/BROKER_API_SECRET_MARKET = '$BROKER_API_SECRET_MARKET'/g" "$OPENALGO_DIR/$ENV_FILE"
+            sed -i "s/BROKER_API_KEY_MARKET = 'YOUR_BROKER_MARKET_API_KEY'/BROKER_API_KEY_MARKET = '$BROKER_API_KEY_MARKET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
+            sed -i "s/BROKER_API_SECRET_MARKET = 'YOUR_BROKER_MARKET_API_SECRET'/BROKER_API_SECRET_MARKET = '$BROKER_API_SECRET_MARKET'/g" "$SILVERTRADE_DIR/$ENV_FILE"
         fi
     fi
 
@@ -300,82 +300,82 @@ do_setup() {
     if [ "$IS_XTS" -eq 1 ]; then
         echo "  Type:           XTS API (with market data)"
     fi
-    echo "  Data directory: $OPENALGO_DIR"
-    echo "  Config file:    $OPENALGO_DIR/$ENV_FILE"
-    echo "  Database:       $OPENALGO_DIR/db/"
-    echo "  Strategies:     $OPENALGO_DIR/strategies/"
-    echo "  Logs:           $OPENALGO_DIR/log/"
+    echo "  Data directory: $SILVERTRADE_DIR"
+    echo "  Config file:    $SILVERTRADE_DIR/$ENV_FILE"
+    echo "  Database:       $SILVERTRADE_DIR/db/"
+    echo "  Strategies:     $SILVERTRADE_DIR/strategies/"
+    echo "  Logs:           $SILVERTRADE_DIR/log/"
     echo ""
     echo "  Redirect URL for broker portal:"
     echo "  http://127.0.0.1:5000/$BROKER_NAME/callback"
     echo ""
-    echo "  Documentation: https://docs.openalgo.in"
+    echo "  Documentation: https://docs.silvertrade.ai"
     echo ""
 
     # Try to open .env in editor (non-blocking)
     read -p "Open .env in editor for review? (y/n): " OPEN_EDITOR
     if [[ "$OPEN_EDITOR" =~ ^[Yy]$ ]]; then
         if [[ "$OSTYPE" == "darwin"* ]]; then
-            open -t "$OPENALGO_DIR/$ENV_FILE"
+            open -t "$SILVERTRADE_DIR/$ENV_FILE"
         elif command -v xdg-open &> /dev/null; then
             # Linux with desktop environment - non-blocking
-            xdg-open "$OPENALGO_DIR/$ENV_FILE" &>/dev/null &
+            xdg-open "$SILVERTRADE_DIR/$ENV_FILE" &>/dev/null &
         elif command -v gedit &> /dev/null; then
-            gedit "$OPENALGO_DIR/$ENV_FILE" &>/dev/null &
+            gedit "$SILVERTRADE_DIR/$ENV_FILE" &>/dev/null &
         elif command -v code &> /dev/null; then
-            code "$OPENALGO_DIR/$ENV_FILE"
+            code "$SILVERTRADE_DIR/$ENV_FILE"
         else
-            echo "  Edit .env manually: $OPENALGO_DIR/$ENV_FILE"
+            echo "  Edit .env manually: $SILVERTRADE_DIR/$ENV_FILE"
         fi
     fi
 
     echo ""
-    log_ok "Setup complete! Run './docker-run.sh start' to launch OpenAlgo."
+    log_ok "Setup complete! Run './docker-run.sh start' to launch SilverTrade AI."
     echo ""
     return 0
 }
 
 # Start function
 do_start() {
-    log_info "Starting OpenAlgo..."
+    log_info "Starting SilverTrade AI..."
     echo ""
 
     # Check if setup is needed
-    if [ ! -f "$OPENALGO_DIR/$ENV_FILE" ]; then
+    if [ ! -f "$SILVERTRADE_DIR/$ENV_FILE" ]; then
         log_info "First time setup detected. Running setup..."
         echo ""
         if ! do_setup; then
             echo ""
-            log_error "Setup failed. Cannot start OpenAlgo."
+            log_error "Setup failed. Cannot start SilverTrade AI."
             echo "Please fix the issues above and try again."
             exit 1
         fi
         echo ""
-        log_info "Starting OpenAlgo after setup..."
+        log_info "Starting SilverTrade AI after setup..."
         echo ""
     fi
 
     # Create db, strategies, log, keys, and tmp directories if not exist
-    if [ ! -d "$OPENALGO_DIR/db" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/db" ]; then
         log_info "Creating database directory..."
-        mkdir -p "$OPENALGO_DIR/db"
+        mkdir -p "$SILVERTRADE_DIR/db"
     fi
-    if [ ! -d "$OPENALGO_DIR/strategies" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/strategies" ]; then
         log_info "Creating strategies directory..."
-        mkdir -p "$OPENALGO_DIR/strategies/scripts"
-        mkdir -p "$OPENALGO_DIR/strategies/examples"
+        mkdir -p "$SILVERTRADE_DIR/strategies/scripts"
+        mkdir -p "$SILVERTRADE_DIR/strategies/examples"
     fi
-    if [ ! -d "$OPENALGO_DIR/log" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/log" ]; then
         log_info "Creating log directory..."
-        mkdir -p "$OPENALGO_DIR/log/strategies"
+        mkdir -p "$SILVERTRADE_DIR/log/strategies"
     fi
-    if [ ! -d "$OPENALGO_DIR/keys" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/keys" ]; then
         log_info "Creating keys directory..."
-        mkdir -p "$OPENALGO_DIR/keys"
+        mkdir -p "$SILVERTRADE_DIR/keys"
     fi
-    if [ ! -d "$OPENALGO_DIR/tmp" ]; then
+    if [ ! -d "$SILVERTRADE_DIR/tmp" ]; then
         log_info "Creating temp directory..."
-        mkdir -p "$OPENALGO_DIR/tmp"
+        mkdir -p "$SILVERTRADE_DIR/tmp"
     fi
 
     # Pull latest image
@@ -404,7 +404,7 @@ do_start() {
 
     # Thread limits based on RAM (prevents RLIMIT_NPROC exhaustion)
     # <3GB: 1 thread | 3-6GB: 2 threads | 6GB+: min(4, cores)
-    # See: https://github.com/marketcalls/openalgo/issues/822
+    # See: https://github.com/silvertrade/silvertrade/issues/822
     if [ $TOTAL_RAM_MB -lt 3000 ]; then
         THREAD_LIMIT=1
     elif [ $TOTAL_RAM_MB -lt 6000 ]; then
@@ -440,29 +440,29 @@ do_start() {
         -e "NUMBA_NUM_THREADS=${THREAD_LIMIT}" \
         -e "STRATEGY_MEMORY_LIMIT_MB=${STRATEGY_MEM_LIMIT}" \
         -e "TZ=Asia/Kolkata" \
-        -v "$OPENALGO_DIR/db:/app/db" \
-        -v "$OPENALGO_DIR/strategies:/app/strategies" \
-        -v "$OPENALGO_DIR/log:/app/log" \
-        -v "$OPENALGO_DIR/keys:/app/keys" \
-        -v "$OPENALGO_DIR/tmp:/app/tmp" \
-        -v "$OPENALGO_DIR/.env:/app/.env" \
+        -v "$SILVERTRADE_DIR/db:/app/db" \
+        -v "$SILVERTRADE_DIR/strategies:/app/strategies" \
+        -v "$SILVERTRADE_DIR/log:/app/log" \
+        -v "$SILVERTRADE_DIR/keys:/app/keys" \
+        -v "$SILVERTRADE_DIR/tmp:/app/tmp" \
+        -v "$SILVERTRADE_DIR/.env:/app/.env" \
         --restart unless-stopped \
         "$IMAGE"; then
 
         echo ""
-        log_success "OpenAlgo started successfully!"
+        log_success "SilverTrade started successfully!"
         echo ""
         echo -e "${GREEN}  ========================================${NC}"
         echo -e "${GREEN}  Web UI:     http://127.0.0.1:5000${NC}"
         echo -e "${GREEN}  WebSocket:  ws://127.0.0.1:8765${NC}"
         echo -e "${GREEN}  ========================================${NC}"
         echo ""
-        echo "  Data directory: $OPENALGO_DIR"
+        echo "  Data directory: $SILVERTRADE_DIR"
         echo ""
         echo "  Useful commands:"
         echo "    ./docker-run.sh logs     - View logs"
-        echo "    ./docker-run.sh stop     - Stop OpenAlgo"
-        echo "    ./docker-run.sh restart  - Restart OpenAlgo"
+        echo "    ./docker-run.sh stop     - Stop SilverTrade"
+        echo "    ./docker-run.sh restart  - Restart SilverTrade"
         echo ""
     else
         echo ""
@@ -471,7 +471,7 @@ do_start() {
         echo "Troubleshooting:"
         echo "  1. Check if ports 5000 and 8765 are available"
         echo "  2. Ensure Docker Desktop is running"
-        echo "  3. Check .env file: $OPENALGO_DIR/$ENV_FILE"
+        echo "  3. Check .env file: $SILVERTRADE_DIR/$ENV_FILE"
         echo ""
         exit 1
     fi
@@ -479,15 +479,15 @@ do_start() {
 
 # Stop function
 do_stop() {
-    log_info "Stopping OpenAlgo..."
+    log_info "Stopping SilverTrade AI..."
     docker stop "$CONTAINER" >/dev/null 2>&1
     docker rm "$CONTAINER" >/dev/null 2>&1
-    log_ok "OpenAlgo stopped."
+    log_ok "SilverTrade stopped."
 }
 
 # Restart function
 do_restart() {
-    log_info "Restarting OpenAlgo..."
+    log_info "Restarting SilverTrade AI..."
     do_stop
     echo ""
     do_start
@@ -521,14 +521,14 @@ do_status() {
 
     # Check if container is running
     if docker ps --filter "name=$CONTAINER" --filter "status=running" | grep -q "$CONTAINER"; then
-        echo -e "${GREEN}[STATUS]${NC} OpenAlgo is running."
+        echo -e "${GREEN}[STATUS]${NC} SilverTrade is running."
         echo ""
         echo "  Web UI: http://127.0.0.1:5000"
     else
-        echo -e "${YELLOW}[STATUS]${NC} OpenAlgo is NOT running."
+        echo -e "${YELLOW}[STATUS]${NC} SilverTrade is NOT running."
     fi
     echo ""
-    echo "  Data directory: $OPENALGO_DIR"
+    echo "  Data directory: $SILVERTRADE_DIR"
 }
 
 # Shell function
@@ -554,7 +554,7 @@ do_help() {
     echo "Usage: ./docker-run.sh [command]"
     echo ""
     echo "Commands:"
-    echo "  start    Start OpenAlgo (runs setup if needed, default)"
+    echo "  start    Start SilverTrade AI (runs setup if needed, default)"
     echo "  stop     Stop and remove container"
     echo "  restart  Restart container"
     echo "  logs     View container logs (live)"
@@ -571,15 +571,15 @@ do_help() {
     echo "     Linux: https://docs.docker.com/desktop/install/linux-install/"
     echo ""
     echo "  2. Download and run:"
-    echo "     curl -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.sh"
+    echo "     curl -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.sh"
     echo "     chmod +x docker-run.sh"
     echo "     ./docker-run.sh"
     echo ""
-    echo "Data Location: $OPENALGO_DIR"
-    echo "  - Config:     $OPENALGO_DIR/.env"
-    echo "  - Database:   $OPENALGO_DIR/db/"
-    echo "  - Strategies: $OPENALGO_DIR/strategies/"
-    echo "  - Logs:       $OPENALGO_DIR/log/"
+    echo "Data Location: $SILVERTRADE_DIR"
+    echo "  - Config:     $SILVERTRADE_DIR/.env"
+    echo "  - Database:   $SILVERTRADE_DIR/db/"
+    echo "  - Strategies: $SILVERTRADE_DIR/strategies/"
+    echo "  - Logs:       $SILVERTRADE_DIR/log/"
     echo ""
     echo "XTS Brokers (require market data credentials):"
     echo "  fivepaisaxts, compositedge, ibulls, iifl, jainamxts, rmoney, wisdom"

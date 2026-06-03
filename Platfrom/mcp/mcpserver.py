@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
-from openalgo import api
+from silvertrade_sdk import api
 
 # Get API key and host from command line arguments
 if len(sys.argv) < 3:
@@ -13,15 +13,15 @@ if len(sys.argv) < 3:
 api_key = sys.argv[1]
 host = sys.argv[2]
 
-# Initialize OpenAlgo client with provided arguments
+# Initialize SilverTrade AI client with provided arguments
 client = api(api_key=api_key, host=host)
 
 # Default strategy name for all order-related calls originating from the MCP server.
-# Surfaced in OpenAlgo logs and analyzer views so MCP-driven trades are identifiable.
+# Surfaced in SilverTrade AI logs and analyzer views so MCP-driven trades are identifiable.
 MCP_STRATEGY = "python mcp"
 
-# OpenAlgo standardized index symbols (NSE_INDEX / BSE_INDEX) — rolled out across all brokers.
-# Source: https://docs.openalgo.in/symbol-format
+# SilverTrade AI standardized index symbols (NSE_INDEX / BSE_INDEX) — rolled out across all brokers.
+# Source: https://docs.silvertrade.ai/symbol-format
 NSE_INDEX_SYMBOLS = [
     "NIFTY", "NIFTYNXT50", "FINNIFTY", "BANKNIFTY", "MIDCPNIFTY", "INDIAVIX",
     "HANGSENGBEESNAV",
@@ -58,7 +58,7 @@ BSE_INDEX_SYMBOLS = [
 ]
 
 # Create MCP server
-mcp = FastMCP("openalgo")
+mcp = FastMCP("silvertrade")
 
 
 def _to_json(payload: Any) -> str:
@@ -781,7 +781,7 @@ def get_historical_data(
         start_date: Start date (YYYY-MM-DD)
         end_date: End date (YYYY-MM-DD)
         source: 'api' (default) fetches from broker API. 'db' fetches from the local
-                OpenAlgo Historify DuckDB store (1m/D stored, other intervals computed via SQL).
+                SilverTrade AI Historify DuckDB store (1m/D stored, other intervals computed via SQL).
 
     Returns:
         JSON with count and data (list of {timestamp, open, high, low, close, volume}).
@@ -866,10 +866,10 @@ def get_symbol_info(symbol: str, exchange: str = "NSE", instrument_type: str = N
 @mcp.tool()
 def get_index_symbols(exchange: str = "NSE") -> str:
     """
-    Get the OpenAlgo-standardized index symbols for NSE or BSE.
+    Get the SilverTrade-standardized index symbols for NSE or BSE.
 
     These are the common index names rolled out across all supported brokers via the
-    OpenAlgo symbol standardization. Use exchange code 'NSE_INDEX' / 'BSE_INDEX' when
+    SilverTrade AI symbol standardization. Use exchange code 'NSE_INDEX' / 'BSE_INDEX' when
     placing orders or fetching quotes for these symbols.
 
     Args:
@@ -1043,12 +1043,12 @@ def get_option_greeks(
 
 
 @mcp.tool()
-def get_openalgo_version() -> str:
-    """Get the OpenAlgo library version."""
+def get_silvertrade_version() -> str:
+    """Get the SilverTrade AI library version."""
     try:
-        import openalgo
+        import silvertrade_sdk as silvertrade
 
-        return f"OpenAlgo version: {openalgo.__version__}"
+        return f"SilverTrade version: {silvertrade.__version__}"
     except Exception as e:
         return f"Error getting version: {str(e)}"
 
@@ -1090,7 +1090,7 @@ def send_telegram_alert(username: str, message: str, priority: int = 5) -> str:
     Send a Telegram alert notification.
 
     Args:
-        username: OpenAlgo login ID/username
+        username: SilverTrade AI login ID/username
         message: Alert message to send
         priority: Notification priority (1-10, default 5). Higher values may be used
                   by the bot for emphasis/sorting depending on configuration.
@@ -1162,7 +1162,7 @@ def check_holiday(date: str, exchange: str | None = None) -> str:
     """
     Check if a specific date is a market holiday for an exchange.
 
-    This calls the /api/v1/checkholiday endpoint directly (not yet in the openalgo SDK).
+    This calls the /api/v1/checkholiday endpoint directly (not yet in the silvertrade SDK).
     Use this for fast pre-trade "is the market open?" checks.
 
     Args:

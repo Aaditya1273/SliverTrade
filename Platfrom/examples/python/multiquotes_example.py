@@ -1,4 +1,4 @@
-from openalgo import api
+from silvertrade_sdk import api
 
 # Initialize client
 client = api(

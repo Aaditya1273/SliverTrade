@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Zebu Broking Parameters
 
 from broker.zebu.api.data import BrokerData

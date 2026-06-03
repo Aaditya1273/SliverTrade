@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from openalgo import api
+from silvertrade_sdk import api
 
 # ─── Configuration ───────────────────────────────────────────────
 API_KEY = "9d5d445ffb2b55af20871a6142e2cedf8c1002e55fce8a93ebe7028b0a6b7cc4"

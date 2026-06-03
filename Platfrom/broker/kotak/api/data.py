@@ -35,7 +35,7 @@ class BrokerData:
         logger.warning("Kotak Neo does not support historical data intervals")
 
     def _get_kotak_exchange(self, exchange):
-        """Map OpenAlgo exchange to Kotak exchange segment"""
+        """Map SilverTrade AI exchange to Kotak exchange segment"""
         exchange_map = {
             "NSE": "nse_cm",
             "BSE": "bse_cm",
@@ -49,7 +49,7 @@ class BrokerData:
         return exchange_map.get(exchange)
 
     def _get_index_symbol(self, symbol):
-        """Map OpenAlgo index symbols to Kotak Neo API format"""
+        """Map SilverTrade AI index symbols to Kotak Neo API format"""
         index_map = {
             "NIFTY": "Nifty 50",
             "NIFTY50": "Nifty 50",

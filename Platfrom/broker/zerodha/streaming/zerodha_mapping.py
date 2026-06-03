@@ -6,16 +6,16 @@ logger = get_logger(__name__)
 Zerodha WebSocket data mapping utilities.
 
 This module provides utilities for mapping between Zerodha's WebSocket data format
-and OpenAlgo's standard format.
+and SilverTrade's standard format.
 """
 from datetime import UTC, datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 
 class ZerodhaExchangeMapper:
-    """Maps exchange codes between Zerodha and OpenAlgo formats"""
+    """Maps exchange codes between Zerodha and SilverTrade AI formats"""
 
-    # Map OpenAlgo exchange codes to Zerodha exchange codes
+    # Map SilverTrade AI exchange codes to Zerodha exchange codes
     # NOTE: GLOBAL_INDEX is the OA umbrella for both Zerodha "GLOBAL" and "NSEIX"
     # feeds. Forward direction picks GLOBAL as the canonical broker code; the
     # NSEIX → GLOBAL_INDEX direction is handled below in _ZERODHA_TO_OA so the
@@ -33,7 +33,7 @@ class ZerodhaExchangeMapper:
         "GLOBAL_INDEX": "GLOBAL",
     }
 
-    # Map Zerodha exchange codes to OpenAlgo exchange codes
+    # Map Zerodha exchange codes to SilverTrade AI exchange codes
     _ZERODHA_TO_OA = {v: k for k, v in _OA_TO_ZERODHA.items()}
     # NSEIX rows fold into GLOBAL_INDEX on the OA side.
     _ZERODHA_TO_OA["NSEIX"] = "GLOBAL_INDEX"
@@ -41,10 +41,10 @@ class ZerodhaExchangeMapper:
     @classmethod
     def to_zerodha_exchange(cls, oa_exchange: str) -> str:
         """
-        Convert OpenAlgo exchange code to Zerodha exchange code.
+        Convert SilverTrade AI exchange code to Zerodha exchange code.
 
         Args:
-            oa_exchange: OpenAlgo exchange code (e.g., 'NSE', 'NFO')
+            oa_exchange: SilverTrade AI exchange code (e.g., 'NSE', 'NFO')
 
         Returns:
             Zerodha exchange code
@@ -54,13 +54,13 @@ class ZerodhaExchangeMapper:
     @classmethod
     def to_oa_exchange(cls, zerodha_exchange: str) -> str:
         """
-        Convert Zerodha exchange code to OpenAlgo exchange code.
+        Convert Zerodha exchange code to SilverTrade AI exchange code.
 
         Args:
             zerodha_exchange: Zerodha exchange code
 
         Returns:
-            OpenAlgo exchange code
+            SilverTrade AI exchange code
         """
         return cls._ZERODHA_TO_OA.get(zerodha_exchange.upper(), zerodha_exchange.upper())
 
@@ -68,7 +68,7 @@ class ZerodhaExchangeMapper:
 class ZerodhaCapabilityRegistry:
     """Registry for Zerodha WebSocket capabilities"""
 
-    # Map OpenAlgo capability flags to Zerodha subscription modes
+    # Map SilverTrade AI capability flags to Zerodha subscription modes
     CAPABILITY_MAP = {
         "LTP": "ltp",
         "QUOTE": "quote",
@@ -84,7 +84,7 @@ class ZerodhaCapabilityRegistry:
         Get Zerodha subscription mode for a capability.
 
         Args:
-            capability: OpenAlgo capability (LTP, QUOTE, DEPTH)
+            capability: SilverTrade AI capability (LTP, QUOTE, DEPTH)
 
         Returns:
             Zerodha subscription mode
@@ -106,14 +106,14 @@ class ZerodhaCapabilityRegistry:
 
 
 class ZerodhaDataTransformer:
-    """Transforms data between Zerodha and OpenAlgo formats"""
+    """Transforms data between Zerodha and SilverTrade AI formats"""
 
     def __init__(self):
         self.logger = get_logger(__name__)
 
     def transform_tick(self, tick_data: dict, symbol: str, exchange: str) -> dict:
         """
-        Transform Zerodha tick data to OpenAlgo format.
+        Transform Zerodha tick data to SilverTrade AI format.
 
         Args:
             tick_data: Raw tick data from Zerodha WebSocket
@@ -121,7 +121,7 @@ class ZerodhaDataTransformer:
             exchange: Exchange code
 
         Returns:
-            Transformed tick data in OpenAlgo format
+            Transformed tick data in SilverTrade AI format
         """
         try:
             if not tick_data:
@@ -205,13 +205,13 @@ class ZerodhaDataTransformer:
 
     def transform_order_update(self, order_data: dict) -> dict:
         """
-        Transform Zerodha order update to OpenAlgo format.
+        Transform Zerodha order update to SilverTrade AI format.
 
         Args:
             order_data: Raw order data from Zerodha WebSocket
 
         Returns:
-            Transformed order data in OpenAlgo format
+            Transformed order data in SilverTrade AI format
         """
         try:
             if not order_data or "data" not in order_data:
@@ -219,7 +219,7 @@ class ZerodhaDataTransformer:
 
             data = order_data["data"]
 
-            # Map Zerodha status to OpenAlgo status
+            # Map Zerodha status to SilverTrade AI status
             status_map = {
                 "OPEN": "open",
                 "COMPLETE": "complete",
@@ -259,13 +259,13 @@ class ZerodhaDataTransformer:
 
     def transform_position(self, position_data: dict) -> dict:
         """
-        Transform Zerodha position data to OpenAlgo format.
+        Transform Zerodha position data to SilverTrade AI format.
 
         Args:
             position_data: Raw position data from Zerodha
 
         Returns:
-            Transformed position data in OpenAlgo format
+            Transformed position data in SilverTrade AI format
         """
         try:
             if not position_data:

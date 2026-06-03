@@ -182,7 +182,7 @@ class FyersHSMWebSocket:
         self.depth_data = {}
 
         # Source identifier
-        self.source = "OpenAlgo-HSM"
+        self.source = "SilverTrade-HSM"
         self.mode = "P"  # Production mode
 
     def _extract_hsm_key(self, access_token: str) -> str | None:

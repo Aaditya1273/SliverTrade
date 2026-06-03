@@ -1,16 +1,16 @@
-# Contributing to OpenAlgo
+# Contributing to SilverTrade
 
 ## Let's democratize algorithmic trading, together!
 
-We're thrilled that you're interested in contributing to OpenAlgo! This guide will help you get started, whether you're fixing a bug, adding a new broker, improving documentation, or building new features.
+We're thrilled that you're interested in contributing to SilverTrade! This guide will help you get started, whether you're fixing a bug, adding a new broker, improving documentation, or building new features.
 
-Below you'll find everything you need to set up OpenAlgo on your computer and start contributing.
+Below you'll find everything you need to set up SilverTrade AI on your computer and start contributing.
 
 ---
 
 ## Our Mission
 
-OpenAlgo is built **by traders, for traders**. We believe in democratizing algorithmic trading by providing a broker-agnostic, open-source platform that puts control back in the hands of traders. Every contribution, no matter how small, helps us achieve this mission.
+SilverTrade is built **by traders, for traders**. We believe in democratizing algorithmic trading by providing a broker-agnostic, open-source platform that puts control back in the hands of traders. Every contribution, no matter how small, helps us achieve this mission.
 
 ---
 
@@ -33,7 +33,7 @@ OpenAlgo is built **by traders, for traders**. We believe in democratizing algor
 
 ## Technology Stack
 
-OpenAlgo uses a **Python Flask** backend with a **React 19** single-page application frontend.
+SilverTrade uses a **Python Flask** backend with a **React 19** single-page application frontend.
 
 ### Backend Technologies
 
@@ -106,8 +106,8 @@ Before you begin, make sure you have the following installed:
 
 ```bash
 # Clone the repository
-git clone https://github.com/marketcalls/openalgo.git
-cd openalgo
+git clone https://github.com/silvertrade/silvertrade.git
+cd silvertrade
 
 # Install uv package manager (if not already installed)
 pip install uv
@@ -207,7 +207,7 @@ uv run gunicorn --worker-class eventlet -w 1 app:app
 Understanding the codebase structure will help you contribute effectively:
 
 ```
-openalgo/
+silvertrade/
 ├── app.py                    # Main Flask application entry point
 ├── pyproject.toml            # Python dependencies & tool config (uv/ruff/pytest)
 ├── frontend/                 # React 19 SPA (TypeScript + Vite)
@@ -263,11 +263,11 @@ openalgo/
 ```bash
 # Fork the repository on GitHub (click Fork button)
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/openalgo.git
-cd openalgo
+git clone https://github.com/YOUR_USERNAME/silvertrade.git
+cd silvertrade
 
 # Add upstream remote
-git remote add upstream https://github.com/marketcalls/openalgo.git
+git remote add upstream https://github.com/silvertrade/silvertrade.git
 
 # Verify remotes
 git remote -v
@@ -275,7 +275,7 @@ git remote -v
 
 > **Important: Disable GitHub Actions on Your Fork**
 >
-> After forking, go to your fork's **Settings → Actions → General** (`https://github.com/YOUR_USERNAME/openalgo/settings/actions`) and select **"Disable actions"** under Actions permissions. This prevents CI workflows (frontend builds, Docker pushes) from running on your fork unnecessarily — those workflows are only meant to run on the upstream repository.
+> After forking, go to your fork's **Settings → Actions → General** (`https://github.com/YOUR_USERNAME/silvertrade/settings/actions`) and select **"Disable actions"** under Actions permissions. This prevents CI workflows (frontend builds, Docker pushes) from running on your fork unnecessarily — those workflows are only meant to run on the upstream repository.
 
 ### 2. Frontend Build Assets (Auto-Built by CI)
 
@@ -436,14 +436,14 @@ git push origin feature/your-feature-name
 
 ### Contribution Policy: One Feature or One Fix at a Time
 
-OpenAlgo follows a strict **incremental contribution** standard. We require all contributions to be submitted as:
+SilverTrade follows a strict **incremental contribution** standard. We require all contributions to be submitted as:
 
 - **One feature** per pull request, OR
 - **One fix** per pull request
 
 **Why this matters:**
 
-OpenAlgo supports **a growing list of brokers**, and every change must be validated across this broad surface area. Large integrations submitted in a single PR require extensive manual testing and verification that is not practical for the maintainers to review all at once.
+SilverTrade supports **a growing list of brokers**, and every change must be validated across this broad surface area. Large integrations submitted in a single PR require extensive manual testing and verification that is not practical for the maintainers to review all at once.
 
 Additionally, many contributions today are developed with AI assistance, which can accelerate development substantially but also increases the need for careful human review, testing, and incremental verification before acceptance into a shared upstream project.
 
@@ -455,9 +455,9 @@ Additionally, many contributions today are developed with AI assistance, which c
 - Large monolithic PRs or full-project integrations will not be accepted in their current form
 - **Exception — New broker integrations** may be submitted as a single PR since they are self-contained within their own `broker/` directory and don't modify core platform code
 
-**If you have a large integration or project built on OpenAlgo:**
+**If you have a large integration or project built on SilverTrade AI:**
 
-We appreciate and encourage projects built on top of OpenAlgo (it's why we're open-source!). However, we cannot merge large codebases as a single contribution. Instead, extract individual improvements, fixes, or self-contained features and submit them separately. This gives each contribution a much better chance of being reviewed and accepted.
+We appreciate and encourage projects built on top of SilverTrade AI (it's why we're open-source!). However, we cannot merge large codebases as a single contribution. Instead, extract individual improvements, fixes, or self-contained features and submit them separately. This gives each contribution a much better chance of being reviewed and accepted.
 
 ---
 
@@ -473,7 +473,7 @@ Great ways to get started:
    - Add examples and tutorials
 
 2. **Bug Fixes**
-   - Check [issues labeled "good first issue"](https://github.com/marketcalls/openalgo/labels/good%20first%20issue)
+   - Check [issues labeled "good first issue"](https://github.com/silvertrade/silvertrade/labels/good%20first%20issue)
    - Fix minor bugs and edge cases
    - Improve error messages
 
@@ -632,7 +632,7 @@ broker/your_broker_name/
 ├── database/
 │   └── master_contract_db.py # Symbol master contract management
 ├── mapping/
-│   ├── order_data.py         # Transform OpenAlgo format to broker format
+│   ├── order_data.py         # Transform SilverTrade AI format to broker format
 │   └── transform_data.py     # General data transformations
 ├── streaming/
 │   └── broker_adapter.py     # WebSocket adapter for live data
@@ -778,7 +778,7 @@ npm run build
 
 #### Component Library
 
-OpenAlgo uses [shadcn/ui](https://ui.shadcn.com/) built on Radix UI primitives with Tailwind CSS:
+SilverTrade uses [shadcn/ui](https://ui.shadcn.com/) built on Radix UI primitives with Tailwind CSS:
 
 ```tsx
 import { Button } from '@/components/ui/button';
@@ -875,7 +875,7 @@ npm run check
        """Place a trading order.
 
        Args:
-           symbol (str): Trading symbol in OpenAlgo format
+           symbol (str): Trading symbol in SilverTrade AI format
            quantity (int): Number of shares/contracts
            price (float): Order price (0 for market orders)
            order_type (str): Order type ('MARKET', 'LIMIT', 'SL')
@@ -1076,14 +1076,14 @@ uv run app.py
 ### Support Channels
 
 - **Discord**: Join our [Discord server](https://discord.com/invite/UPh7QPsNhP) for real-time help
-- **GitHub Discussions**: Ask questions in [GitHub Discussions](https://github.com/marketcalls/openalgo/discussions)
-- **Documentation**: Check [docs.openalgo.in](https://docs.openalgo.in)
-- **GitHub Issues**: Report bugs in [Issues](https://github.com/marketcalls/openalgo/issues)
+- **GitHub Discussions**: Ask questions in [GitHub Discussions](https://github.com/silvertrade/silvertrade/discussions)
+- **Documentation**: Check [docs.silvertrade.ai](https://docs.silvertrade.ai)
+- **GitHub Issues**: Report bugs in [Issues](https://github.com/silvertrade/silvertrade/issues)
 
 ### Before Asking for Help
 
 1. **Search existing issues** — your question might already be answered
-2. **Check documentation** — review docs at docs.openalgo.in
+2. **Check documentation** — review docs at docs.silvertrade.ai
 3. **Review error logs** — include error messages when asking for help
 4. **Provide context** — share your environment (OS, Python version, Node version, broker)
 
@@ -1099,7 +1099,7 @@ When asking for help, include:
    - OS and version
    - Python version (`python --version`)
    - Node.js version (`node --version`)
-   - OpenAlgo version
+   - SilverTrade AI version
    - Broker being used
 
 ---
@@ -1138,7 +1138,7 @@ We value all contributions! Contributors will be:
 
 - **Listed in contributors section** on GitHub
 - **Mentioned in release notes** for significant contributions
-- **Part of the OpenAlgo community** on Discord
+- **Part of the SilverTrade AI community** on Discord
 
 ### Community Guidelines
 
@@ -1152,29 +1152,29 @@ We value all contributions! Contributors will be:
 
 ## Quick Reference Links
 
-- **Repository**: [github.com/marketcalls/openalgo](https://github.com/marketcalls/openalgo)
-- **Issue Tracker**: [github.com/marketcalls/openalgo/issues](https://github.com/marketcalls/openalgo/issues)
-- **Documentation**: [docs.openalgo.in](https://docs.openalgo.in)
+- **Repository**: [github.com/silvertrade/silvertrade](https://github.com/silvertrade/silvertrade)
+- **Issue Tracker**: [github.com/silvertrade/silvertrade/issues](https://github.com/silvertrade/silvertrade/issues)
+- **Documentation**: [docs.silvertrade.ai](https://docs.silvertrade.ai)
 - **Discord**: [discord.com/invite/UPh7QPsNhP](https://discord.com/invite/UPh7QPsNhP)
-- **PyPI Package**: [pypi.org/project/openalgo](https://pypi.org/project/openalgo)
-- **YouTube**: [youtube.com/@openalgoHQ](https://youtube.com/@openalgoHQ)
-- **Twitter/X**: [@openalgoHQ](https://twitter.com/openalgoHQ)
+- **PyPI Package**: [pypi.org/project/silvertrade](https://pypi.org/project/silvertrade)
+- **YouTube**: [youtube.com/@silvertradeai](https://youtube.com/@silvertradeai)
+- **Twitter/X**: [@silvertradeHQ](https://twitter.com/silvertradeHQ)
 
 ---
 
 ## License
 
-OpenAlgo is released under the **AGPL v3.0 License**. See the [LICENSE](License.md) file for details.
+SilverTrade is released under the **AGPL v3.0 License**. See the [LICENSE](License.md) file for details.
 
-By contributing to OpenAlgo, you agree that your contributions will be licensed under the AGPL v3.0 License.
+By contributing to SilverTrade, you agree that your contributions will be licensed under the AGPL v3.0 License.
 
 ---
 
 ## Thank You!
 
-Thank you for contributing to OpenAlgo! Your efforts help democratize algorithmic trading and empower traders worldwide. Every line of code, documentation improvement, and bug report makes a difference.
+Thank you for contributing to SilverTrade! Your efforts help democratize algorithmic trading and empower traders worldwide. Every line of code, documentation improvement, and bug report makes a difference.
 
-**Happy coding, and welcome to the OpenAlgo community!**
+**Happy coding, and welcome to the SilverTrade AI community!**
 
 ---
 

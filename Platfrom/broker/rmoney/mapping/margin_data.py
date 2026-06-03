@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # RMoney XTS Margin Calculator API mappings
 
 from broker.rmoney.mapping.transform_data import map_exchange_numeric, map_order_type, map_product_type
@@ -18,7 +18,7 @@ def _safe_float(value, field_name, default=0.0):
 
 def transform_margin_positions(positions):
     """
-    Transform OpenAlgo margin position format to RMoney XTS margin API format.
+    Transform SilverTrade AI margin position format to RMoney XTS margin API format.
 
     RMoney XTS Regular Order Margin API expects a portfolio array with:
     - exchange: Numeric exchange segment code (e.g., 1 for NSECM, 2 for NSEFO)
@@ -32,7 +32,7 @@ def transform_margin_positions(positions):
     - orderSessionType: Order session type (1 = DAY)
 
     Args:
-        positions: List of positions in OpenAlgo format
+        positions: List of positions in SilverTrade AI format
 
     Returns:
         List of positions in RMoney XTS portfolio format
@@ -84,7 +84,7 @@ def transform_margin_positions(positions):
 
 def parse_margin_response(response_data):
     """
-    Parse RMoney XTS margin calculator response to OpenAlgo standard format.
+    Parse RMoney XTS margin calculator response to SilverTrade AI standard format.
 
     RMoney Response Structure:
     {
@@ -106,7 +106,7 @@ def parse_margin_response(response_data):
         response_data: Raw response from RMoney XTS margin calculator API
 
     Returns:
-        dict: Parsed margin data in OpenAlgo format
+        dict: Parsed margin data in SilverTrade AI format
     """
     if not response_data or not isinstance(response_data, dict):
         return {

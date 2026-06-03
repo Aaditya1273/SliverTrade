@@ -1,12 +1,12 @@
 # IEOD Data Downloader
 
-This tool allows you to download Intraday End of Day (IEOD) data for specified stock symbols from the OpenAlgo API.
+This tool allows you to download Intraday End of Day (IEOD) data for specified stock symbols from the SilverTrade API.
 
 ## Prerequisites
 
 - Python 3.x
-- Valid OpenAlgo API key
-- Access to OpenAlgo API endpoint (ensure openalgo is running)
+- Valid SilverTrade API key
+- Access to SilverTrade API endpoint (ensure silvertrade is running)
 
 ## File Structure
 
@@ -17,7 +17,7 @@ This tool allows you to download Intraday End of Day (IEOD) data for specified s
 
 ## Setup
 
-1. Ensure you have a valid API key from OpenAlgo
+1. Ensure you have a valid API key from SilverTrade
 2. Place your stock symbols in `symbols.csv` (one symbol per line)
 3. The script will automatically create necessary folders and files
 

@@ -18,7 +18,7 @@ This helps developers toggle between silent mode, basic logs, or full debug-leve
 ### **Usage**
 
 ```python
-from openalgo import api
+from silvertrade import api
 
 # Silent mode (default) - no SDK output
 client = api(api_key="...", host="...", ws_url="...", verbose=False)
@@ -36,9 +36,9 @@ client = api(api_key="...", host="...", ws_url="...", verbose=2)
 
 ```python
 """
-Test verbose control in OpenAlgo WebSocket Feed
+Test verbose control in SilverTrade WebSocket Feed
 """
-from openalgo import api
+from silvertrade import api
 import time
 
 # Change this to test different levels: False, True, 1, 2
@@ -165,7 +165,7 @@ If you need additional information that is not directly available in this page, 
 Perform an HTTP GET request on the current page URL with the `ask` query parameter:
 
 ```
-GET https://docs.openalgo.in/trading-platform/python/websockets-verbose-control.md?ask=<question>
+GET https://docs.silvertrade.ai/trading-platform/python/websockets-verbose-control.md?ask=<question>
 ```
 
 The question should be specific, self-contained, and written in natural language.

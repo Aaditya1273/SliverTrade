@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This guide helps you diagnose and resolve common issues in OpenAlgo. Problems are organized by category with step-by-step solutions.
+This guide helps you diagnose and resolve common issues in SilverTrade AI. Problems are organized by category with step-by-step solutions.
 
 ## Quick Diagnostic Checklist
 
@@ -13,7 +13,7 @@ Before diving deep, check these basics:
 │  Quick Diagnostic Checklist                                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  □ Is OpenAlgo running? (Check terminal/service status)                    │
+│  □ Is SilverTrade AI running? (Check terminal/service status)                    │
 │  □ Is your broker logged in? (Check broker status indicator)               │
 │  □ Is the market open? (Check exchange timings)                            │
 │  □ Is your internet working? (Test connectivity)                           │
@@ -73,9 +73,9 @@ uv run app.py --port 5001
 **Symptom**: `database is locked`
 
 **Solution**:
-1. Stop OpenAlgo
+1. Stop SilverTrade
 2. Close all connections
-3. Restart OpenAlgo
+3. Restart SilverTrade
 4. If persistent, delete and recreate database
 
 ## Broker Connection Issues
@@ -104,7 +104,7 @@ uv run app.py --port 5001
 **Symptom**: `Session expired` or `Token invalid`
 
 **Solution**:
-1. Go to OpenAlgo dashboard
+1. Go to SilverTrade AI dashboard
 2. Click on broker status
 3. Re-authenticate with broker
 4. Complete OAuth flow again
@@ -186,13 +186,13 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 
 ### Webhook Not Receiving
 
-**Symptom**: TradingView/ChartInk alerts not reaching OpenAlgo
+**Symptom**: TradingView/ChartInk alerts not reaching SilverTrade
 
 **Checklist**:
-1. Is OpenAlgo accessible from internet?
+1. Is SilverTrade AI accessible from internet?
    ```bash
    # Test with curl from external machine
-   curl https://your-openalgo-url/health
+   curl https://your-silvertrade-url/health
    ```
 
 2. Is the URL correct?
@@ -219,7 +219,7 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 **Symptom**: TradingView shows webhook failed
 
 **Solution**:
-1. Check OpenAlgo is running
+1. Check SilverTrade AI is running
 2. Check server response time
 3. Increase timeout if needed
 4. Check Traffic Logs for details
@@ -229,7 +229,7 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 **Symptom**: `Invalid API key` error
 
 **Solution**:
-1. Copy API key from OpenAlgo dashboard
+1. Copy API key from SilverTrade AI dashboard
 2. Ensure no extra spaces
 3. Check key hasn't been regenerated
 4. Verify key in webhook payload
@@ -261,7 +261,7 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 2. Verify symbol subscription
 3. Restart WebSocket server:
    ```bash
-   # Restart OpenAlgo
+   # Restart SilverTrade
    uv run app.py
    ```
 
@@ -287,7 +287,7 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 
 ### High Memory Usage
 
-**Symptom**: OpenAlgo consuming too much RAM
+**Symptom**: SilverTrade AI consuming too much RAM
 
 **Solution**:
 ```bash
@@ -295,7 +295,7 @@ Options: NIFTY30JAN2521500CE (with date, strike, type)
 ps aux | grep python
 
 # Restart to clear memory
-systemctl restart openalgo
+systemctl restart silvertrade
 
 # Consider database cleanup
 # Delete old logs and data
@@ -309,7 +309,7 @@ systemctl restart openalgo
 1. Clean old logs
 2. Vacuum database:
    ```bash
-   sqlite3 db/openalgo.db "VACUUM;"
+   sqlite3 db/silvertrade.db "VACUUM;"
    ```
 3. Consider archiving old data
 
@@ -323,7 +323,7 @@ systemctl restart openalgo
 1. Clear browser cache
 2. Try incognito mode
 3. Check browser console for errors
-4. Verify OpenAlgo is running
+4. Verify SilverTrade AI is running
 
 ### Login Issues
 
@@ -385,10 +385,10 @@ systemctl restart openalgo
 
 ```bash
 # Application logs
-tail -f logs/openalgo.log
+tail -f logs/silvertrade.log
 
 # Check for errors
-grep -i error logs/openalgo.log
+grep -i error logs/silvertrade.log
 
 # Check Traffic Logs in UI
 ```
@@ -416,8 +416,8 @@ grep -i error logs/openalgo.log
 If all else fails:
 
 ```bash
-# Stop OpenAlgo
-pkill -f openalgo
+# Stop SilverTrade
+pkill -f silvertrade
 
 # Backup current data
 cp -r db/ db_backup/
@@ -432,8 +432,8 @@ uv run app.py
 ### Restore from Backup
 
 ```bash
-# Stop OpenAlgo
-pkill -f openalgo
+# Stop SilverTrade
+pkill -f silvertrade
 
 # Restore backup
 cp -r db_backup/* db/
@@ -447,7 +447,7 @@ uv run app.py
 ### Before Contacting Support
 
 Gather this information:
-1. OpenAlgo version
+1. SilverTrade AI version
 2. Error messages (exact text)
 3. Steps to reproduce
 4. Screenshots if applicable
@@ -455,26 +455,26 @@ Gather this information:
 
 ### Support Channels
 
-OpenAlgo is community-driven:
+SilverTrade is community-driven:
 
 | Channel | Use For | Link |
 |---------|---------|------|
-| GitHub Issues | Bug reports, feature requests | [github.com/marketcalls/openalgo/issues](https://github.com/marketcalls/openalgo/issues) |
-| Discord | Community support, questions | [openalgo.in/discord](http://openalgo.in/discord) |
-| Documentation | How-to guides | [docs.openalgo.in](https://docs.openalgo.in) |
+| GitHub Issues | Bug reports, feature requests | [github.com/silvertrade/silvertrade/issues](https://github.com/silvertrade/silvertrade/issues) |
+| Discord | Community support, questions | [silvertrade.ai/discord](https://silvertrade.ai/discord) |
+| Documentation | How-to guides | [docs.silvertrade.ai](https://docs.silvertrade.ai) |
 
 ### Useful Commands
 
 ```bash
-# Check OpenAlgo version
-uv run python -c "import openalgo; print(openalgo.__version__)"
+# Check SilverTrade AI version
+uv run python -c "import silvertrade; print(silvertrade.__version__)"
 
 # Check system info
 uname -a
 python --version
 
 # Check running processes
-ps aux | grep openalgo
+ps aux | grep silvertrade
 
 # Check port usage
 netstat -tlnp | grep 5000

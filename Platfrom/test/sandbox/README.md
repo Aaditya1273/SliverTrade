@@ -1,6 +1,6 @@
 # Sandbox Mode Test Suite
 
-This directory contains comprehensive tests for the OpenAlgo sandbox (virtual trading) mode.
+This directory contains comprehensive tests for the SilverTrade AI sandbox (virtual trading) mode.
 
 ## Test Files
 
@@ -78,14 +78,14 @@ This directory contains comprehensive tests for the OpenAlgo sandbox (virtual tr
 
 ### Individual Test
 ```bash
-cd /path/to/openalgo
+cd /path/to/silvertrade
 source .venv/bin/activate
 python test/sandbox/test_margin_scenarios.py
 ```
 
 ### All Sandbox Tests
 ```bash
-cd /path/to/openalgo
+cd /path/to/silvertrade
 source .venv/bin/activate
 
 # Run all tests

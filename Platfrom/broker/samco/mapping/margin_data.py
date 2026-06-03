@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Samco Span Margin API https://docs-tradeapi.samco.in/span-margin.html
 
 from database.token_db import get_br_symbol
@@ -9,7 +9,7 @@ logger = get_logger(__name__)
 
 def transform_margin_position(position):
     """
-    Transform a single OpenAlgo margin position to Samco span margin format.
+    Transform a single SilverTrade AI margin position to Samco span margin format.
 
     Samco spanMargin API expects:
     - exchange: Name of the exchange (NFO, MCX, CDS, BFO)
@@ -19,8 +19,8 @@ def transform_margin_position(position):
     - price: Price (optional, for single scrip)
 
     Args:
-        position: Position in OpenAlgo format
-            - symbol: OpenAlgo symbol
+        position: Position in SilverTrade AI format
+            - symbol: SilverTrade AI symbol
             - exchange: Exchange (NFO, MCX, CDS, BFO)
             - quantity: Quantity
             - action: BUY or SELL
@@ -95,7 +95,7 @@ def transform_margin_position(position):
 
 def parse_margin_response(response_data):
     """
-    Parse Samco span margin response to OpenAlgo standard format.
+    Parse Samco span margin response to SilverTrade AI standard format.
 
     Samco spanMargin API returns:
     - status: Success or Failure
@@ -117,7 +117,7 @@ def parse_margin_response(response_data):
         response_data: Raw response from Samco API
 
     Returns:
-        Standardized margin response matching OpenAlgo format
+        Standardized margin response matching SilverTrade AI format
     """
     try:
         if not response_data or not isinstance(response_data, dict):

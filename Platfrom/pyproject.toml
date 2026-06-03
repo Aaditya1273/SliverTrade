@@ -1,8 +1,8 @@
 [project]
 requires-python = ">=3.12"
-name = "openalgoUI"
-version = "2.0.0.9"
-description = "Broker-agnostic open-source trading automation"
+name = "silvertrade-platform"
+version = "1.0.0"
+description = "SilverTrade AI — Unified trading platform across 30+ brokers with real-time WebSocket streaming, options analytics, and automated strategies"
 dependencies = [
   "aniso8601==9.0.1",
   "annotated-types==0.7.0",
@@ -80,7 +80,7 @@ dependencies = [
   "nbformat==5.10.4",
   "nest-asyncio==1.6.0",
   "numpy==2.4.4",
-  "openalgo==1.0.49",
+  "# silvertrade==1.0.49 (replaced by internal silvertrade_sdk module)",
   "ordered-set==4.1.0",
   "orjson==3.11.8",
   "packaging==24.1",

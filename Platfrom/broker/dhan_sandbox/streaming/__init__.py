@@ -1,5 +1,5 @@
 """
-Dhan WebSocket streaming integration for OpenAlgo.
+Dhan WebSocket streaming integration for SilverTrade AI.
 """
 
 from .dhan_adapter import DhanWebSocketAdapter

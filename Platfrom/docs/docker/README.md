@@ -1,6 +1,6 @@
 # Docker Documentation
 
-Complete Docker deployment and troubleshooting documentation for OpenAlgo.
+Complete Docker deployment and troubleshooting documentation for SilverTrade AI.
 
 ---
 
@@ -56,20 +56,20 @@ Complete Docker deployment and troubleshooting documentation for OpenAlgo.
 
 ### Desktop Installation (macOS/Linux)
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.sh
+curl -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.sh
 chmod +x docker-run.sh
 ./docker-run.sh
 ```
 
 ### Desktop Installation (Windows)
 ```powershell
-curl.exe -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.bat
+curl.exe -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.bat
 docker-run.bat
 ```
 
 ### Server Installation (Ubuntu/Debian)
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/install-docker.sh
+curl -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/install-docker.sh
 chmod +x install-docker.sh
 sudo ./install-docker.sh
 ```
@@ -114,24 +114,24 @@ For environment variable issues, see [docker_env_changes.md](docker_env_changes.
 
 ### Current Setup
 
-OpenAlgo uses a **multi-stage build** with the following configuration:
+SilverTrade uses a **multi-stage build** with the following configuration:
 
 ```yaml
 services:
-  openalgo:
-    image: openalgo:latest
-    container_name: openalgo-web
+  silvertrade:
+    image: silvertrade:latest
+    container_name: silvertrade-web
 
     ports:
       - "5000:5000"   # Web UI
       - "8765:8765"   # WebSocket
 
     volumes:
-      - openalgo_db:/app/db
-      - openalgo_log:/app/log
-      - openalgo_strategies:/app/strategies
-      - openalgo_keys:/app/keys
-      - openalgo_tmp:/app/tmp
+      - silvertrade_db:/app/db
+      - silvertrade_log:/app/log
+      - silvertrade_strategies:/app/strategies
+      - silvertrade_keys:/app/keys
+      - silvertrade_tmp:/app/tmp
       - ./.env:/app/.env:ro
 
     shm_size: '2gb'  # For scipy/numba operations
@@ -157,10 +157,10 @@ The Docker image includes:
 ### Verify Installation
 ```bash
 # Check container status
-docker ps --filter "name=openalgo"
+docker ps --filter "name=silvertrade"
 
 # Test numba/scipy
-docker exec openalgo python -c "import numba, scipy; print('✓ OK')"
+docker exec silvertrade python -c "import numba, scipy; print('✓ OK')"
 
 # View logs
 docker-compose logs -f
@@ -168,13 +168,13 @@ docker-compose logs -f
 
 ### Verify Shared Memory
 ```bash
-docker inspect openalgo --format='{{.HostConfig.ShmSize}}'
+docker inspect silvertrade --format='{{.HostConfig.ShmSize}}'
 # Should show: 2147483648 (2GB)
 ```
 
 ### Verify Volumes
 ```bash
-docker inspect openalgo --format='{{range .Mounts}}{{.Destination}} {{end}}'
+docker inspect silvertrade --format='{{range .Mounts}}{{.Destination}} {{end}}'
 # Should include: /app/tmp /app/keys
 ```
 
@@ -209,24 +209,24 @@ If you encounter issues:
 
 3. **Verify Configuration**
    ```bash
-   docker inspect openalgo
+   docker inspect silvertrade
    ```
 
 4. **Community Support**
    - Discord: https://discord.com/invite/UPh7QPsNhP
-   - GitHub Issues: https://github.com/marketcalls/openalgo/issues
+   - GitHub Issues: https://github.com/silvertrade/silvertrade/issues
 
 ---
 
 ## 🔗 Related Documentation
 
 - [Installation Scripts](/install/) - Desktop and server installation scripts
-- [Main Documentation](https://docs.openalgo.in) - Official documentation site
+- [Main Documentation](https://docs.silvertrade.ai) - Official documentation site
 - [CLAUDE.md](/CLAUDE.md) - Development guide
 
 ---
 
 **Last Updated:** 2026-01-28
-**Docker Image:** marketcalls/openalgo:latest
+**Docker Image:** marketcalls/silvertrade:latest
 **Python Version:** 3.12+
-**OpenAlgo Version:** 2.0.0.0
+**SilverTrade Version:** 2.0.0.0

@@ -1,20 +1,20 @@
 """
 NIFTY Option Chain - CE/PE Open Interest Histogram (Side by Side)
-Author : OpenAlgo GPT
+Author : SilverTrade GPT
 Description: Plots Option Chain OI histogram for NIFTY 27JAN26 expiry
              CE (green) and PE (red) bars SIDE BY SIDE
              Only 100-point strikes (no 50s)
              White background
 """
 
-print("🔁 OpenAlgo Python Bot is running.")
+print("🔁 SilverTrade AI Python Bot is running.")
 
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from openalgo import api
+from silvertrade_sdk import api
 
 # ───────────────────────── CONFIG ─────────────────────────
 API_KEY = "3f75e26648a543a886c9b38332a6942e30e0710bbf0488cf432ef27745de8ae7"
@@ -34,7 +34,7 @@ client = api(api_key=API_KEY, host=API_HOST)
 
 # ───────────────────── FETCH OPTION CHAIN ─────────────────────
 def fetch_option_chain():
-    """Fetch option chain data from OpenAlgo API"""
+    """Fetch option chain data from SilverTrade API"""
 
     print(f"\n📥 Fetching {UNDERLYING} Option Chain for {EXPIRY} expiry...")
 

@@ -2,17 +2,17 @@
 
 ## General Questions
 
-### What is OpenAlgo?
+### What is SilverTrade?
 
-OpenAlgo is an open-source algorithmic trading platform that connects various trading platforms (TradingView, Amibroker, Python) to Indian stock brokers through a unified API.
+SilverTrade is an open-source algorithmic trading platform that connects various trading platforms (TradingView, Amibroker, Python) to Indian stock brokers through a unified API.
 
-### Is OpenAlgo free?
+### Is SilverTrade AI free?
 
-Yes, OpenAlgo is completely free and open-source. You can download, use, and modify it without any cost.
+Yes, SilverTrade AI is completely free and open-source. You can download, use, and modify it without any cost.
 
 ### Which brokers are supported?
 
-OpenAlgo supports 29 Indian brokers including:
+SilverTrade supports 29 Indian brokers including:
 - Zerodha
 - Angel One
 - Dhan
@@ -20,9 +20,9 @@ OpenAlgo supports 29 Indian brokers including:
 - Fyers
 - And many more (see full list in documentation)
 
-### Can I use OpenAlgo for live trading?
+### Can I use SilverTrade AI for live trading?
 
-Yes, OpenAlgo supports live trading with real money. However, we strongly recommend:
+Yes, SilverTrade AI supports live trading with real money. However, we strongly recommend:
 1. Testing in Analyzer Mode first
 2. Starting with small quantities
 3. Monitoring your first few trades closely
@@ -45,12 +45,12 @@ Yes, OpenAlgo supports live trading with real money. However, we strongly recomm
 | OS | Windows 10+, Ubuntu 20+, macOS 11+ |
 | Internet | Stable broadband |
 
-### How do I install OpenAlgo?
+### How do I install SilverTrade?
 
 ```bash
 # Clone repository
-git clone https://github.com/marketcalls/openalgo.git
-cd openalgo
+git clone https://github.com/silvertrade/silvertrade.git
+cd silvertrade
 
 # Setup environment
 cp .sample.env .env
@@ -61,19 +61,19 @@ uv run app.py
 
 See [Installation Guide](../04-installation/README.md) for details.
 
-### Can I run OpenAlgo on a VPS/Cloud?
+### Can I run SilverTrade AI on a VPS/Cloud?
 
-Yes, OpenAlgo can run on:
+Yes, SilverTrade AI can run on:
 - AWS EC2/Lightsail
 - Google Cloud
 - DigitalOcean
 - Azure
 - Any Linux VPS
 
-### How do I update OpenAlgo?
+### How do I update SilverTrade?
 
 ```bash
-cd openalgo
+cd silvertrade
 git pull origin main
 uv sync
 ```
@@ -82,11 +82,11 @@ uv sync
 
 ### Why do I need to login daily?
 
-Most Indian brokers require daily authentication for security. This is a broker requirement, not an OpenAlgo limitation.
+Most Indian brokers require daily authentication for security. This is a broker requirement, not an SilverTrade AI limitation.
 
 ### Can I use multiple brokers?
 
-Currently, OpenAlgo supports one broker at a time. You can switch between brokers by changing the configuration.
+Currently, SilverTrade AI supports one broker at a time. You can switch between brokers by changing the configuration.
 
 ### Why is my broker not connecting?
 
@@ -107,7 +107,7 @@ Most brokers provide API access free or at minimal cost. Check with your specifi
 ### What is the latency for order execution?
 
 Typical latency:
-- OpenAlgo processing: 5-20ms
+- SilverTrade AI processing: 5-20ms
 - Broker API: 50-200ms
 - Total: 100-500ms
 
@@ -115,22 +115,22 @@ See [Latency Monitor](../25-latency-monitor/README.md) for details.
 
 ### Can I trade F&O (Futures & Options)?
 
-Yes, OpenAlgo fully supports F&O trading. Use correct symbol format:
+Yes, SilverTrade AI fully supports F&O trading. Use correct symbol format:
 - Futures: `NIFTY30JAN25FUT`
 - Options: `NIFTY30JAN2521500CE`
 
 ### What is Analyzer Mode?
 
-Analyzer Mode is OpenAlgo's sandbox testing environment. It simulates trading with ₹1 Crore sandbox capital using real market prices but no real money.
+Analyzer Mode is SilverTrade's sandbox testing environment. It simulates trading with ₹1 Crore sandbox capital using real market prices but no real money.
 
 ### Can I backtest strategies?
 
-OpenAlgo is primarily for live trading and walkforward testing strategies. For backtesting:
+SilverTrade is primarily for live trading and walkforward testing strategies. For backtesting:
 - Use TradingView's strategy tester
 - Use Amibroker's backtesting
 - Use Python backtesting libraries
 
-### What happens if OpenAlgo crashes during a trade?
+### What happens if SilverTrade AI crashes during a trade?
 
 - Open positions remain with your broker
 - You can manage them through broker terminal
@@ -140,7 +140,7 @@ OpenAlgo is primarily for live trading and walkforward testing strategies. For b
 
 ### How do I get an API key?
 
-1. Login to OpenAlgo
+1. Login to SilverTrade
 2. Go to API Key page
 3. Click Generate New Key
 4. Copy and store securely
@@ -167,11 +167,11 @@ Yes:
 
 ## TradingView Questions
 
-### How do I connect TradingView to OpenAlgo?
+### How do I connect TradingView to SilverTrade?
 
-1. Enable OpenAlgo accessible via internet (ngrok/cloud)
+1. Enable SilverTrade AI accessible via internet (ngrok/cloud)
 2. Create webhook alert in TradingView
-3. Use OpenAlgo endpoint URL
+3. Use SilverTrade AI endpoint URL
 4. Configure JSON payload
 
 See [TradingView Integration](../16-tradingview-integration/README.md).
@@ -203,7 +203,7 @@ Yes:
 ### How do I install the Python library?
 
 ```bash
-pip install openalgo
+pip install silvertrade
 ```
 
 ### Can I run multiple strategies?
@@ -235,7 +235,7 @@ Use recovery codes to regain access. Store them safely when setting up 2FA.
 
 ### How do I report a security issue?
 
-Report security vulnerabilities to: security@openalgo.in (or via GitHub private advisory)
+Report security vulnerabilities to: security@silvertrade.ai (or via GitHub private advisory)
 
 ## Static IP Questions
 
@@ -275,11 +275,11 @@ If your strategy consistently places over 10 orders per second, you may need for
 
 ### Where can I get help?
 
-OpenAlgo is community-driven. Get help through:
+SilverTrade is community-driven. Get help through:
 
-1. Documentation: [https://docs.openalgo.in](https://docs.openalgo.in)
-2. Discord Community: [http://openalgo.in/discord](http://openalgo.in/discord)
-3. GitHub Issues: [https://github.com/marketcalls/openalgo/issues](https://github.com/marketcalls/openalgo/issues)
+1. Documentation: [https://docs.silvertrade.ai](https://docs.silvertrade.ai)
+2. Discord Community: [https://silvertrade.ai/discord](https://silvertrade.ai/discord)
+3. GitHub Issues: [https://github.com/silvertrade/silvertrade/issues](https://github.com/silvertrade/silvertrade/issues)
 4. YouTube tutorials: For video guides
 
 ### How do I report a bug?
@@ -287,7 +287,7 @@ OpenAlgo is community-driven. Get help through:
 1. Go to GitHub Issues
 2. Use the bug report template
 3. Include:
-   - OpenAlgo version
+   - SilverTrade AI version
    - Steps to reproduce
    - Error messages
    - Screenshots
@@ -306,13 +306,13 @@ Yes! Submit feature requests on GitHub Issues with the "enhancement" label.
 
 ## Pricing Questions
 
-### Is OpenAlgo really free?
+### Is SilverTrade AI really free?
 
-Yes, OpenAlgo is 100% free and open-source under the AGPL license.
+Yes, SilverTrade AI is 100% free and open-source under the AGPL license.
 
 ### Are there any hidden costs?
 
-No hidden costs from OpenAlgo. You may have:
+No hidden costs from SilverTrade AI. You may have:
 - Broker API charges (varies by broker)
 - Cloud hosting costs (if using cloud)
 - TradingView subscription (for webhooks)
@@ -323,21 +323,21 @@ Currently, support is community-based. For enterprise needs, contact the maintai
 
 ## Common Misconceptions
 
-### "OpenAlgo is a trading bot"
+### "SilverTrade is a trading bot"
 
-OpenAlgo is a **bridge/platform**, not a trading bot. It connects your strategy signals to your broker. You still need to create or use existing strategies.
+SilverTrade is a **bridge/platform**, not a trading bot. It connects your strategy signals to your broker. You still need to create or use existing strategies.
 
 ### "I can make guaranteed profits"
 
-No trading system guarantees profits. OpenAlgo is a tool - your results depend on your strategy.
+No trading system guarantees profits. SilverTrade AI is a tool - your results depend on your strategy.
 
 ### "It works without internet"
 
-OpenAlgo requires internet connection to communicate with brokers and receive signals.
+SilverTrade requires internet connection to communicate with brokers and receive signals.
 
 ### "I can trade after market hours"
 
-OpenAlgo follows exchange timings. F&O can be traded during extended hours as per exchange rules.
+SilverTrade follows exchange timings. F&O can be traded during extended hours as per exchange rules.
 
 ## Symbol Format Quick Reference
 
@@ -355,7 +355,7 @@ Products:  MIS (intraday), CNC (delivery), NRML (F&O overnight)
 If your question isn't answered here:
 
 1. Search the [documentation](../README.md)
-2. Check [GitHub Discussions](https://github.com/marketcalls/openalgo/discussions)
+2. Check [GitHub Discussions](https://github.com/silvertrade/silvertrade/discussions)
 3. Ask in community forums
 4. Create a GitHub issue
 

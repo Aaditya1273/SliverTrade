@@ -154,7 +154,7 @@ POST /api/v1/basketorder
 ## Python Example
 
 ```python
-from openalgo import api
+from silvertrade import api
 
 client = api(api_key="your-key", host="http://127.0.0.1:5000")
 

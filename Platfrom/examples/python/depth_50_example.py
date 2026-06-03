@@ -1,12 +1,12 @@
 """
-OpenAlgo WebSocket 50-Level Market Depth Example
+SilverTrade WebSocket 50-Level Market Depth Example
 For brokers that support deep market depth (Fyers TBT, etc.)
 """
 
 import logging
 import time
 
-from openalgo import api
+from silvertrade_sdk import api
 
 # Configure logging to see WebSocket debug output
 logging.basicConfig(

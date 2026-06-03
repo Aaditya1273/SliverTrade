@@ -15,8 +15,8 @@ This folder contains test scripts for the Option Greeks API.
    uv pip install mibian
    ```
 
-2. **OpenAlgo must be running**
-   - Start OpenAlgo application
+2. **SilverTrade must be running**
+   - Start SilverTrade AI application
    - Ensure it's accessible at `http://127.0.0.1:5000`
 
 3. **Markets Should Be Open**
@@ -25,7 +25,7 @@ This folder contains test scripts for the Option Greeks API.
    - Pre-market/post-market may have stale data
 
 4. **API Key**
-   - Get your API key from OpenAlgo settings
+   - Get your API key from SilverTrade AI settings
    - Replace `"your_api_key_here"` in the test file
 
 ## How to Run Tests
@@ -34,7 +34,7 @@ This folder contains test scripts for the Option Greeks API.
 
 ```bash
 # Navigate to test directory
-cd D:/openalgo-sandbox-test/openalgo/test
+cd D:/silvertrade-sandbox-test/silvertrade/test
 
 # Run Option Greeks API tests
 python test_option_greeks_api.py
@@ -44,7 +44,7 @@ python test_option_greeks_api.py
 
 ```bash
 # Navigate to project root
-cd D:/openalgo-sandbox-test/openalgo
+cd D:/silvertrade-sandbox-test/silvertrade
 
 # Run Option Greeks API tests
 python test/test_option_greeks_api.py
@@ -54,7 +54,7 @@ python test/test_option_greeks_api.py
 
 ```bash
 # From project root
-cd D:/openalgo-sandbox-test/openalgo
+cd D:/silvertrade-sandbox-test/silvertrade
 
 # Run tests with uv
 uv run python test/test_option_greeks_api.py
@@ -458,5 +458,5 @@ For issues or questions:
 - Check symbol format matches documented pattern
 - Ensure markets are open for accurate prices
 - Update expiry dates to current/future
-- Review OpenAlgo logs for detailed errors
+- Review SilverTrade AI logs for detailed errors
 - Compare with broker Greeks to validate accuracy

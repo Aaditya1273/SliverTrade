@@ -13,7 +13,7 @@ if __name__ == "__main__":
     _debug = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
     _is_reloader_parent = _debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true"
     if not _is_reloader_parent:
-        print("\033[93mStarting OpenAlgo...\033[0m", flush=True)
+        print("\033[93mStarting SilverTrade AI...\033[0m", flush=True)
 
 import mimetypes
 
@@ -827,7 +827,7 @@ if __name__ == "__main__":
                 _dip = "127.0.0.1"
         _wu = f"http://{_dip}:{port}"
         _wsu = f"ws://{_dip}:{os.getenv('WEBSOCKET_PORT', 8765)}"
-        _du = "https://docs.openalgo.in"
+        _du = "https://docs.silvertrade.ai"
         G, C, M, W, Y, R, BD, DM = "\033[92m", "\033[96m", "\033[95m", "\033[97m", "\033[93m", "\033[0m", "\033[1m", "\033[2m"
         _ae = re.compile(r"\x1B\[[0-9;]*m")
         def _vl(t): return len(_ae.sub("", t))

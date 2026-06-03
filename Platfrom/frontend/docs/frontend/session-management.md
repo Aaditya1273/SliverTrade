@@ -2,7 +2,7 @@
 
 ## Overview
 
-OpenAlgo supports multi-device login with automatic session synchronization. A user can authenticate once with their broker (OAuth) and then access OpenAlgo from additional devices without repeating the broker login flow.
+SilverTrade supports multi-device login with automatic session synchronization. A user can authenticate once with their broker (OAuth) and then access SilverTrade AI from additional devices without repeating the broker login flow.
 
 ## Architecture
 

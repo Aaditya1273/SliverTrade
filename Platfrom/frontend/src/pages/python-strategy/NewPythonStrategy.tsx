@@ -21,7 +21,7 @@ import time
 from silvertrade import api
 
 # Get API key from environment variable
-API_KEY = os.getenv('OPENALGO_API_KEY')
+API_KEY = os.getenv('SILVERTRADE_API_KEY')
 
 # Initialize the API client
 client = api(

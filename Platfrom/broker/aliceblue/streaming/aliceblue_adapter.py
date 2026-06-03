@@ -471,8 +471,8 @@ class AliceblueWebSocketAdapter(BaseBrokerWebSocketAdapter):
                             "token": token,
                             "mode": mode,  # Store the highest mode subscribed
                             "depth_level": depth_level,
-                            "original_symbol": symbol,  # Store original OpenAlgo symbol for lookup
-                            "original_exchange": exchange,  # Store original OpenAlgo exchange
+                            "original_symbol": symbol,  # Store original SilverTrade symbol for lookup
+                            "original_exchange": exchange,  # Store original SilverTrade exchange
                             "all_modes": self.subscriptions.get(sub_key, {}).get("all_modes", set())
                             | {mode},  # Track all subscribed modes
                         }
@@ -981,7 +981,7 @@ class AliceblueWebSocketAdapter(BaseBrokerWebSocketAdapter):
             # Find the original subscription to get the correct exchange and symbol
             # This is important because the client subscribes with NSE_INDEX for NIFTY
             # but the data comes with NSE exchange
-            # Also, for NFO/BFO symbols, AliceBlue returns broker symbols but we need OpenAlgo symbols
+            # Also, for NFO/BFO symbols, AliceBlue returns broker symbols but we need SilverTrade symbols
             sub_key = symbol_key  # Use the same key as created above
             self.logger.debug(f"Looking for subscription with key: {sub_key}")
             original_exchange = exchange  # Default to mapped exchange

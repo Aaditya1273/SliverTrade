@@ -1,10 +1,10 @@
-# OpenAlgo Developer Documentation
+# SilverTrade AI Developer Documentation
 
-Welcome to the OpenAlgo Developer Bible - a comprehensive guide for understanding and working with the OpenAlgo algorithmic trading platform.
+Welcome to the SilverTrade AI Developer Bible - a comprehensive guide for understanding and working with the SilverTrade AI algorithmic trading platform.
 
-## What is OpenAlgo?
+## What is SilverTrade?
 
-OpenAlgo is a production-ready algorithmic trading platform built with Flask (backend) and React 19 (frontend). It provides a unified API layer across 29 Indian brokers, enabling seamless integration with TradingView, Amibroker, Excel, Python, and AI agents.
+SilverTrade is a production-ready algorithmic trading platform built with Flask (backend) and React 19 (frontend). It provides a unified API layer across 29 Indian brokers, enabling seamless integration with TradingView, Amibroker, Excel, Python, and AI agents.
 
 ## Documentation Index
 

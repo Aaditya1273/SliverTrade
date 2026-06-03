@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Shoonya Broking Parameters https://shoonya.com/api-documentation
 
 from database.token_db import get_br_symbol

@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Zerodha Margin API https://kite.trade/docs/connect/v3/margins/
 
 from database.token_db import get_br_symbol
@@ -9,10 +9,10 @@ logger = get_logger(__name__)
 
 def transform_margin_positions(positions):
     """
-    Transform OpenAlgo margin position format to Zerodha margin format.
+    Transform SilverTrade AI margin position format to Zerodha margin format.
 
     Args:
-        positions: List of positions in OpenAlgo format
+        positions: List of positions in SilverTrade AI format
 
     Returns:
         List of positions in Zerodha format
@@ -82,9 +82,9 @@ def transform_margin_positions(positions):
 
 def map_product_type(product):
     """
-    Maps OpenAlgo product type to Zerodha product type.
+    Maps SilverTrade AI product type to Zerodha product type.
 
-    OpenAlgo: CNC, NRML, MIS
+    SilverTrade AI: CNC, NRML, MIS
     Zerodha: CNC, NRML, MIS (Direct mapping - no transformation needed)
     """
     product_type_mapping = {
@@ -97,9 +97,9 @@ def map_product_type(product):
 
 def map_order_type(pricetype):
     """
-    Maps OpenAlgo price type to Zerodha order type.
+    Maps SilverTrade AI price type to Zerodha order type.
 
-    OpenAlgo: MARKET, LIMIT, SL, SL-M
+    SilverTrade AI: MARKET, LIMIT, SL, SL-M
     Zerodha: MARKET, LIMIT, SL, SL-M (Direct mapping - no transformation needed)
     """
     order_type_mapping = {"MARKET": "MARKET", "LIMIT": "LIMIT", "SL": "SL", "SL-M": "SL-M"}
@@ -108,7 +108,7 @@ def map_order_type(pricetype):
 
 def parse_margin_response(response_data):
     """
-    Parse Zerodha margin response to OpenAlgo standard format.
+    Parse Zerodha margin response to SilverTrade AI standard format.
 
     Zerodha basket margin response structure:
     - data.initial: Total margins from basket calculation (partially optimized)
@@ -141,7 +141,7 @@ def parse_margin_response(response_data):
         response_data: Raw response from Zerodha API
 
     Returns:
-        Standardized margin response matching OpenAlgo format
+        Standardized margin response matching SilverTrade AI format
     """
     try:
         if not response_data or not isinstance(response_data, dict):
@@ -274,7 +274,7 @@ def parse_margin_response(response_data):
                 f"Orders margin: total={total_margin_required}, span={span_margin}, exposure={exposure_margin}"
             )
 
-        # Return standardized format matching OpenAlgo API specification
+        # Return standardized format matching SilverTrade AI API specification
         response_data = {
             "status": "success",
             "data": {

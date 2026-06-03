@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details all GitHub Actions workflows in the OpenAlgo CI/CD pipeline.
+This document details all GitHub Actions workflows in the SilverTrade AI CI/CD pipeline.
 
 ## Main CI Workflow
 

@@ -1,10 +1,10 @@
 """
-OpenAlgo WebSocket Market Depth Example
+SilverTrade WebSocket Market Depth Example
 """
 
 import time
 
-from openalgo import api
+from silvertrade_sdk import api
 
 # Initialize feed client with explicit parameters
 client = api(

@@ -2,7 +2,7 @@
 
 ## Problem Summary
 
-When running OpenAlgo strategies in Docker that use numba/llvmlite (for indicators like Supertrend, EMA, TEMA), you may encounter these errors:
+When running SilverTrade AI strategies in Docker that use numba/llvmlite (for indicators like Supertrend, EMA, TEMA), you may encounter these errors:
 
 ```
 KeyError: 'LLVMPY_AddSymbol'
@@ -91,7 +91,7 @@ docker-compose build --no-cache
 docker-compose up -d
 
 # Verify the fix
-docker-compose exec openalgo python -c "import numba; import llvmlite; import scipy; print('✓ All imports successful')"
+docker-compose exec silvertrade python -c "import numba; import llvmlite; import scipy; print('✓ All imports successful')"
 ```
 
 ### Option 2: Using Docker Run
@@ -100,38 +100,38 @@ If you're using `docker run` directly:
 
 ```bash
 # Stop and remove the old container
-docker stop openalgo-web && docker rm openalgo-web
+docker stop silvertrade-web && docker rm silvertrade-web
 
 # Rebuild the image
-docker build -t openalgo:latest .
+docker build -t silvertrade:latest .
 
 # Run with shared memory and tmpfs mount
 docker run -d \
-  --name openalgo-web \
+  --name silvertrade-web \
   --shm-size=2g \
   -p 5000:5000 \
   -p 8765:8765 \
-  -v openalgo_db:/app/db \
-  -v openalgo_log:/app/log \
-  -v openalgo_strategies:/app/strategies \
-  -v openalgo_keys:/app/keys \
+  -v silvertrade_db:/app/db \
+  -v silvertrade_log:/app/log \
+  -v silvertrade_strategies:/app/strategies \
+  -v silvertrade_keys:/app/keys \
   -v "$(pwd)/.env:/app/.env:ro" \
   --tmpfs /app/tmp:size=1g,mode=1777 \
-  openalgo:latest
+  silvertrade:latest
 ```
 
 ### Option 3: Using Docker Hub Image (When Available)
 
 ```bash
 # Pull the latest image
-docker pull marketcalls/openalgo:latest
+docker pull marketcalls/silvertrade:latest
 
 # Update docker-compose.yaml to use the image
 # Change:
 #   build:
 #     context: .
 # To:
-#   image: marketcalls/openalgo:latest
+#   image: marketcalls/silvertrade:latest
 
 # Start the container
 docker-compose up -d
@@ -141,12 +141,12 @@ docker-compose up -d
 
 1. **Test Python imports:**
 ```bash
-docker-compose exec openalgo python -c "import numba; import llvmlite; import scipy; print('✓ Success')"
+docker-compose exec silvertrade python -c "import numba; import llvmlite; import scipy; print('✓ Success')"
 ```
 
 2. **Test numba JIT compilation:**
 ```bash
-docker-compose exec openalgo python -c "
+docker-compose exec silvertrade python -c "
 from numba import jit
 import numpy as np
 
@@ -165,7 +165,7 @@ print(f'✓ Numba JIT works: sum={result}')
 
 3. **Test scipy:**
 ```bash
-docker-compose exec openalgo python -c "
+docker-compose exec silvertrade python -c "
 from scipy import stats
 print('✓ SciPy works:', stats.norm.cdf(0))
 "
@@ -173,12 +173,12 @@ print('✓ SciPy works:', stats.norm.cdf(0))
 
 4. **Run your strategy:**
 ```bash
-docker-compose exec openalgo uv run python /app/strategies/scripts/your_strategy.py
+docker-compose exec silvertrade uv run python /app/strategies/scripts/your_strategy.py
 ```
 
 ## For CI/CD (GitHub Actions)
 
-The CI/CD pipeline will automatically build the updated Docker image when you push to the `main` branch. The image will be pushed to Docker Hub as `marketcalls/openalgo:latest`.
+The CI/CD pipeline will automatically build the updated Docker image when you push to the `main` branch. The image will be pushed to Docker Hub as `marketcalls/silvertrade:latest`.
 
 ## Additional Environment Variables (Optional)
 
@@ -224,7 +224,7 @@ volumes:
 
 **Solution**: Check logs and rebuild completely:
 ```bash
-docker-compose logs openalgo
+docker-compose logs silvertrade
 docker-compose down -v  # WARNING: This removes volumes!
 docker-compose build --no-cache
 docker-compose up -d

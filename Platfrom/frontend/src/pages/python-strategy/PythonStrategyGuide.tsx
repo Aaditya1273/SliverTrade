@@ -18,12 +18,12 @@ const sampleStrategy = `"""
 ===============================================================================
 
 Run standalone:
-    export OPENALGO_API_KEY="your-api-key"
+    export SILVERTRADE_API_KEY="your-api-key"
     python emacrossover_strategy_python.py
 
 Run via SilverTrade AI's /python strategy runner:
-    OPENALGO_API_KEY            : injected per-strategy (PR #1247).
-    OPENALGO_STRATEGY_EXCHANGE  : set from the strategy's \`exchange\` config
+    SILVERTRADE_API_KEY            : injected per-strategy (PR #1247).
+    SILVERTRADE_STRATEGY_EXCHANGE  : set from the strategy's \`exchange\` config
                                   (NSE / BSE / NFO / BFO / MCX / BCD / CDS / CRYPTO).
                                   Drives both this script's trading exchange and
                                   the host's calendar/holiday gating, so the two
@@ -47,20 +47,20 @@ from silvertrade import api
 
 # API Configuration — read from environment with sensible fallbacks.
 # When launched via SilverTrade AI's /python runner, these come from the platform:
-#   OPENALGO_API_KEY : injected per-strategy (decrypted from DB)
+#   SILVERTRADE_API_KEY : injected per-strategy (decrypted from DB)
 #   HOST_SERVER      : inherited from SilverTrade AI's .env
 #   WEBSOCKET_URL    : inherited from SilverTrade AI's .env
-API_KEY = os.getenv("OPENALGO_API_KEY", "silvertrade-apikey")
+API_KEY = os.getenv("SILVERTRADE_API_KEY", "silvertrade-apikey")
 API_HOST = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
 WS_URL = os.getenv("WEBSOCKET_URL", "ws://127.0.0.1:8765")
 
 # Trade Settings
-# EXCHANGE prefers OPENALGO_STRATEGY_EXCHANGE (set by /python runner from the
+# EXCHANGE prefers SILVERTRADE_STRATEGY_EXCHANGE (set by /python runner from the
 # strategy's config) so the script trades on whichever exchange the host is
 # gating its calendar against. Falls back to EXCHANGE env var, then NSE.
 SYMBOL = os.getenv("SYMBOL", "NHPC")              # Stock to trade
 EXCHANGE = os.getenv(
-    "OPENALGO_STRATEGY_EXCHANGE",
+    "SILVERTRADE_STRATEGY_EXCHANGE",
     os.getenv("EXCHANGE", "NSE"),
 )                                                 # NSE, BSE, NFO, MCX, etc.
 QUANTITY = int(os.getenv("QUANTITY", "1"))        # Number of shares
@@ -264,14 +264,14 @@ if __name__ == "__main__":
 `
 
 const envVarsSnippet = `# API Configuration — auto-injected by the /python runner
-API_KEY = os.getenv("OPENALGO_API_KEY", "silvertrade-apikey")
+API_KEY = os.getenv("SILVERTRADE_API_KEY", "silvertrade-apikey")
 API_HOST = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
 WS_URL = os.getenv("WEBSOCKET_URL", "ws://127.0.0.1:8765")
 
-# Exchange — reads OPENALGO_STRATEGY_EXCHANGE so your script
+# Exchange — reads SILVERTRADE_STRATEGY_EXCHANGE so your script
 # trades on the same exchange the host gates its calendar against.
 EXCHANGE = os.getenv(
-    "OPENALGO_STRATEGY_EXCHANGE",
+    "SILVERTRADE_STRATEGY_EXCHANGE",
     os.getenv("EXCHANGE", "NSE"),
 )
 
@@ -402,8 +402,8 @@ export default function PythonStrategyGuide() {
             <div className="bg-muted p-3 rounded-lg">
               <p className="font-medium mb-1">Environment Injection</p>
               <p className="text-muted-foreground">
-                The host injects <code>OPENALGO_API_KEY</code>, <code>STRATEGY_ID</code>,{' '}
-                <code>STRATEGY_NAME</code>, and <code>OPENALGO_STRATEGY_EXCHANGE</code> into
+                The host injects <code>SILVERTRADE_API_KEY</code>, <code>STRATEGY_ID</code>,{' '}
+                <code>STRATEGY_NAME</code>, and <code>SILVERTRADE_STRATEGY_EXCHANGE</code> into
                 each strategy's environment. Your <code>.env</code> variables (like{' '}
                 <code>HOST_SERVER</code>, <code>WEBSOCKET_URL</code>) are also inherited.
                 Custom parameters from the upload form become additional env vars.
@@ -454,7 +454,7 @@ export default function PythonStrategyGuide() {
                 </thead>
                 <tbody className="text-muted-foreground">
                   <tr className="border-b">
-                    <td className="py-2 pr-4"><code>OPENALGO_API_KEY</code></td>
+                    <td className="py-2 pr-4"><code>SILVERTRADE_API_KEY</code></td>
                     <td className="py-2">Decrypted API key for this user</td>
                   </tr>
                   <tr className="border-b">
@@ -466,14 +466,14 @@ export default function PythonStrategyGuide() {
                     <td className="py-2">Name of the strategy (as entered at upload)</td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 pr-4"><code>OPENALGO_STRATEGY_EXCHANGE</code></td>
+                    <td className="py-2 pr-4"><code>SILVERTRADE_STRATEGY_EXCHANGE</code></td>
                     <td className="py-2">
                       Exchange picked at upload/edit (NSE / BSE / NFO / BFO / MCX / BCD / CDS / CRYPTO).
                       Read this so your trading calls match the calendar the host gates against
                     </td>
                   </tr>
                   <tr className="border-b">
-                    <td className="py-2 pr-4"><code>OPENALGO_HOST</code></td>
+                    <td className="py-2 pr-4"><code>SILVERTRADE_HOST</code></td>
                     <td className="py-2">
                       Convenience fallback (<code>http://127.0.0.1:5000</code>).
                       Prefer <code>HOST_SERVER</code> instead
@@ -545,7 +545,7 @@ export default function PythonStrategyGuide() {
           </div>
 
           <Alert>
-            <AlertTitle>Reading OPENALGO_STRATEGY_EXCHANGE is strongly recommended</AlertTitle>
+            <AlertTitle>Reading SILVERTRADE_STRATEGY_EXCHANGE is strongly recommended</AlertTitle>
             <AlertDescription>
               If your script hardcodes <code>exchange = "NSE"</code>, the host will still gate
               it correctly per its config (e.g. the host runs your script during the MCX evening
@@ -1070,7 +1070,7 @@ export default function PythonStrategyGuide() {
                     sensible fallbacks so the same script works standalone and under the /python runner
                   </li>
                   <li>
-                    <strong>Read OPENALGO_STRATEGY_EXCHANGE</strong> &mdash; Wire the exchange from
+                    <strong>Read SILVERTRADE_STRATEGY_EXCHANGE</strong> &mdash; Wire the exchange from
                     the host so your orders match the calendar
                   </li>
                   <li>
@@ -1166,7 +1166,7 @@ export default function PythonStrategyGuide() {
                     <p className="font-medium">Orders rejected with "market closed" while strategy is running</p>
                     <p className="mt-1">
                       Your script's hardcoded <code>exchange="NSE"</code> doesn't match the host's{' '}
-                      <code>exchange="MCX"</code>. Read <code>OPENALGO_STRATEGY_EXCHANGE</code> in your
+                      <code>exchange="MCX"</code>. Read <code>SILVERTRADE_STRATEGY_EXCHANGE</code> in your
                       script (see Environment Variables above).
                     </p>
                   </div>
@@ -1189,7 +1189,7 @@ export default function PythonStrategyGuide() {
                   </div>
 
                   <div className="bg-muted p-3 rounded-lg">
-                    <p className="font-medium">OPENALGO_API_KEY not set</p>
+                    <p className="font-medium">SILVERTRADE_API_KEY not set</p>
                     <p className="mt-1">
                       Make sure you have generated an API key at{' '}
                       <Link to="/apikey" className="text-primary hover:underline">API Key</Link>.

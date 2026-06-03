@@ -1,8 +1,8 @@
-# OpenAlgo Security Audit Report
+# SilverTrade AI Security Audit Report
 
 ## Executive Summary
 
-This security audit was conducted on OpenAlgo, a **single-user, self-hosted** algorithmic trading platform. When deployed using the official `install.sh` script on Ubuntu server, most production security measures are **automatically configured**.
+This security audit was conducted on SilverTrade, a **single-user, self-hosted** algorithmic trading platform. When deployed using the official `install.sh` script on Ubuntu server, most production security measures are **automatically configured**.
 
 ### Deployment Model
 
@@ -10,7 +10,7 @@ This security audit was conducted on OpenAlgo, a **single-user, self-hosted** al
 ┌────────────────────────────────────────────────────────────────┐
 │                    Your Ubuntu Server                           │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │                   OpenAlgo (install.sh)                   │  │
+│  │                   SilverTrade AI (install.sh)                   │  │
 │  │  • Nginx with SSL (Let's Encrypt)                         │  │
 │  │  • Security headers (HSTS, X-Frame-Options, etc.)         │  │
 │  │  • Firewall (UFW)                                         │  │
@@ -40,7 +40,7 @@ This security audit was conducted on OpenAlgo, a **single-user, self-hosted** al
 
 | Use Case | Recommended Method |
 |----------|-------------------|
-| Running OpenAlgo | Ubuntu server with `install.sh` |
+| Running SilverTrade AI | Ubuntu server with `install.sh` |
 | Accessing dashboard | `https://yourdomain.com` (Nginx) |
 | TradingView webhooks | `https://yourdomain.com` OR ngrok tunnel |
 | GoCharting/Chartink | `https://yourdomain.com` OR ngrok tunnel |
@@ -121,7 +121,7 @@ API_KEY_PEPPER=$(python3 -c "import secrets; print(secrets.token_hex(32))")
 ```bash
 sudo chown -R www-data:www-data $BASE_PATH
 sudo chmod -R 755 $BASE_PATH
-sudo chmod 700 $OPENALGO_PATH/keys  # Restrictive for sensitive files
+sudo chmod 700 $SILVERTRADE_PATH/keys  # Restrictive for sensitive files
 ```
 
 ## What You Still Need to Do
@@ -133,7 +133,7 @@ sudo chmod 700 $OPENALGO_PATH/keys  # Restrictive for sensitive files
    - Use 12+ characters, mix of letters/numbers/symbols
 
 2. **Enable 2FA** (Recommended)
-   - Go to Settings in OpenAlgo
+   - Go to Settings in SilverTrade
    - Enable two-factor authentication
    - Scan QR with authenticator app
 
@@ -155,10 +155,10 @@ sudo chmod 700 $OPENALGO_PATH/keys  # Restrictive for sensitive files
 | Network | Firewall (UFW) | install.sh |
 | Transport | TLS 1.2/1.3 | install.sh |
 | Headers | HSTS, X-Frame-Options, etc. | install.sh |
-| Application | CSRF, XSS prevention | OpenAlgo code |
-| Authentication | Argon2, 2FA | OpenAlgo code |
-| Data at Rest | Fernet encryption | OpenAlgo code |
-| API | Key hashing with pepper | OpenAlgo code |
+| Application | CSRF, XSS prevention | SilverTrade AI code |
+| Authentication | Argon2, 2FA | SilverTrade AI code |
+| Data at Rest | Fernet encryption | SilverTrade AI code |
+| API | Key hashing with pepper | SilverTrade AI code |
 
 ## Quick Security Checklist
 
@@ -189,7 +189,7 @@ When setting up webhooks:
 ```json
 // Webhook payload example
 {
-    "apikey": "your_openalgo_api_key",
+    "apikey": "your_silvertrade_api_key",
     "symbol": "RELIANCE",
     "exchange": "NSE",
     "action": "BUY",
@@ -228,7 +228,7 @@ If using ngrok temporarily for webhooks:
 
 ## Bottom Line
 
-**Using `install.sh` on Ubuntu**: OpenAlgo is deployed with production-grade security. The script handles SSL, headers, firewall, and key generation automatically.
+**Using `install.sh` on Ubuntu**: SilverTrade AI is deployed with production-grade security. The script handles SSL, headers, firewall, and key generation automatically.
 
 **Ngrok**: Use only for webhooks if you don't have a domain. Don't run the entire app over ngrok.
 

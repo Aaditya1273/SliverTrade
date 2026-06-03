@@ -2,11 +2,11 @@
 
 ## Overview
 
-OpenAlgo implements a two-phase authentication system:
-1. **User Authentication** - Username/password login to OpenAlgo
+SilverTrade implements a two-phase authentication system:
+1. **User Authentication** - Username/password login to SilverTrade
 2. **Broker Authentication** - OAuth2/TOTP/API-based login to trading broker
 
-This design ensures users first authenticate with OpenAlgo before connecting to their broker account.
+This design ensures users first authenticate with SilverTrade AI before connecting to their broker account.
 
 ## Authentication Flow Diagram
 
@@ -149,7 +149,7 @@ class User:
 
 ### Broker Types and Auth Methods
 
-OpenAlgo supports 29 brokers with different authentication methods:
+SilverTrade supports 29 brokers with different authentication methods:
 
 | Auth Type | Brokers | Flow |
 |-----------|---------|------|
@@ -166,7 +166,7 @@ OpenAlgo supports 29 brokers with different authentication methods:
 │                     OAuth2 Authentication                        │
 └─────────────────────────────────────────────────────────────────┘
 
-User                    OpenAlgo                    Broker OAuth
+User                    SilverTrade AI                    Broker OAuth
   │                        │                            │
   │  1. Select Zerodha     │                            │
   ├───────────────────────►│                            │
@@ -202,7 +202,7 @@ User                    OpenAlgo                    Broker OAuth
 │                     TOTP Authentication                          │
 └─────────────────────────────────────────────────────────────────┘
 
-User                    OpenAlgo                    Broker API
+User                    SilverTrade AI                    Broker API
   │                        │                            │
   │  1. Select Angel       │                            │
   ├───────────────────────►│                            │
@@ -373,7 +373,7 @@ def get_encryption_key():
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,
-        salt=b'openalgo_salt_v1',
+        salt=b'silvertrade_salt_v1',
         iterations=100000,
     )
     return base64.urlsafe_b64encode(kdf.derive(pepper))

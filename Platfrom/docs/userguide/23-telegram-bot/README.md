@@ -2,7 +2,7 @@
 
 ## Introduction
 
-OpenAlgo's Telegram Bot integration provides real-time notifications and remote control capabilities directly from your Telegram app. Get trade alerts, monitor positions, and execute commands without accessing the dashboard.
+SilverTrade's Telegram Bot integration provides real-time notifications and remote control capabilities directly from your Telegram app. Get trade alerts, monitor positions, and execute commands without accessing the dashboard.
 
 ## Features
 
@@ -35,8 +35,8 @@ OpenAlgo's Telegram Bot integration provides real-time notifications and remote 
 1. Open Telegram and search for **@BotFather**
 2. Send command: `/newbot`
 3. Follow prompts:
-   - Enter bot name (e.g., "My OpenAlgo Bot")
-   - Enter username (e.g., "myopenalgo_bot")
+   - Enter bot name (e.g., "My SilverTrade AI Bot")
+   - Enter username (e.g., "mysilvertrade_bot")
 4. **Save the API token** provided
 
 ```
@@ -58,7 +58,7 @@ Keep your token secure and store it safely!
    ```
 4. Save this Chat ID
 
-### Step 3: Configure in OpenAlgo
+### Step 3: Configure in SilverTrade
 
 1. Go to **Settings** → **Telegram**
 2. Enter:
@@ -259,7 +259,7 @@ Win Rate: 66.7%
 ```
 🔧 SYSTEM STATUS
 
-OpenAlgo: ✅ Running
+SilverTrade AI: ✅ Running
 Broker: ✅ Connected
 WebSocket: ✅ Active
 Last Order: 10:45:10
@@ -277,7 +277,7 @@ For team environments:
 1. Create Telegram Group
 2. Add your bot to the group
 3. Get group Chat ID (starts with -)
-4. Configure in OpenAlgo
+4. Configure in SilverTrade
 
 ```
 Group Chat ID: -1001234567890
@@ -308,7 +308,7 @@ Send custom notifications from strategies:
 
 **Python Strategy:**
 ```python
-from openalgo import api
+from silvertrade import api
 
 client = api(api_key="YOUR_KEY", host="http://127.0.0.1:5000")
 
@@ -343,7 +343,7 @@ client.send_telegram("Custom alert: Strategy triggered!")
 
 Expected message:
 ```
-🔔 OpenAlgo Test
+🔔 SilverTrade AI Test
 
 This is a test message.
 Your Telegram integration is working correctly!

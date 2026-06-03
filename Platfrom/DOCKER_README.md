@@ -1,18 +1,18 @@
-# OpenAlgo - Algorithmic Trading Platform
+# SilverTrade - Algorithmic Trading Platform
 
-OpenAlgo is a production-ready algorithmic trading platform providing a unified API layer across 24+ Indian brokers. Seamlessly integrate with TradingView, Amibroker, Excel, Python, and AI agents.
+SilverTrade is a production-ready algorithmic trading platform providing a unified API layer across 24+ Indian brokers. Seamlessly integrate with TradingView, Amibroker, Excel, Python, and AI agents.
 
 ## Quick Start
 
 ### Windows
 ```powershell
-curl.exe -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.bat
+curl.exe -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.bat
 docker-run.bat
 ```
 
 ### macOS / Linux
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/openalgo/main/install/docker-run.sh
+curl -O https://raw.githubusercontent.com/marketcalls/silvertrade/main/install/docker-run.sh
 chmod +x docker-run.sh
 ./docker-run.sh
 ```
@@ -33,8 +33,8 @@ Zerodha, Fyers, Angel One, Dhan, Delta Exchange, Upstox, Shoonya, Flattrade, Kot
 
 ```bash
 # Windows
-docker-run.bat start      # Start OpenAlgo
-docker-run.bat stop       # Stop OpenAlgo
+docker-run.bat start      # Start SilverTrade
+docker-run.bat stop       # Stop SilverTrade
 docker-run.bat restart    # Update & restart
 docker-run.bat logs       # View logs
 docker-run.bat status     # Check status
@@ -57,15 +57,15 @@ All data is stored locally in the script directory:
 
 ## Documentation
 
-- **Full Docs**: https://docs.openalgo.in
-- **Installation Guide**: https://github.com/marketcalls/openalgo/blob/main/install/Docker-install-readme.md
-- **GitHub**: https://github.com/marketcalls/openalgo
+- **Full Docs**: https://docs.silvertrade.ai
+- **Installation Guide**: https://github.com/silvertrade/silvertrade/blob/main/install/Docker-install-readme.md
+- **GitHub**: https://github.com/silvertrade/silvertrade
 
 ## Community
 
 - **Discord**: https://discord.com/invite/UPh7QPsNhP
-- **YouTube**: https://youtube.com/@openalgoHQ
-- **Website**: https://openalgo.in
+- **YouTube**: https://youtube.com/@silvertradeai
+- **Website**: https://silvertrade.ai
 
 ## License
 

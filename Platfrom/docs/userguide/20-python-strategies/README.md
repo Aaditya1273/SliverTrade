@@ -2,20 +2,20 @@
 
 ## Introduction
 
-Python is one of the most powerful ways to build trading strategies with OpenAlgo. Using the official OpenAlgo Python library, you can create sophisticated algorithms, backtest strategies, and execute trades programmatically.
+Python is one of the most powerful ways to build trading strategies with SilverTrade AI. Using the official SilverTrade AI Python library, you can create sophisticated algorithms, backtest strategies, and execute trades programmatically.
 
 ## Getting Started
 
 ### Installing the Library
 
 ```bash
-pip install openalgo
+pip install silvertrade
 ```
 
 ### Basic Setup
 
 ```python
-from openalgo import api
+from silvertrade import api
 
 # Initialize client
 client = api(
@@ -24,7 +24,7 @@ client = api(
 )
 
 # Test connection
-print("Connected to OpenAlgo!")
+print("Connected to SilverTrade!")
 ```
 
 ## Core Functions
@@ -195,7 +195,7 @@ client.close_all_positions(strategy="SquareOff")
 ```python
 import pandas as pd
 import numpy as np
-from openalgo import api
+from silvertrade import api
 import time
 
 client = api(api_key="YOUR_KEY", host="http://127.0.0.1:5000")
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 ### 2. RSI Mean Reversion
 
 ```python
-from openalgo import api
+from silvertrade import api
 import pandas as pd
 import numpy as np
 import time
@@ -356,7 +356,7 @@ def rsi_strategy(symbol, exchange, quantity):
 ### 3. Multi-Symbol Scanner
 
 ```python
-from openalgo import api
+from silvertrade import api
 import pandas as pd
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -434,7 +434,7 @@ while True:
 ### 4. Options Strategy
 
 ```python
-from openalgo import api
+from silvertrade import api
 import datetime
 
 client = api(api_key="YOUR_KEY", host="http://127.0.0.1:5000")
@@ -539,7 +539,7 @@ iron_condor("NIFTY", expiry, 22000, 22100, 21000, 20900, 50)
 
 ```python
 import time
-from openalgo import api
+from silvertrade import api
 
 client = api(api_key="YOUR_KEY", host="http://127.0.0.1:5000")
 
@@ -584,7 +584,7 @@ result = place_order_with_retry(order)
 ```python
 import schedule
 import time
-from openalgo import api
+from silvertrade import api
 
 client = api(api_key="YOUR_KEY", host="http://127.0.0.1:5000")
 
@@ -620,7 +620,7 @@ while True:
 
 ```python
 # Use Analyzer Mode for testing
-# Enable it in OpenAlgo before running your strategy
+# Enable it in SilverTrade AI before running your strategy
 ```
 
 ### 2. Implement Risk Management

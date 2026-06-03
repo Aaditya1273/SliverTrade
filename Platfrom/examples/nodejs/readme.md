@@ -1,1 +1,1 @@
-OpenAlgo Nodejs SDK Examples
+SilverTrade Nodejs SDK Examples

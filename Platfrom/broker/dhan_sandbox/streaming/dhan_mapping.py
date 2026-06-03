@@ -1,13 +1,13 @@
 """
 Mapping utilities for Dhan broker integration.
-Provides exchange code mappings between OpenAlgo and Dhan formats.
+Provides exchange code mappings between SilverTrade AI and Dhan formats.
 """
 
 from typing import Dict
 
 # Exchange code mappings
-# OpenAlgo exchange code -> Dhan exchange code
-OPENALGO_TO_DHAN_EXCHANGE = {
+# SilverTrade AI exchange code -> Dhan exchange code
+SILVERTRADE_TO_DHAN_EXCHANGE = {
     "NSE": "NSE_EQ",
     "BSE": "BSE_EQ",
     "NFO": "NSE_FNO",
@@ -19,31 +19,31 @@ OPENALGO_TO_DHAN_EXCHANGE = {
     "BSE_INDEX": "IDX_I",
 }
 
-# Dhan exchange code -> OpenAlgo exchange code
-DHAN_TO_OPENALGO_EXCHANGE = {v: k for k, v in OPENALGO_TO_DHAN_EXCHANGE.items()}
+# Dhan exchange code -> SilverTrade AI exchange code
+DHAN_TO_SILVERTRADE_EXCHANGE = {v: k for k, v in SILVERTRADE_TO_DHAN_EXCHANGE.items()}
 
 
-def get_dhan_exchange(openalgo_exchange: str) -> str:
+def get_dhan_exchange(silvertrade_exchange: str) -> str:
     """
-    Convert OpenAlgo exchange code to Dhan exchange code.
+    Convert SilverTrade AI exchange code to Dhan exchange code.
 
     Args:
-        openalgo_exchange (str): Exchange code in OpenAlgo format
+        silvertrade_exchange (str): Exchange code in SilverTrade AI format
 
     Returns:
         str: Exchange code in Dhan format
     """
-    return OPENALGO_TO_DHAN_EXCHANGE.get(openalgo_exchange, openalgo_exchange)
+    return SILVERTRADE_TO_DHAN_EXCHANGE.get(silvertrade_exchange, silvertrade_exchange)
 
 
-def get_openalgo_exchange(dhan_exchange: str) -> str:
+def get_silvertrade_exchange(dhan_exchange: str) -> str:
     """
-    Convert Dhan exchange code to OpenAlgo exchange code.
+    Convert Dhan exchange code to SilverTrade AI exchange code.
 
     Args:
         dhan_exchange (str): Exchange code in Dhan format
 
     Returns:
-        str: Exchange code in OpenAlgo format
+        str: Exchange code in SilverTrade AI format
     """
-    return DHAN_TO_OPENALGO_EXCHANGE.get(dhan_exchange, dhan_exchange)
+    return DHAN_TO_SILVERTRADE_EXCHANGE.get(dhan_exchange, dhan_exchange)

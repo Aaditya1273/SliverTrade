@@ -1,4 +1,4 @@
-# OpenAlgo Developer Documentation Tracker
+# SilverTrade AI Developer Documentation Tracker
 
 ## Progress Overview
 

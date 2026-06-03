@@ -2,16 +2,16 @@
 
 ## Introduction
 
-Amibroker is a powerful technical analysis and backtesting software widely used by Indian traders. OpenAlgo provides seamless integration via its HTTP API, allowing your Amibroker strategies to execute trades automatically.
+Amibroker is a powerful technical analysis and backtesting software widely used by Indian traders. SilverTrade AI provides seamless integration via its HTTP API, allowing your Amibroker strategies to execute trades automatically.
 
 ## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    Amibroker → OpenAlgo Flow                                │
+│                    Amibroker → SilverTrade AI Flow                                │
 │                                                                              │
 │  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌──────────┐  │
-│  │  Amibroker  │     │    HTTP     │     │  OpenAlgo   │     │  Broker  │  │
+│  │  Amibroker  │     │    HTTP     │     │  SilverTrade AI   │     │  Broker  │  │
 │  │    AFL      │────▶│   Request   │────▶│   Server    │────▶│   API    │  │
 │  │   Signal    │     │             │     │             │     │          │  │
 │  └─────────────┘     └─────────────┘     └─────────────┘     └──────────┘  │
@@ -25,8 +25,8 @@ Amibroker is a powerful technical analysis and backtesting software widely used 
 ## Prerequisites
 
 1. Amibroker 6.0 or later
-2. OpenAlgo running on same machine or network
-3. API key generated in OpenAlgo
+2. SilverTrade AI running on same machine or network
+3. API key generated in SilverTrade
 4. Broker connected and logged in
 
 ## Basic AFL Integration
@@ -36,7 +36,7 @@ Amibroker is a powerful technical analysis and backtesting software widely used 
 Add this function to your AFL code:
 
 ```afl
-function SendOpenAlgoOrder(apiKey, strategy, symbol, exchange, action, quantity, priceType, product)
+function SendSilverTradeOrder(apiKey, strategy, symbol, exchange, action, quantity, priceType, product)
 {
     // Build JSON payload
     json = "{";
@@ -85,13 +85,13 @@ product = "MIS";
 // Send orders
 if(LastValue(Buy) AND LastValue(Ref(Buy, -1)) == 0)
 {
-    response = SendOpenAlgoOrder(apiKey, strategy, symbol, exchange, "BUY", quantity, priceType, product);
+    response = SendSilverTradeOrder(apiKey, strategy, symbol, exchange, "BUY", quantity, priceType, product);
     _TRACE("Buy Order: " + response);
 }
 
 if(LastValue(Sell) AND LastValue(Ref(Sell, -1)) == 0)
 {
-    response = SendOpenAlgoOrder(apiKey, strategy, symbol, exchange, "SELL", quantity, priceType, product);
+    response = SendSilverTradeOrder(apiKey, strategy, symbol, exchange, "SELL", quantity, priceType, product);
     _TRACE("Sell Order: " + response);
 }
 ```
@@ -102,15 +102,15 @@ if(LastValue(Sell) AND LastValue(Ref(Sell, -1)) == 0)
 
 ```afl
 //=============================================================================
-// OpenAlgo Integration Template for Amibroker
+// SilverTrade AI Integration Template for Amibroker
 // Version: 1.0
 //=============================================================================
 
 // Configuration Section
-_SECTION_BEGIN("OpenAlgo Configuration");
+_SECTION_BEGIN("SilverTrade Configuration");
 
 apiKey = ParamStr("API Key", "YOUR_API_KEY");
-baseUrl = ParamStr("OpenAlgo URL", "http://127.0.0.1:5000");
+baseUrl = ParamStr("SilverTrade URL", "http://127.0.0.1:5000");
 strategy = ParamStr("Strategy Name", "AmibrokerStrategy");
 exchange = ParamList("Exchange", "NSE|NFO|BSE|MCX|CDS");
 product = ParamList("Product", "MIS|CNC|NRML");
@@ -544,7 +544,7 @@ if(DateTimeDiff(currentTime, lastOrderTime) > 60)
 
 ### 2. Test in Analyzer Mode
 
-Always test with Analyzer Mode enabled in OpenAlgo first.
+Always test with Analyzer Mode enabled in SilverTrade AI first.
 
 ### 3. Use Limit on Position
 
@@ -577,8 +577,8 @@ if(isWeekday AND IsMarketOpen())
 
 | Issue | Solution |
 |-------|----------|
-| Connection refused | Check OpenAlgo is running |
-| Invalid API key | Verify key in OpenAlgo |
+| Connection refused | Check SilverTrade AI is running |
+| Invalid API key | Verify key in SilverTrade AI |
 | Order not executing | Check broker login status |
 | Duplicate orders | Implement duplicate prevention |
 | Symbol not found | Verify symbol in master contract |

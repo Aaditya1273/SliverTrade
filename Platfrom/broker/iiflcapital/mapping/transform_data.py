@@ -70,7 +70,7 @@ def _to_float(value: Any, default: float = 0.0) -> float:
 
 
 def transform_data(data: dict, token: str) -> dict:
-    """Transform OpenAlgo order request to IIFL Capital format."""
+    """Transform SilverTrade AI order request to IIFL Capital format."""
     transformed = {
         "instrumentId": str(token),
         "exchange": map_exchange(data.get("exchange", "")),
@@ -80,7 +80,7 @@ def transform_data(data: dict, token: str) -> dict:
         "product": map_product_type(data.get("product", "MIS")),
         "orderType": map_order_type(data.get("pricetype", "MARKET")),
         "validity": map_validity(data.get("validity", "DAY")),
-        "apiOrderSource": "openalgo",
+        "apiOrderSource": "silvertrade",
     }
 
     if transformed["orderType"] in ("LIMIT", "SL"):
@@ -100,7 +100,7 @@ def transform_data(data: dict, token: str) -> dict:
 
 
 def transform_modify_order_data(data: dict) -> dict:
-    """Transform OpenAlgo modify request to IIFL Capital format."""
+    """Transform SilverTrade AI modify request to IIFL Capital format."""
     transformed = {}
 
     quantity = data.get("quantity")

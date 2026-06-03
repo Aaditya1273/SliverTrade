@@ -1,6 +1,6 @@
 # utils/ngrok_manager.py
 """
-Ngrok tunnel manager for OpenAlgo.
+Ngrok tunnel manager for SilverTrade AI.
 Handles tunnel creation, cleanup, and graceful shutdown.
 Cross-platform compatible (Windows, Linux, macOS).
 """

@@ -7,7 +7,7 @@ BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# OpenAlgo Multi-Instance Installation Banner
+# SilverTrade AI Multi-Instance Installation Banner
 echo -e "${BLUE}"
 echo "  ██████╗ ██████╗ ███████╗███╗   ██╗ █████╗ ██╗      ██████╗  ██████╗ "
 echo " ██╔═══██╗██╔══██╗██╔════╝████╗  ██║██╔══██╗██║     ██╔════╝ ██╔═══██╗"
@@ -93,7 +93,7 @@ check_timezone() {
 }
 
 # Start logging
-log_message "Starting OpenAlgo Multi-Instance installation" "$BLUE"
+log_message "Starting SilverTrade AI Multi-Instance installation" "$BLUE"
 log_message "Log file: $LOG_FILE" "$BLUE"
 log_message "----------------------------------------" "$BLUE"
 
@@ -102,7 +102,7 @@ check_timezone
 
 # Ask number of instances
 while true; do
-    read -p "How many OpenAlgo instances do you want to set up? " INSTANCES
+    read -p "How many SilverTrade AI instances do you want to set up? " INSTANCES
     if [[ "$INSTANCES" =~ ^[0-9]+$ ]] && [ "$INSTANCES" -gt 0 ]; then
         break
     else
@@ -110,11 +110,11 @@ while true; do
     fi
 done
 
-log_message "Setting up $INSTANCES OpenAlgo instances" "$GREEN"
+log_message "Setting up $INSTANCES SilverTrade AI instances" "$GREEN"
 
 # Base configuration
-BASE_DIR="/var/python/openalgo-flask"
-REPO_URL="https://github.com/marketcalls/openalgo.git"
+BASE_DIR="/var/python/silvertrade-flask"
+REPO_URL="https://github.com/silvertrade/silvertrade.git"
 FLASK_PORT_BASE=5000
 WS_PORT_BASE=8765
 ZMQ_PORT_BASE=5555
@@ -213,7 +213,7 @@ check_status "Failed to install packages"
 # Install Chromium for Kaleido/Plotly static chart rendering (Telegram /chart command).
 # Kaleido 1.x ships no bundled browser; it drives a system Chromium via choreographer.
 # Debian has 'chromium' in main; Ubuntu 19.10+ renamed it to 'chromium-browser' (snap transitional).
-# Non-fatal — if nothing sticks we warn; the rest of openalgo still installs fine.
+# Non-fatal — if nothing sticks we warn; the rest of silvertrade still installs fine.
 log_message "\nInstalling Chromium for Telegram /chart rendering..." "$BLUE"
 if sudo apt-get install -y chromium fonts-liberation 2>/dev/null; then
     log_message "Installed chromium (Debian package)" "$GREEN"
@@ -258,10 +258,10 @@ for ((i=1; i<=INSTANCES; i++)); do
 
     # Paths
     DEPLOY_NAME="${DOMAIN/./-}-${BROKER}"
-    INSTANCE_DIR="$BASE_DIR/openalgo$i"
+    INSTANCE_DIR="$BASE_DIR/silvertrade$i"
     VENV_PATH="$INSTANCE_DIR/venv"
-    SOCKET_FILE="$INSTANCE_DIR/openalgo.sock"
-    SERVICE_NAME="openalgo$i"
+    SOCKET_FILE="$INSTANCE_DIR/silvertrade.sock"
+    SERVICE_NAME="silvertrade$i"
 
     # Ports
     FLASK_PORT=$((FLASK_PORT_BASE + i - 1))
@@ -309,7 +309,7 @@ for ((i=1; i<=INSTANCES; i++)); do
     API_KEY_PEPPER=$(generate_hex)
 
     # Database paths (unique per instance for complete isolation)
-    DB_PATH="sqlite:///db/openalgo${i}.db"
+    DB_PATH="sqlite:///db/silvertrade${i}.db"
     LATENCY_DB="sqlite:///db/latency${i}.db"
     LOGS_DB="sqlite:///db/logs${i}.db"
     HEALTH_DB="sqlite:///db/health${i}.db"
@@ -349,8 +349,8 @@ for ((i=1; i<=INSTANCES; i++)); do
     sudo sed -i "s|YOUR_BROKER_API_SECRET|$API_SECRET|g" "$ENV_FILE"
 
     # 7. Update security keys
-    sudo sed -i "s|OPENALGO_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE|$APP_KEY|g" "$ENV_FILE"
-    sudo sed -i "s|OPENALGO_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE|$API_KEY_PEPPER|g" "$ENV_FILE"
+    sudo sed -i "s|SILVERTRADE_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE|$APP_KEY|g" "$ENV_FILE"
+    sudo sed -i "s|SILVERTRADE_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE|$API_KEY_PEPPER|g" "$ENV_FILE"
 
     # Each instance runs gunicorn behind nginx (Unix socket bind). Trust the
     # proxy's X-Forwarded-For / X-Real-IP for IP-based features.
@@ -553,7 +553,7 @@ EOL
     log_message "Creating systemd service..." "$BLUE"
     sudo tee /etc/systemd/system/$SERVICE_NAME.service > /dev/null << EOL
 [Unit]
-Description=OpenAlgo Instance $i ($DOMAIN - $BROKER)
+Description=SilverTrade Instance $i ($DOMAIN - $BROKER)
 After=network.target
 
 [Service]
@@ -570,7 +570,7 @@ Environment="NUMBA_CACHE_DIR=$INSTANCE_DIR/tmp/numba_cache"
 Environment="LLVMLITE_TMPDIR=$INSTANCE_DIR/tmp"
 Environment="MPLCONFIGDIR=$INSTANCE_DIR/tmp/matplotlib"
 # Limit OpenBLAS/NumPy threads to prevent RLIMIT_NPROC exhaustion
-# See: https://github.com/marketcalls/openalgo/issues/822
+# See: https://github.com/silvertrade/silvertrade/issues/822
 Environment="OPENBLAS_NUM_THREADS=2"
 Environment="OMP_NUM_THREADS=2"
 Environment="MKL_NUM_THREADS=2"
@@ -619,15 +619,15 @@ for ((i=1; i<=INSTANCES; i++)); do
     log_message "\nInstance $i:" "$BLUE"
     log_message "  Domain: https://${DOMAINS[$idx]}" "$GREEN"
     log_message "  Broker: ${BROKERS[$idx]}" "$BLUE"
-    log_message "  Service: openalgo$i" "$BLUE"
-    log_message "  Directory: $BASE_DIR/openalgo$i" "$BLUE"
+    log_message "  Service: silvertrade$i" "$BLUE"
+    log_message "  Directory: $BASE_DIR/silvertrade$i" "$BLUE"
 done
 
 log_message "\n📚 USEFUL COMMANDS:" "$YELLOW"
-log_message "View all services: systemctl list-units 'openalgo*'" "$BLUE"
-log_message "Restart instance: sudo systemctl restart openalgo<N>" "$BLUE"
-log_message "View logs: sudo journalctl -u openalgo<N> -f" "$BLUE"
-log_message "Check status: sudo systemctl status openalgo<N>" "$BLUE"
+log_message "View all services: systemctl list-units 'silvertrade*'" "$BLUE"
+log_message "Restart instance: sudo systemctl restart silvertrade<N>" "$BLUE"
+log_message "View logs: sudo journalctl -u silvertrade<N> -f" "$BLUE"
+log_message "Check status: sudo systemctl status silvertrade<N>" "$BLUE"
 
 log_message "\n📝 Installation log saved to: $LOG_FILE" "$BLUE"
 log_message "\n🎉 All instances are ready to use!" "$GREEN"

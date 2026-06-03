@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Nubra API Parameters https://api.nubra.io/docs
 
 from database.token_db import get_br_symbol
@@ -6,9 +6,9 @@ from database.token_db import get_br_symbol
 
 def transform_data(data, token):
     """
-    Transforms the OpenAlgo API request structure to Nubra's expected structure.
+    Transforms the SilverTrade AI API request structure to Nubra's expected structure.
     
-    OpenAlgo format:
+    SilverTrade AI format:
     - action: BUY/SELL
     - product: CNC/MIS/NRML
     - pricetype: MARKET/LIMIT/SL/SL-M
@@ -52,7 +52,7 @@ def transform_data(data, token):
         "order_qty": int(data["quantity"]),
         "validity_type": validity_type,
         "order_price": price_in_paise,
-        "tag": data.get("strategy", "openalgo"),
+        "tag": data.get("strategy", "silvertrade"),
     }
     
     # Add algo_params for stoploss orders
@@ -71,7 +71,7 @@ def transform_data(data, token):
 
 def transform_modify_order_data(data, token):
     """
-    Transforms modify order data from OpenAlgo format to Nubra's format.
+    Transforms modify order data from SilverTrade AI format to Nubra's format.
     
     Nubra Modify Order API: POST /orders/v2/modify/{order_id}
     
@@ -108,7 +108,7 @@ def transform_modify_order_data(data, token):
 
 def map_order_side(action):
     """
-    Maps OpenAlgo action (BUY/SELL) to Nubra order_side.
+    Maps SilverTrade AI action (BUY/SELL) to Nubra order_side.
     """
     side_mapping = {
         "BUY": "ORDER_SIDE_BUY",
@@ -119,7 +119,7 @@ def map_order_side(action):
 
 def map_order_delivery_type(product):
     """
-    Maps OpenAlgo product type to Nubra order_delivery_type.
+    Maps SilverTrade AI product type to Nubra order_delivery_type.
     CNC -> ORDER_DELIVERY_TYPE_CNC (Cash & Carry / Delivery)
     MIS -> ORDER_DELIVERY_TYPE_IDAY (Intraday)
     NRML -> ORDER_DELIVERY_TYPE_CNC (Normal for F&O, treated as carry forward)
@@ -134,7 +134,7 @@ def map_order_delivery_type(product):
 
 def map_order_type(pricetype):
     """
-    Maps OpenAlgo pricetype to Nubra order_type.
+    Maps SilverTrade AI pricetype to Nubra order_type.
     Regular orders for MARKET/LIMIT, Stoploss for SL/SL-M
     """
     order_type_mapping = {
@@ -148,7 +148,7 @@ def map_order_type(pricetype):
 
 def map_price_type(pricetype):
     """
-    Maps OpenAlgo pricetype to Nubra price_type.
+    Maps SilverTrade AI pricetype to Nubra price_type.
     Only MARKET or LIMIT in Nubra.
     """
     price_type_mapping = {
@@ -162,7 +162,7 @@ def map_price_type(pricetype):
 
 def map_product_type(product):
     """
-    Maps OpenAlgo product type to Nubra's internal product type for position lookup.
+    Maps SilverTrade AI product type to Nubra's internal product type for position lookup.
     Used for get_open_position to match positions.
     """
     product_type_mapping = {
@@ -175,7 +175,7 @@ def map_product_type(product):
 
 def reverse_map_product_type(product):
     """
-    Maps Nubra's order_delivery_type back to OpenAlgo product type.
+    Maps Nubra's order_delivery_type back to SilverTrade AI product type.
     """
     reverse_product_type_mapping = {
         "ORDER_DELIVERY_TYPE_CNC": "CNC",

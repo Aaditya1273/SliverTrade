@@ -402,20 +402,20 @@ When a strategy runs, these environment variables are available:
 
 | Variable | Description |
 |----------|-------------|
-| `OPENALGO_APIKEY` | API key for OpenAlgo requests |
-| `OPENALGO_HOST` | OpenAlgo server URL |
+| `SILVERTRADE_APIKEY` | API key for SilverTrade requests |
+| `SILVERTRADE_HOST` | SilverTrade server URL |
 | `PYTHONUNBUFFERED` | Set to '1' for real-time output |
 
-### Using OpenAlgo SDK in Strategy
+### Using SilverTrade SDK in Strategy
 
 ```python
 #!/usr/bin/env python
 import os
-from openalgo import api
+from silvertrade import api
 
 # Get credentials from environment
-API_KEY = os.getenv('OPENALGO_APIKEY')
-HOST = os.getenv('OPENALGO_HOST', 'http://127.0.0.1:5000')
+API_KEY = os.getenv('SILVERTRADE_APIKEY')
+HOST = os.getenv('SILVERTRADE_HOST', 'http://127.0.0.1:5000')
 
 # Initialize client
 client = api(api_key=API_KEY, host=HOST)

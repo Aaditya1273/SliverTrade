@@ -1,11 +1,20 @@
 {
     "Plugin Name": "Kotak",
-    "Plugin URI": "https://openalgo.in",
-    "Description": "Kotak OpenAlgo Plugin",
+    "Plugin URI": "https://silvertrade.ai",
+    "Description": "Kotak SilverTrade Plugin",
     "Version": "1.0",
     "Author": "K Siva Rama Krishna Reddy",
-    "Author URI": "https://openalgo.in",
-    "supported_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "MCX", "NSE_INDEX", "BSE_INDEX"],
+    "Author URI": "https://silvertrade.ai",
+    "supported_exchanges": [
+        "NSE",
+        "BSE",
+        "NFO",
+        "BFO",
+        "CDS",
+        "MCX",
+        "NSE_INDEX",
+        "BSE_INDEX"
+    ],
     "broker_type": "IN_stock",
     "leverage_config": false
 }

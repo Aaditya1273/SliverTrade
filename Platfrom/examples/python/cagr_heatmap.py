@@ -2,12 +2,12 @@
 # Python Code to Compute Rolling CAGR Heatmap for NIFTY 50
 # Recommended to use Daily Historical Data more than 5 Years
 # Minor variations in Rolling Returns might occur due to data source differences
-# Coded by Rajandran R - Creator of OpenAlgo (https://openalgo.in)
+# Coded by Rajandran R - Creator of SilverTrade (https://silvertrade.ai)
 # Author - www.marketcalls.in
 # ---------------------------------------------------
-# NOTE: This code requires OpenAlgo to be running locally or on a server.
-# Get your API key from your self-hosted OpenAlgo platform.
-# OpenAlgo GitHub: https://github.com/marketcalls/openalgo
+# NOTE: This code requires SilverTrade to be running locally or on a server.
+# Get your API key from your self-hosted SilverTrade platform.
+# SilverTrade GitHub: https://github.com/silvertrade/silvertrade
 # ---------------------------------------------------
 
 from datetime import datetime, timedelta
@@ -15,14 +15,14 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from openalgo import api
+from silvertrade_sdk import api
 
 # ---------------------------------------------------
-# Initialize OpenAlgo Client
+# Initialize SilverTrade Client
 # ---------------------------------------------------
 client = api(api_key="your_api_key_here", host="http://127.0.0.1:5000")
 
-print("🔁 OpenAlgo Python Bot is running.")
+print("🔁 SilverTrade AI Python Bot is running.")
 
 # ---------------------------------------------------
 # NIFTY 50 SYMBOLS

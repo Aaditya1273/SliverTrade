@@ -1,18 +1,18 @@
 """
 RELIANCE 5-Minute Chart with Williams Vix Fix (CM_Williams_Vix_Fix)
-Author : OpenAlgo GPT
+Author : SilverTrade GPT
 Description: Plots RELIANCE candlestick with Williams Vix Fix indicator
-             Converted from Pine Script v3 to Python using OpenAlgo ta library
+             Converted from Pine Script v3 to Python using SilverTrade ta library
 """
 
-print("🔁 OpenAlgo Python Bot is running.")
+print("🔁 SilverTrade AI Python Bot is running.")
 
 from datetime import datetime
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from openalgo import api, ta
+from silvertrade_sdk import api, ta
 from plotly.subplots import make_subplots
 
 # ───────────────────────── CONFIG ─────────────────────────
@@ -60,7 +60,7 @@ def fetch_historical_data():
     # Print the raw response
     print(f"History Response: {response}")
 
-    # OpenAlgo history() returns DataFrame directly (not a dict)
+    # SilverTrade history() returns DataFrame directly (not a dict)
     if isinstance(response, pd.DataFrame):
         df = response.copy()
     else:

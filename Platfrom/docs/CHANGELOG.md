@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to OpenAlgo will be documented in this file.
+All notable changes to SilverTrade AI will be documented in this file.
 
 ## [2.0.0.0] - 2026-01-22
 
@@ -224,7 +224,7 @@ This is a major release featuring a complete rewrite of the frontend from Flask/
 - Position filtering for session boundaries
 - Show closed positions that were traded today
 - Expired F&O contract cleanup on startup
-- Order field names aligned with OpenAlgo schema
+- Order field names aligned with SilverTrade AI schema
 
 ### Broker Integrations
 - AliceBlue holdings symbol field fix
@@ -255,7 +255,7 @@ This is a major release featuring a complete rewrite of the frontend from Flask/
 ## Documentation
 
 ### User Guide (30 Modules)
-- What is OpenAlgo, Key Concepts, System Requirements
+- What is SilverTrade, Key Concepts, System Requirements
 - Installation Guide, First-Time Setup
 - Broker Connection, Dashboard Overview
 - Understanding Interface, API Key Management
@@ -283,7 +283,7 @@ This is a major release featuring a complete rewrite of the frontend from Flask/
 
 ### API Documentation
 - All REST endpoints documented
-- OpenAlgo symbol format reference
+- SilverTrade AI symbol format reference
 - Manual testing guide
 - Bruno collections for all APIs
 
@@ -296,7 +296,7 @@ This is a major release featuring a complete rewrite of the frontend from Flask/
 - Latency Audit
 
 ### Other Documentation
-- Why Build with OpenAlgo guide
+- Why Build with SilverTrade AI guide
 - Ubuntu Server deployment
 - Docker deployment guide
 - Security Policy
@@ -307,7 +307,7 @@ This is a major release featuring a complete rewrite of the frontend from Flask/
 ## Infrastructure
 
 ### Database Architecture (5 Databases)
-- `db/openalgo.db` - Main database (users, orders, settings)
+- `db/silvertrade.db` - Main database (users, orders, settings)
 - `db/logs.db` - Traffic and API logs
 - `db/latency.db` - Latency monitoring data
 - `db/sandbox.db` - Analyzer/sandbox mode (isolated)
@@ -409,13 +409,13 @@ Special thanks to all contributors who made this release possible:
 
 ### [1.0.0.41] and earlier
 
-See [GitHub Releases](https://github.com/marketcalls/openalgo/releases) for previous version history.
+See [GitHub Releases](https://github.com/silvertrade/silvertrade/releases) for previous version history.
 
 ---
 
 ## Links
 
-- **Repository**: https://github.com/marketcalls/openalgo
-- **Documentation**: https://docs.openalgo.in
-- **Discord**: https://www.openalgo.in/discord
-- **YouTube**: https://www.youtube.com/@openalgo
+- **Repository**: https://github.com/silvertrade/silvertrade
+- **Documentation**: https://docs.silvertrade.ai
+- **Discord**: https://www.silvertrade.ai/discord
+- **YouTube**: https://www.youtube.com/@silvertrade

@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "silvertrade",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

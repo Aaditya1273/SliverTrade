@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Smart Orders are position-aware orders that automatically calculate the correct action based on your current holdings. Instead of manually figuring out what to do, you tell OpenAlgo your target position, and it handles the rest.
+Smart Orders are position-aware orders that automatically calculate the correct action based on your current holdings. Instead of manually figuring out what to do, you tell SilverTrade AI your target position, and it handles the rest.
 
 ## The Problem Smart Orders Solve
 
@@ -26,7 +26,7 @@ You must track position and calculate!
 Current Position: 100 SBIN LONG
 Smart Order: "position_size = -100" (SHORT 100)
 
-OpenAlgo Automatically:
+SilverTrade Automatically:
 1. Checks current position (100 LONG)
 2. Calculates required action (SELL 200)
 3. Executes single order
@@ -194,7 +194,7 @@ Content-Type: application/json
 ## Python Example
 
 ```python
-from openalgo import api
+from silvertrade import api
 
 client = api(api_key="your-key", host="http://127.0.0.1:5000")
 

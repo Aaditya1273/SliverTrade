@@ -1,0 +1,11 @@
+{
+    "Plugin Name": "bybit",
+    "Plugin URI": "https://silvertrade.ai",
+    "Description": "Bybit SilverTrade AI Plugin — Crypto Spot & Derivatives Trading",
+    "Version": "1.0",
+    "Author": "SilverTrade AI",
+    "Author URI": "https://silvertrade.ai",
+    "supported_exchanges": ["CRYPTO"],
+    "broker_type": "crypto",
+    "leverage_config": true
+}

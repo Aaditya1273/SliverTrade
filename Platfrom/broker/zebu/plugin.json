@@ -1,11 +1,19 @@
 {
     "Plugin Name": "Zebu",
-    "Plugin URI": "https://openalgo.in",
-    "Description": "Zebu OpenAlgo Plugin",
+    "Plugin URI": "https://silvertrade.ai",
+    "Description": "Zebu SilverTrade Plugin",
     "Version": "1.0",
     "Author": "Rajandran R",
-    "Author URI": "https://openalgo.in",
-    "supported_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "MCX", "NSE_INDEX"],
+    "Author URI": "https://silvertrade.ai",
+    "supported_exchanges": [
+        "NSE",
+        "BSE",
+        "NFO",
+        "BFO",
+        "CDS",
+        "MCX",
+        "NSE_INDEX"
+    ],
     "broker_type": "IN_stock",
     "leverage_config": false
 }

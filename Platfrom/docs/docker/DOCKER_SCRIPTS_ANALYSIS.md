@@ -22,10 +22,10 @@ docker run -d \
     --name "$CONTAINER" \
     -p 5000:5000 \
     -p 8765:8765 \
-    -v "$OPENALGO_DIR/db:/app/db" \
-    -v "$OPENALGO_DIR/strategies:/app/strategies" \
-    -v "$OPENALGO_DIR/log:/app/log" \
-    -v "$OPENALGO_DIR/.env:/app/.env:ro" \
+    -v "$SILVERTRADE_DIR/db:/app/db" \
+    -v "$SILVERTRADE_DIR/strategies:/app/strategies" \
+    -v "$SILVERTRADE_DIR/log:/app/log" \
+    -v "$SILVERTRADE_DIR/.env:/app/.env:ro" \
     --restart unless-stopped \
     "$IMAGE"
 ```
@@ -42,20 +42,20 @@ docker run -d \
     --shm-size=2g \
     -p 5000:5000 \
     -p 8765:8765 \
-    -v "$OPENALGO_DIR/db:/app/db" \
-    -v "$OPENALGO_DIR/strategies:/app/strategies" \
-    -v "$OPENALGO_DIR/log:/app/log" \
-    -v "$OPENALGO_DIR/keys:/app/keys" \
-    -v "$OPENALGO_DIR/tmp:/app/tmp" \
-    -v "$OPENALGO_DIR/.env:/app/.env:ro" \
+    -v "$SILVERTRADE_DIR/db:/app/db" \
+    -v "$SILVERTRADE_DIR/strategies:/app/strategies" \
+    -v "$SILVERTRADE_DIR/log:/app/log" \
+    -v "$SILVERTRADE_DIR/keys:/app/keys" \
+    -v "$SILVERTRADE_DIR/tmp:/app/tmp" \
+    -v "$SILVERTRADE_DIR/.env:/app/.env:ro" \
     --restart unless-stopped \
     "$IMAGE"
 ```
 
 **Changes needed:**
 1. Add `--shm-size=2g` after `--name "$CONTAINER"`
-2. Add `-v "$OPENALGO_DIR/keys:/app/keys"` volume
-3. Add `-v "$OPENALGO_DIR/tmp:/app/tmp"` volume
+2. Add `-v "$SILVERTRADE_DIR/keys:/app/keys"` volume
+3. Add `-v "$SILVERTRADE_DIR/tmp:/app/tmp"` volume
 4. Update setup function to create `keys` and `tmp` directories
 
 ---
@@ -111,24 +111,24 @@ docker run -d ^
 **Current docker-compose.yaml generation (Lines 298-348):**
 ```yaml
 services:
-  openalgo:
-    image: openalgo:latest
+  silvertrade:
+    image: silvertrade:latest
     build:
       context: .
       dockerfile: Dockerfile
 
-    container_name: openalgo-web
+    container_name: silvertrade-web
 
     ports:
       - "127.0.0.1:5000:5000"
       - "127.0.0.1:8765:8765"
 
     volumes:
-      - openalgo_db:/app/db
-      - openalgo_logs:/app/logs
-      - openalgo_log:/app/log
-      - openalgo_strategies:/app/strategies
-      - openalgo_keys:/app/keys
+      - silvertrade_db:/app/db
+      - silvertrade_logs:/app/logs
+      - silvertrade_log:/app/log
+      - silvertrade_strategies:/app/strategies
+      - silvertrade_keys:/app/keys
       - ./.env:/app/.env:ro
 
     environment:
@@ -146,43 +146,43 @@ services:
     restart: unless-stopped
 
 volumes:
-  openalgo_db:
+  silvertrade_db:
     driver: local
-  openalgo_logs:
+  silvertrade_logs:
     driver: local
-  openalgo_log:
+  silvertrade_log:
     driver: local
-  openalgo_strategies:
+  silvertrade_strategies:
     driver: local
-  openalgo_keys:
+  silvertrade_keys:
     driver: local
 ```
 
 **Missing:**
 - ❌ `shm_size: '2gb'` - Required for scipy/numba memory operations
-- ❌ `openalgo_tmp` volume and mount - Required for numba cache
+- ❌ `silvertrade_tmp` volume and mount - Required for numba cache
 
 **Should be:**
 ```yaml
 services:
-  openalgo:
-    image: openalgo:latest
+  silvertrade:
+    image: silvertrade:latest
     build:
       context: .
       dockerfile: Dockerfile
 
-    container_name: openalgo-web
+    container_name: silvertrade-web
 
     ports:
       - "127.0.0.1:5000:5000"
       - "127.0.0.1:8765:8765"
 
     volumes:
-      - openalgo_db:/app/db
-      - openalgo_log:/app/log
-      - openalgo_strategies:/app/strategies
-      - openalgo_keys:/app/keys
-      - openalgo_tmp:/app/tmp
+      - silvertrade_db:/app/db
+      - silvertrade_log:/app/log
+      - silvertrade_strategies:/app/strategies
+      - silvertrade_keys:/app/keys
+      - silvertrade_tmp:/app/tmp
       - ./.env:/app/.env:ro
 
     environment:
@@ -203,23 +203,23 @@ services:
     restart: unless-stopped
 
 volumes:
-  openalgo_db:
+  silvertrade_db:
     driver: local
-  openalgo_log:
+  silvertrade_log:
     driver: local
-  openalgo_strategies:
+  silvertrade_strategies:
     driver: local
-  openalgo_keys:
+  silvertrade_keys:
     driver: local
-  openalgo_tmp:
+  silvertrade_tmp:
     driver: local
 ```
 
 **Changes needed:**
 1. Add `shm_size: '2gb'` after environment section
-2. Add `openalgo_tmp:/app/tmp` volume mount
-3. Add `openalgo_tmp:` volume definition
-4. Remove duplicate `openalgo_logs` volume (unused)
+2. Add `silvertrade_tmp:/app/tmp` volume mount
+3. Add `silvertrade_tmp:` volume definition
+4. Remove duplicate `silvertrade_logs` volume (unused)
 
 ---
 
@@ -258,14 +258,14 @@ After updating scripts:
 ### docker-run.sh
 - [ ] Create new installation: `./docker-run.sh start`
 - [ ] Verify directories created: `db/`, `strategies/`, `log/`, `keys/`, `tmp/`
-- [ ] Test numba: `docker exec openalgo python -c "import numba; print('OK')"`
-- [ ] Check shared memory: `docker inspect openalgo --format='{{.HostConfig.ShmSize}}'`
+- [ ] Test numba: `docker exec silvertrade python -c "import numba; print('OK')"`
+- [ ] Check shared memory: `docker inspect silvertrade --format='{{.HostConfig.ShmSize}}'`
 
 ### docker-run.bat
 - [ ] Create new installation: `docker-run.bat start`
 - [ ] Verify directories created: `db\`, `strategies\`, `log\`, `keys\`, `tmp\`
-- [ ] Test numba: `docker exec openalgo python -c "import numba; print('OK')"`
-- [ ] Check shared memory: `docker inspect openalgo --format='{{.HostConfig.ShmSize}}'`
+- [ ] Test numba: `docker exec silvertrade python -c "import numba; print('OK')"`
+- [ ] Check shared memory: `docker inspect silvertrade --format='{{.HostConfig.ShmSize}}'`
 
 ### install-docker.sh
 - [ ] Run full installation on clean Ubuntu/Debian server

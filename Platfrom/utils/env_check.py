@@ -7,11 +7,11 @@ import time
 
 from dotenv import load_dotenv
 
-# Placeholder values shipped in .sample.env. OpenAlgo detects these on startup
+# Placeholder values shipped in .sample.env. SilverTrade AI detects these on startup
 # and rotates them to fresh random secrets on first run. Coordinated with the
 # install/*.sh scripts which use the same strings as their sed targets.
-PLACEHOLDER_APP_KEY = "OPENALGO_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE"
-PLACEHOLDER_PEPPER = "OPENALGO_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE"
+PLACEHOLDER_APP_KEY = "SILVERTRADE_PLACEHOLDER_APP_KEY_REGENERATE_BEFORE_USE"
+PLACEHOLDER_PEPPER = "SILVERTRADE_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE"
 
 # Historical leaked literals: these were the original values in .sample.env
 # committed to the public repo before the placeholder switch. Any .env that
@@ -88,7 +88,7 @@ def check_tmp_noexec() -> None:
                         print("⚠️  WARNING: /tmp is mounted with 'noexec' flag")
                         print("   This can cause issues with Python libraries like numba/llvmlite.")
                         print("")
-                        print("   OpenAlgo has auto-configured alternative paths:")
+                        print("   SilverTrade AI has auto-configured alternative paths:")
                         print(f"   - NUMBA_CACHE_DIR={os.environ.get('NUMBA_CACHE_DIR', 'not set')}")
                         print(f"   - LLVMLITE_TMPDIR={os.environ.get('LLVMLITE_TMPDIR', 'not set')}")
                         print("")
@@ -238,7 +238,7 @@ def _db_has_user_data(env_dir: str) -> bool:
 
     Args:
         env_dir: Absolute directory containing the .env file. Used to
-            resolve a relative DATABASE_URL such as ``sqlite:///db/openalgo.db``
+            resolve a relative DATABASE_URL such as ``sqlite:///db/silvertrade.db``
             against the project root.
 
     Returns:
@@ -411,7 +411,7 @@ def _generate_keys_on_first_run(env_path: str) -> None:
                 # rotation requires re-encryption + password reset via the
                 # dedicated upgrade/rotate_pepper.py script.
                 sys.stderr.write(
-                    "\n\033[91m\033[1m[OpenAlgo security]\033[0m\n"
+                    "\n\033[91m\033[1m[SilverTrade security]\033[0m\n"
                     "\033[91mDetected publicly-known APP_KEY in .env, but could not\n"
                     f"rewrite the file ({e}).\n"
                     "\n"
@@ -431,7 +431,7 @@ def _generate_keys_on_first_run(env_path: str) -> None:
             else:
                 # Fresh DB (no users yet): both can be safely regenerated.
                 sys.stderr.write(
-                    "\n\033[91m\033[1m[OpenAlgo security]\033[0m\n"
+                    "\n\033[91m\033[1m[SilverTrade security]\033[0m\n"
                     "\033[91mDetected publicly-known APP_KEY/API_KEY_PEPPER in .env, but\n"
                     f"could not rewrite the file ({e}).\n"
                     "\n"
@@ -449,7 +449,7 @@ def _generate_keys_on_first_run(env_path: str) -> None:
 
     if rotated_names and not db_populated and not is_reloader_parent:
         print(
-            "\n\033[92m\033[1m[OpenAlgo first-run setup]\033[0m "
+            "\n\033[92m\033[1m[SilverTrade first-run setup]\033[0m "
             f"\033[92mGenerated fresh {' and '.join(rotated_names)} and saved\n"
             f"to {env_path}. The .sample.env placeholder values have been replaced\n"
             "with cryptographically random secrets. This message will not appear\n"
@@ -458,7 +458,7 @@ def _generate_keys_on_first_run(env_path: str) -> None:
         )
     elif "APP_KEY" in rotated_names and db_populated and not is_reloader_parent:
         print(
-            "\n\033[93m\033[1m[OpenAlgo security]\033[0m "
+            "\n\033[93m\033[1m[SilverTrade security]\033[0m "
             "\033[93mYour APP_KEY in .env was the public sample value. It has been\n"
             "rotated to a fresh random value. Active browser sessions will need\n"
             "to log in again.\033[0m\n",
@@ -573,7 +573,7 @@ def load_and_check_env_variables() -> None:
             print("  BROKER_API_KEY = 'abc123xyz:::12345678:::5P12345678'")
             print("  BROKER_API_SECRET = 'your_encryption_key'")
             print("\nFor detailed instructions, please refer to:")
-            print("  https://docs.openalgo.in/connect-brokers/brokers/5paisa")
+            print("  https://docs.silvertrade.ai/connect-brokers/brokers/5paisa")
             sys.exit(1)
 
     # Validate flattrade API key format
@@ -586,7 +586,7 @@ def load_and_check_env_variables() -> None:
             print("  BROKER_API_KEY = 'FT123456:::your_api_key_here'")
             print("  BROKER_API_SECRET = 'your_api_secret'")
             print("\nFor detailed instructions, please refer to:")
-            print("  https://docs.openalgo.in/connect-brokers/brokers/flattrade")
+            print("  https://docs.silvertrade.ai/connect-brokers/brokers/flattrade")
             sys.exit(1)
 
     # Validate dhan API key format
@@ -599,7 +599,7 @@ def load_and_check_env_variables() -> None:
             print("  BROKER_API_KEY = '1234567890:::your_dhan_apikey'")
             print("  BROKER_API_SECRET = 'your_dhan_apisecret'")
             print("\nFor detailed instructions, please refer to:")
-            print("  https://docs.openalgo.in/connect-brokers/brokers/dhan")
+            print("  https://docs.silvertrade.ai/connect-brokers/brokers/dhan")
             sys.exit(1)
 
     # Validate environment variable values

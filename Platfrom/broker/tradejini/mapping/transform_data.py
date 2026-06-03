@@ -1,4 +1,4 @@
-# Mapping OpenAlgo API Request https://openalgo.in/docs
+# Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # Mapping Tradejini API Parameters https://api.tradejini.com/v2
 
 from database.token_db import get_br_symbol
@@ -6,7 +6,7 @@ from database.token_db import get_br_symbol
 
 def transform_data(data, token):
     """
-    Transforms OpenAlgo order format to Tradejini API format.
+    Transforms SilverTrade AI order format to Tradejini API format.
     """
     symbol = get_br_symbol(data["symbol"], data["exchange"])
 
@@ -41,10 +41,10 @@ def transform_data(data, token):
 
 def transform_modify_order_data(data, token):
     """
-    Transforms OpenAlgo modify order format to Tradejini API format.
+    Transforms SilverTrade AI modify order format to Tradejini API format.
 
     Args:
-        data (dict): OpenAlgo modify order data
+        data (dict): SilverTrade AI modify order data
         token (str): Broker symbol token
 
     Returns:
@@ -87,7 +87,7 @@ def transform_modify_order_data(data, token):
 
 def map_order_type(pricetype):
     """
-    Maps OpenAlgo order types to Tradejini order types.
+    Maps SilverTrade AI order types to Tradejini order types.
     """
     order_type_mapping = {
         "MARKET": "market",
@@ -100,7 +100,7 @@ def map_order_type(pricetype):
 
 def map_product_type(product):
     """
-    Maps OpenAlgo product types to Tradejini product types.
+    Maps SilverTrade AI product types to Tradejini product types.
     """
     product_type_mapping = {"CNC": "delivery", "NRML": "normal", "MIS": "intraday"}
     return product_type_mapping.get(product, "intraday")
@@ -108,7 +108,7 @@ def map_product_type(product):
 
 def map_validity(validity):
     """
-    Maps OpenAlgo validity types to Tradejini validity types.
+    Maps SilverTrade AI validity types to Tradejini validity types.
     """
     validity_mapping = {"DAY": "day", "IOC": "ioc", "GTC": "gtc"}
     return validity_mapping.get(validity, "day")
@@ -116,7 +116,7 @@ def map_validity(validity):
 
 def reverse_map_product_type(product):
     """
-    Maps Tradejini product types back to OpenAlgo product types.
+    Maps Tradejini product types back to SilverTrade AI product types.
     """
     reverse_product_type_mapping = {"delivery": "CNC", "normal": "NRML", "intraday": "MIS"}
     return reverse_product_type_mapping.get(product)

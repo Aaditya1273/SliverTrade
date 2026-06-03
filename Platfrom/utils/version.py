@@ -1,13 +1,13 @@
-# OpenAlgo Version Management
+# SilverTrade AI Version Management
 # This file is the single source of truth for version information
 
-VERSION = "2.0.0.9"
+VERSION = "1.0.0"
 
 
 def get_version() -> str:
-    """Return the current OpenAlgo version.
+    """Return the current SilverTrade AI version.
 
     Returns:
-        str: The current version string (e.g. '2.0.0.2')
+        str: The current version string (e.g. '1.0.0')
     """
     return VERSION

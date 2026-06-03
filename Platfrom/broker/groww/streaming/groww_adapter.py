@@ -492,7 +492,7 @@ class GrowwWebSocketAdapter(BaseBrokerWebSocketAdapter):
                             f"Checking {cid}: symbol={sub.get('symbol')}, exchange={sub.get('exchange')}, groww_exchange={sub.get('groww_exchange')}, mode={sub.get('mode')}"
                         )
 
-                        # For index subscriptions, the OpenAlgo exchange is NSE_INDEX/BSE_INDEX but Groww sends NSE/BSE
+                        # For index subscriptions, the SilverTrade exchange is NSE_INDEX/BSE_INDEX but Groww sends NSE/BSE
                         # Check if this is an index subscription
                         is_index_match = (
                             (mode == "index" or mode == "index_depth")

@@ -5,7 +5,7 @@ Stop Loss: 10 points | Target: 10 points
 
 import time
 
-from openalgo import api
+from silvertrade_sdk import api
 
 # Configuration
 API_KEY = "your-api-key-here"

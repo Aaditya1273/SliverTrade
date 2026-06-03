@@ -1,6 +1,6 @@
 """
 Fyers Symbol to HSM Token Converter
-Converts OpenAlgo symbols to Fyers HSM format for WebSocket streaming
+Converts SilverTrade AI symbols to Fyers HSM format for WebSocket streaming
 Uses database lookup for brsymbol mapping
 """
 
@@ -74,7 +74,7 @@ class FyersTokenConverter:
         self, symbol_exchange_pairs: list[tuple[str, str]]
     ) -> dict[tuple[str, str], str]:
         """
-        Lookup brsymbols from database using OpenAlgo symbol and exchange
+        Lookup brsymbols from database using SilverTrade AI symbol and exchange
         Uses the existing get_br_symbol function from database.token_db
 
         Args:
@@ -107,11 +107,11 @@ class FyersTokenConverter:
 
         return brsymbol_map
 
-    def convert_openalgo_symbols_to_hsm(
+    def convert_silvertrade_symbols_to_hsm(
         self, symbol_info_list: list[dict], data_type: str = "SymbolUpdate"
     ) -> tuple[list[str], dict[str, str], list[str]]:
         """
-        Convert OpenAlgo symbols to HSM tokens using database lookup for brsymbols
+        Convert SilverTrade AI symbols to HSM tokens using database lookup for brsymbols
 
         Args:
             symbol_info_list: List of dicts with 'symbol' and 'exchange' keys
@@ -125,7 +125,7 @@ class FyersTokenConverter:
             symbol_exchange_pairs = [
                 (info["symbol"], info["exchange"]) for info in symbol_info_list
             ]
-            # self.logger.info(f"Converting OpenAlgo symbols: {symbol_exchange_pairs}")
+            # self.logger.info(f"Converting SilverTrade AI symbols: {symbol_exchange_pairs}")
 
             # Get brsymbols from database using get_br_symbol
             brsymbol_map = self.get_brsymbols_from_database(symbol_exchange_pairs)
@@ -154,7 +154,7 @@ class FyersTokenConverter:
                 return [], {}, invalid_symbols
 
         except Exception as e:
-            self.logger.error(f"OpenAlgo symbol conversion error: {e}")
+            self.logger.error(f"SilverTrade symbol conversion error: {e}")
             return [], {}, [f"{info['symbol']}@{info['exchange']}" for info in symbol_info_list]
 
     def convert_symbols_to_hsm(
@@ -468,9 +468,9 @@ class FyersTokenConverter:
             return self.EXCHANGE_SEGMENTS.get(ex_sg)
         return None
 
-    def convert_openalgo_to_fyers_symbol(self, exchange: str, symbol: str) -> str:
+    def convert_silvertrade_to_fyers_symbol(self, exchange: str, symbol: str) -> str:
         """
-        Convert OpenAlgo format (exchange, symbol) to Fyers symbol format
+        Convert SilverTrade AI format (exchange, symbol) to Fyers symbol format
 
         Args:
             exchange: Exchange name (NSE, BSE, MCX, etc.)

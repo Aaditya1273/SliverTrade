@@ -2,7 +2,7 @@
 
 ## Overview
 
-The utils directory contains shared utility functions used across the OpenAlgo platform for authentication, logging, configuration, and common operations.
+The utils directory contains shared utility functions used across the SilverTrade AI platform for authentication, logging, configuration, and common operations.
 
 ## Utils Directory Structure
 

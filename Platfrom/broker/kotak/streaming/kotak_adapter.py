@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
     """
-    Adapter for Kotak WebSocket streaming, suitable for OpenAlgo or similar frameworks.
+    Adapter for Kotak WebSocket streaming, suitable for SilverTrade AI or similar frameworks.
     Each instance is isolated and manages its own KotakWebSocket client.
     """
 
@@ -49,8 +49,8 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
         self._symbol_state = {}  # {broker_exchange|token: data} for partial update merging
         self._depth_poll_state = {}  # {exchange|symbol: data} for depth polling state
 
-        # Mapping from Kotak format to OpenAlgo format - critical for data flow
-        self._kotak_to_openalgo = {}  # {(kotak_exchange, token): (exchange, symbol)}
+        # Mapping from Kotak format to SilverTrade AI format - critical for data flow
+        self._kotak_to_silvertrade = {}  # {(kotak_exchange, token): (exchange, symbol)}
 
         # Track active subscription modes per symbol - CRITICAL FOR MULTI-CLIENT SUPPORT
         self._symbol_modes = {}  # {(kotak_exchange, token): set of active modes}
@@ -312,7 +312,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
                 # Store the complete data only for mapped symbols (avoids unbounded growth
                 # from unsolicited broker data for symbols we're not subscribed to)
-                if (broker_exchange, token) in self._kotak_to_openalgo:
+                if (broker_exchange, token) in self._kotak_to_silvertrade:
                     self._symbol_state[symbol_key] = {
                         **parsed_data,
                         "bids": parsed_data.get("bids", []),
@@ -329,8 +329,8 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
             publish_queue = []
 
             with self._lock:
-                if mapping_key in self._kotak_to_openalgo:
-                    exchange, symbol = self._kotak_to_openalgo[mapping_key]
+                if mapping_key in self._kotak_to_silvertrade:
+                    exchange, symbol = self._kotak_to_silvertrade[mapping_key]
                     cache_key = (exchange, symbol)
 
                     # For LTP data, update LTP cache
@@ -519,7 +519,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 self._depth_cache.clear()
                 self._symbol_state.clear()
                 self._depth_poll_state.clear()
-                self._kotak_to_openalgo.clear()
+                self._kotak_to_silvertrade.clear()
                 self._symbol_modes.clear()
                 self.subscriptions.clear()
                 self._reconnect_attempts = 0
@@ -714,7 +714,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 self._depth_cache.clear()
                 self._symbol_state.clear()
                 self._depth_poll_state.clear()
-                self._kotak_to_openalgo.clear()
+                self._kotak_to_silvertrade.clear()
                 self._symbol_modes.clear()
                 self.subscriptions.clear()
 
@@ -871,7 +871,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
             # Store mapping and track mode - CRITICAL FOR MULTI-CLIENT SUPPORT
             with self._lock:
                 mapping_key = (kotak_exchange, str(token))
-                self._kotak_to_openalgo[mapping_key] = (exchange, symbol)
+                self._kotak_to_silvertrade[mapping_key] = (exchange, symbol)
 
                 # Track active modes for this symbol
                 if mapping_key not in self._symbol_modes:
@@ -932,7 +932,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
                     # Clean up mapping and cached state only if NO modes are active
                     if not self._symbol_modes[mapping_key]:
-                        self._kotak_to_openalgo.pop(mapping_key, None)
+                        self._kotak_to_silvertrade.pop(mapping_key, None)
                         self._symbol_modes.pop(mapping_key, None)
                         # Clean up symbol state to prevent unbounded memory growth
                         symbol_key = f"{kotak_exchange}|{token}"
@@ -969,7 +969,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
             # Store mapping and track mode
             with self._lock:
                 mapping_key = (kotak_exchange, str(token))
-                self._kotak_to_openalgo[mapping_key] = (exchange, symbol)
+                self._kotak_to_silvertrade[mapping_key] = (exchange, symbol)
 
                 # Track active modes for this symbol
                 if mapping_key not in self._symbol_modes:
@@ -1023,7 +1023,7 @@ class KotakWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
                     # Clean up mapping and cached state only if NO modes are active
                     if not self._symbol_modes[mapping_key]:
-                        self._kotak_to_openalgo.pop(mapping_key, None)
+                        self._kotak_to_silvertrade.pop(mapping_key, None)
                         self._symbol_modes.pop(mapping_key, None)
                         # Clean up symbol state to prevent unbounded memory growth
                         symbol_key = f"{kotak_exchange}|{token}"

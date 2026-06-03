@@ -174,7 +174,7 @@ def process_upstox_json(path):
     df["symbol"] = df.apply(reformat_symbol, axis=1)
     df["brexchange"] = segment_copy
 
-    # NSE Index Symbol Mapping (Upstox trading_symbol → OpenAlgo format)
+    # NSE Index Symbol Mapping (Upstox trading_symbol → SilverTrade format)
     df["symbol"] = df["symbol"].replace({
         # Major NSE Indices
         "NIFTY 50": "NIFTY",

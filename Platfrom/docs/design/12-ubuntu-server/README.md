@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide covers deploying OpenAlgo on an Ubuntu server (20.04/22.04 LTS) with Nginx reverse proxy, systemd services, and SSL configuration for production use.
+This guide covers deploying SilverTrade AI on an Ubuntu server (20.04/22.04 LTS) with Nginx reverse proxy, systemd services, and SSL configuration for production use.
 
 ## Architecture Diagram
 
@@ -28,19 +28,19 @@ This guide covers deploying OpenAlgo on an Ubuntu server (20.04/22.04 LTS) with 
                     │                       │
                     ▼                       ▼
 ┌─────────────────────────────────────────────────────┐
-│           OpenAlgo (Gunicorn + WebSocket)           │
+│           SilverTrade AI (Gunicorn + WebSocket)           │
 │                                                     │
 │  Flask App ─────────── localhost:5000               │
 │  WebSocket Thread ──── localhost:8765               │
 │                                                     │
-│  systemd: openalgo                                  │
+│  systemd: silvertrade                                  │
 └─────────────────────────────────────────────────────┘
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          File System                                         │
 │                                                                              │
-│  /opt/openalgo/                                                             │
+│  /opt/silvertrade/                                                             │
 │  ├── .venv/              # Virtual environment                              │
 │  ├── db/                 # SQLite databases                                 │
 │  ├── log/                # Application logs                                 │
@@ -72,12 +72,12 @@ sudo apt install -y nodejs
 
 ```bash
 # Create application directory
-sudo mkdir -p /opt/openalgo
-sudo chown $USER:$USER /opt/openalgo
+sudo mkdir -p /opt/silvertrade
+sudo chown $USER:$USER /opt/silvertrade
 
 # Clone repository
-cd /opt/openalgo
-git clone https://github.com/marketcalls/openalgo.git .
+cd /opt/silvertrade
+git clone https://github.com/silvertrade/silvertrade.git .
 ```
 
 ### 2. Setup Python Environment
@@ -123,21 +123,21 @@ cd ..
 **Note:** The WebSocket server runs as a thread inside the main app (port 8765), so only ONE systemd service is needed.
 
 ```bash
-sudo nano /etc/systemd/system/openalgo.service
+sudo nano /etc/systemd/system/silvertrade.service
 ```
 
 ```ini
 [Unit]
-Description=OpenAlgo Trading Platform
+Description=SilverTrade Trading Platform
 After=network.target
 
 [Service]
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/opt/openalgo
-Environment="PATH=/opt/openalgo/.venv/bin"
-ExecStart=/opt/openalgo/.venv/bin/gunicorn \
+WorkingDirectory=/opt/silvertrade
+Environment="PATH=/opt/silvertrade/.venv/bin"
+ExecStart=/opt/silvertrade/.venv/bin/gunicorn \
     --worker-class eventlet \
     -w 1 \
     --bind 127.0.0.1:5000 \
@@ -156,18 +156,18 @@ WantedBy=multi-user.target
 
 ```bash
 # Set ownership
-sudo chown -R www-data:www-data /opt/openalgo
+sudo chown -R www-data:www-data /opt/silvertrade
 
 # Set permissions
-sudo chmod -R 755 /opt/openalgo
-sudo chmod 700 /opt/openalgo/keys
-sudo chmod 600 /opt/openalgo/.env
+sudo chmod -R 755 /opt/silvertrade
+sudo chmod 700 /opt/silvertrade/keys
+sudo chmod 600 /opt/silvertrade/.env
 ```
 
 ### 7. Configure Nginx
 
 ```bash
-sudo nano /etc/nginx/sites-available/openalgo
+sudo nano /etc/nginx/sites-available/silvertrade
 ```
 
 ```nginx
@@ -219,7 +219,7 @@ server {
 
     # Static files
     location /static {
-        alias /opt/openalgo/static;
+        alias /opt/silvertrade/static;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
@@ -230,14 +230,14 @@ server {
 
 ```bash
 # Enable Nginx site
-sudo ln -s /etc/nginx/sites-available/openalgo /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/silvertrade /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl restart nginx
 
-# Enable and start OpenAlgo service
+# Enable and start SilverTrade AI service
 sudo systemctl daemon-reload
-sudo systemctl enable openalgo
-sudo systemctl start openalgo
+sudo systemctl enable silvertrade
+sudo systemctl start silvertrade
 ```
 
 ### 9. Setup SSL (Let's Encrypt)
@@ -250,16 +250,16 @@ sudo certbot --nginx -d your-domain.com
 
 ```bash
 # Check status
-sudo systemctl status openalgo
+sudo systemctl status silvertrade
 
 # View logs
-sudo journalctl -u openalgo -f
+sudo journalctl -u silvertrade -f
 
 # Restart service
-sudo systemctl restart openalgo
+sudo systemctl restart silvertrade
 
 # Stop service
-sudo systemctl stop openalgo
+sudo systemctl stop silvertrade
 ```
 
 ## Firewall Configuration
@@ -281,10 +281,10 @@ sudo ufw status
 
 ```bash
 # Stop service
-sudo systemctl stop openalgo
+sudo systemctl stop silvertrade
 
 # Pull updates
-cd /opt/openalgo
+cd /opt/silvertrade
 git pull origin main
 
 # Update dependencies
@@ -298,25 +298,25 @@ npm run build
 cd ..
 
 # Start service
-sudo systemctl start openalgo
+sudo systemctl start silvertrade
 ```
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| 502 Bad Gateway | Check if OpenAlgo service is running: `systemctl status openalgo` |
+| 502 Bad Gateway | Check if SilverTrade AI service is running: `systemctl status silvertrade` |
 | WebSocket fails | Check Nginx /ws proxy config and service logs |
-| Permission denied | Verify www-data ownership: `chown -R www-data:www-data /opt/openalgo` |
+| Permission denied | Verify www-data ownership: `chown -R www-data:www-data /opt/silvertrade` |
 | SSL error | Renew certificates: `sudo certbot renew` |
 
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
-| `/etc/systemd/system/openalgo.service` | Main service (includes WebSocket) |
-| `/etc/nginx/sites-available/openalgo` | Nginx config |
-| `/opt/openalgo/.env` | Application config |
+| `/etc/systemd/system/silvertrade.service` | Main service (includes WebSocket) |
+| `/etc/nginx/sites-available/silvertrade` | Nginx config |
+| `/opt/silvertrade/.env` | Application config |
 | `/var/log/nginx/` | Nginx logs |
 
-**Note:** There is no separate `openalgo-ws.service`. The WebSocket server runs as a thread inside the main Flask application on port 8765.
+**Note:** There is no separate `silvertrade-ws.service`. The WebSocket server runs as a thread inside the main Flask application on port 8765.

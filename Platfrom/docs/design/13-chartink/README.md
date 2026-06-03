@@ -2,7 +2,7 @@
 
 ## Overview
 
-Chartink integration allows OpenAlgo to receive trading signals from Chartink screener alerts via webhooks. When a stock appears in a Chartink scanner, it triggers a webhook that OpenAlgo processes to place trades automatically.
+Chartink integration allows SilverTrade AI to receive trading signals from Chartink screener alerts via webhooks. When a stock appears in a Chartink scanner, it triggers a webhook that SilverTrade AI processes to place trades automatically.
 
 > **Note**: The Chartink integration uses a "Strategy" concept (not "Scanner") where each strategy has symbol-level configuration with time-based trading controls.
 
@@ -27,7 +27,7 @@ Chartink integration allows OpenAlgo to receive trading signals from Chartink sc
                               │ HTTP POST
                               ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     OpenAlgo Chartink Webhook                                │
+│                     SilverTrade AI Chartink Webhook                                │
 │                     POST /chartink/webhook                                   │
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -126,12 +126,12 @@ class ChartinkSymbolMapping(Base):
 
 ```json
 {
-    "webhook_id": "your_webhook_id_from_openalgo",
+    "webhook_id": "your_webhook_id_from_silvertrade",
     "stocks": "{stocks}"
 }
 ```
 
-### OpenAlgo Setup
+### SilverTrade AI Setup
 
 1. Navigate to `/chartink`
 2. Create new strategy
@@ -302,21 +302,21 @@ STRATEGY_RATE_LIMIT=200 per minute
 
 ```
 Chartink: Stocks crossing 20 DMA with volume spike
-OpenAlgo: Auto-buy with MIS product, qty=100
+SilverTrade AI: Auto-buy with MIS product, qty=100
 ```
 
 ### Breakout Scanner
 
 ```
 Chartink: Stocks breaking 52-week high
-OpenAlgo: Auto-buy with CNC product for delivery
+SilverTrade AI: Auto-buy with CNC product for delivery
 ```
 
 ### Exit Scanner
 
 ```
 Chartink: Stocks falling below support
-OpenAlgo: Auto-sell to close positions
+SilverTrade AI: Auto-sell to close positions
 ```
 
 ## Key Files Reference

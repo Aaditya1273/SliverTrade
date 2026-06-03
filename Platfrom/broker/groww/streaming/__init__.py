@@ -1,5 +1,5 @@
 """
-Groww WebSocket streaming module for OpenAlgo
+Groww WebSocket streaming module for SilverTrade
 """
 
 from .groww_adapter import GrowwWebSocketAdapter

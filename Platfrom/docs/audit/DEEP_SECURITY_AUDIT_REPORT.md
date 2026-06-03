@@ -1,11 +1,11 @@
-# OpenAlgo Deep Codebase Security Audit Report
+# SilverTrade AI Deep Codebase Security Audit Report
 
 ## Metadata
-- **Project:** OpenAlgo
-- **PR Context:** https://github.com/marketcalls/openalgo/pull/947 (Crypto Exchange Integration)
+- **Project:** SilverTrade
+- **PR Context:** https://github.com/silvertrade/silvertrade/pull/947 (Crypto Exchange Integration)
 - **Audit date:** 2026-03-03
 - **Auditor:** Claude Opus 4.6
-- **Scope:** Full codebase audit of `openalgo/services/`, `openalgo/blueprints/`, `openalgo/restx_api/`, `openalgo/database/`, `openalgo/sandbox/`, `openalgo/broker/`, `openalgo/upgrade/`
+- **Scope:** Full codebase audit of `silvertrade/services/`, `silvertrade/blueprints/`, `silvertrade/restx_api/`, `silvertrade/database/`, `silvertrade/sandbox/`, `silvertrade/broker/`, `silvertrade/upgrade/`
 - **Focus:** SQL injection, input validation, security vulnerabilities, crypto integration impact on existing Indian broker functionality
 
 ---

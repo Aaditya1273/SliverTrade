@@ -4,7 +4,7 @@
 
 ## Overview
 
-Python Strategies enables traders to run custom Python trading algorithms within OpenAlgo, with process isolation, market-aware scheduling, and comprehensive lifecycle management.
+Python Strategies enables traders to run custom Python trading algorithms within SilverTrade, with process isolation, market-aware scheduling, and comprehensive lifecycle management.
 
 ## Problem Statement
 
@@ -80,9 +80,9 @@ A subprocess-based strategy execution system that:
 ### FR6: API Integration
 | ID | Requirement | Priority |
 |----|-------------|----------|
-| FR6.1 | OpenAlgo SDK available to strategies | P0 |
+| FR6.1 | SilverTrade AI SDK available to strategies | P0 |
 | FR6.2 | Environment variables for API key | P0 |
-| FR6.3 | Access to all OpenAlgo API endpoints | P0 |
+| FR6.3 | Access to all SilverTrade AI API endpoints | P0 |
 
 ## Non-Functional Requirements
 
@@ -102,7 +102,7 @@ A subprocess-based strategy execution system that:
 | 4GB | 2 | 512MB | 5-8 |
 | 8GB+ | 2-4 | 1024MB | 10+ |
 
-> **Note**: Thread limits (`OPENBLAS_NUM_THREADS`, etc.) prevent RLIMIT_NPROC exhaustion when using NumPy/SciPy/Numba. See [Issue #822](https://github.com/marketcalls/openalgo/issues/822).
+> **Note**: Thread limits (`OPENBLAS_NUM_THREADS`, etc.) prevent RLIMIT_NPROC exhaustion when using NumPy/SciPy/Numba. See [Issue #822](https://github.com/silvertrade/silvertrade/issues/822).
 
 ## Architecture
 
@@ -131,7 +131,7 @@ A subprocess-based strategy execution system that:
 │                          │                                  │
 │                          ▼                                  │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │              OpenAlgo SDK (openalgo)                   │  │
+│  │              SilverTrade AI SDK (silvertrade)                   │  │
 │  │  • client.placesmartorder()                           │  │
 │  │  • client.history()                                   │  │
 │  │  • client.quotes()                                    │  │
@@ -148,11 +148,11 @@ Simple EMA Crossover Strategy Template
 """
 import os
 import time
-from openalgo import api
+from silvertrade import api
 
 # Configuration
-API_KEY = os.getenv('OPENALGO_APIKEY')
-HOST = os.getenv('OPENALGO_HOST', 'http://127.0.0.1:5000')
+API_KEY = os.getenv('SILVERTRADE_APIKEY')
+HOST = os.getenv('SILVERTRADE_HOST', 'http://127.0.0.1:5000')
 SYMBOL = 'SBIN'
 EXCHANGE = 'NSE'
 QUANTITY = 1
@@ -271,7 +271,7 @@ strategy_configs.json (file-based)
 ## Directory Structure
 
 ```
-openalgo/
+silvertrade/
 ├── strategies/
 │   ├── scripts/           # User-uploaded strategies
 │   ├── examples/          # Template strategies

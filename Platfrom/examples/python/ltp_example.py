@@ -1,10 +1,10 @@
 """
-OpenAlgo WebSocket Feed Example
+SilverTrade WebSocket Feed Example
 """
 
 import time
 
-from openalgo import api
+from silvertrade_sdk import api
 
 # Initialize feed client with explicit parameters
 client = api(

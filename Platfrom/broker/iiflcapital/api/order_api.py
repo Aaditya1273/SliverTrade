@@ -339,7 +339,7 @@ def close_all_positions(current_api_key, auth):
             "product": row.get("product", "NORMAL"),
             "orderType": "MARKET",
             "validity": "DAY",
-            "apiOrderSource": "openalgo",
+            "apiOrderSource": "silvertrade",
             "orderTag": "close_all_positions",
         }
 

@@ -4,7 +4,7 @@
 
 ## Overview
 
-Historify is OpenAlgo's historical market data management system for downloading, storing, and exporting OHLCV data for backtesting and analysis.
+Historify is SilverTrade's historical market data management system for downloading, storing, and exporting OHLCV data for backtesting and analysis.
 
 ## Problem Statement
 

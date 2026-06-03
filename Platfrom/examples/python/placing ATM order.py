@@ -1,6 +1,6 @@
-from openalgo import api
+from silvertrade_sdk import api
 
-print("🔁 OpenAlgo Python Bot is running.")
+print("🔁 SilverTrade AI Python Bot is running.")
 
 # ------------------------------------------
 # Initialize API client

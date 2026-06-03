@@ -1,10 +1,10 @@
 """
 Mapping utilities for Kotak broker integration.
-Provides exchange, product, and order type mappings between OpenAlgo and Kotak formats.
+Provides exchange, product, and order type mappings between SilverTrade AI and Kotak formats.
 """
 
 # Exchange code mappings
-OPENALGO_TO_KOTAK_EXCHANGE = {
+SILVERTRADE_TO_KOTAK_EXCHANGE = {
     "NSE": "nse_cm",
     "nse": "nse_cm",
     "BSE": "bse_cm",
@@ -23,10 +23,10 @@ OPENALGO_TO_KOTAK_EXCHANGE = {
     "BSE_INDEX": "bse_cm",
 }
 
-KOTAK_TO_OPENALGO_EXCHANGE = {v: k for k, v in OPENALGO_TO_KOTAK_EXCHANGE.items()}
+KOTAK_TO_SILVERTRADE_EXCHANGE = {v: k for k, v in SILVERTRADE_TO_KOTAK_EXCHANGE.items()}
 
 # Product type mappings
-OPENALGO_TO_KOTAK_PRODUCT = {
+SILVERTRADE_TO_KOTAK_PRODUCT = {
     "Normal": "NRML",
     "NRML": "NRML",
     "CNC": "CNC",
@@ -44,10 +44,10 @@ OPENALGO_TO_KOTAK_PRODUCT = {
     "bo": "Bracket Order",
 }
 
-KOTAK_TO_OPENALGO_PRODUCT = {v: k for k, v in OPENALGO_TO_KOTAK_PRODUCT.items()}
+KOTAK_TO_SILVERTRADE_PRODUCT = {v: k for k, v in SILVERTRADE_TO_KOTAK_PRODUCT.items()}
 
 # Order type mappings
-OPENALGO_TO_KOTAK_ORDER_TYPE = {
+SILVERTRADE_TO_KOTAK_ORDER_TYPE = {
     "Limit": "L",
     "L": "L",
     "l": "L",
@@ -71,46 +71,46 @@ OPENALGO_TO_KOTAK_ORDER_TYPE = {
     "Three leg": "3L",
 }
 
-KOTAK_TO_OPENALGO_ORDER_TYPE = {v: k for k, v in OPENALGO_TO_KOTAK_ORDER_TYPE.items()}
+KOTAK_TO_SILVERTRADE_ORDER_TYPE = {v: k for k, v in SILVERTRADE_TO_KOTAK_ORDER_TYPE.items()}
 
 
-def get_kotak_exchange(openalgo_exchange: str) -> str:
+def get_kotak_exchange(silvertrade_exchange: str) -> str:
     """
-    Convert OpenAlgo exchange code to Kotak exchange code.
+    Convert SilverTrade AI exchange code to Kotak exchange code.
     """
-    return OPENALGO_TO_KOTAK_EXCHANGE.get(openalgo_exchange, openalgo_exchange)
+    return SILVERTRADE_TO_KOTAK_EXCHANGE.get(silvertrade_exchange, silvertrade_exchange)
 
 
-def get_openalgo_exchange(kotak_exchange: str) -> str:
+def get_silvertrade_exchange(kotak_exchange: str) -> str:
     """
-    Convert Kotak exchange code to OpenAlgo exchange code.
+    Convert Kotak exchange code to SilverTrade AI exchange code.
     """
-    return KOTAK_TO_OPENALGO_EXCHANGE.get(kotak_exchange, kotak_exchange)
+    return KOTAK_TO_SILVERTRADE_EXCHANGE.get(kotak_exchange, kotak_exchange)
 
 
-def get_kotak_product(openalgo_product: str) -> str:
+def get_kotak_product(silvertrade_product: str) -> str:
     """
-    Convert OpenAlgo product type to Kotak product type.
+    Convert SilverTrade AI product type to Kotak product type.
     """
-    return OPENALGO_TO_KOTAK_PRODUCT.get(openalgo_product, openalgo_product)
+    return SILVERTRADE_TO_KOTAK_PRODUCT.get(silvertrade_product, silvertrade_product)
 
 
-def get_openalgo_product(kotak_product: str) -> str:
+def get_silvertrade_product(kotak_product: str) -> str:
     """
-    Convert Kotak product type to OpenAlgo product type.
+    Convert Kotak product type to SilverTrade AI product type.
     """
-    return KOTAK_TO_OPENALGO_PRODUCT.get(kotak_product, kotak_product)
+    return KOTAK_TO_SILVERTRADE_PRODUCT.get(kotak_product, kotak_product)
 
 
-def get_kotak_order_type(openalgo_order_type: str) -> str:
+def get_kotak_order_type(silvertrade_order_type: str) -> str:
     """
-    Convert OpenAlgo order type to Kotak order type.
+    Convert SilverTrade AI order type to Kotak order type.
     """
-    return OPENALGO_TO_KOTAK_ORDER_TYPE.get(openalgo_order_type, openalgo_order_type)
+    return SILVERTRADE_TO_KOTAK_ORDER_TYPE.get(silvertrade_order_type, silvertrade_order_type)
 
 
-def get_openalgo_order_type(kotak_order_type: str) -> str:
+def get_silvertrade_order_type(kotak_order_type: str) -> str:
     """
-    Convert Kotak order type to OpenAlgo order type.
+    Convert Kotak order type to SilverTrade AI order type.
     """
-    return KOTAK_TO_OPENALGO_ORDER_TYPE.get(kotak_order_type, kotak_order_type)
+    return KOTAK_TO_SILVERTRADE_ORDER_TYPE.get(kotak_order_type, kotak_order_type)

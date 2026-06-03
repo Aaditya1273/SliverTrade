@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, render_template_string, request
-from openalgo import api
+from silvertrade_sdk import api
 
 app = Flask(__name__)
 

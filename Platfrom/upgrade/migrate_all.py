@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenAlgo Master Migration Script
+SilverTrade Master Migration Script
 
 This script runs ALL migrations in the correct order.
 Each migration is idempotent - it skips if already applied.
@@ -108,7 +108,7 @@ def main():
     print()
     print("#" * 60)
     print("#" + " " * 58 + "#")
-    print("#" + "       OpenAlgo Master Migration Script".center(58) + "#")
+    print("#" + "       SilverTrade AI Master Migration Script".center(58) + "#")
     print("#" + " " * 58 + "#")
     print("#" * 60)
     print()

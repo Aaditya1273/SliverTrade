@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-GTT (Good Till Triggered) Order Support Migration Script for OpenAlgo
+GTT (Good Till Triggered) Order Support Migration Script for SilverTrade
 
 Adds two tables to the sandbox database:
 
