@@ -1,6 +1,6 @@
 services:
   # ----------------------------------------------------
-  # 1. Platform Core (Main API Gateway)
+  # 1. SilverTrade Platform (Main API Gateway)
   # ----------------------------------------------------
   platform:
     build:
@@ -13,7 +13,6 @@ services:
       - FLASK_ENV=development
       - REDIRECT_URL=http://localhost:5000/zerodha/callback
       - DATA_FETCH_URL=http://data_fetch:5005
-      - FINANCIAL_LAYER_URL=http://financial_layer:5006
       - TRADE_STRATEGIES_URL=http://trade_strategies:5007
     volumes:
       - ./Platfrom:/app
@@ -23,7 +22,7 @@ services:
     restart: unless-stopped
 
   # ----------------------------------------------------
-  # 2. Data Fetch Service (Market Data)
+  # 2. SilverTrade Data Fetch (Market Data Aggregation)
   # ----------------------------------------------------
   data_fetch:
     build:
@@ -33,7 +32,7 @@ services:
     ports:
       - "5005:5005"
     environment:
-      - OPENALGO_HOST=http://platform:5000
+      - SILVERTRADE_HOST=http://platform:5000
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5005
     volumes:
@@ -44,29 +43,7 @@ services:
     restart: unless-stopped
 
   # ----------------------------------------------------
-  # 3. Financial Analytics (Indicators Engine)
-  # ----------------------------------------------------
-  financial_layer:
-    build:
-      context: ./Financial_Layer
-      dockerfile: Dockerfile
-    container_name: financial_layer
-    ports:
-      - "5006:5006"
-    environment:
-      - DATA_FETCH_URL=http://data_fetch:5005/api/data
-      - STRATEGY_URL=http://trade_strategies:5007/api/v1/decision
-      - FINANCIAL_PORT=5006
-    volumes:
-      - ./Financial_Layer:/app
-      - ./Financial_Layer/.env:/app/.env
-    depends_on:
-      - data_fetch
-      - trade_strategies
-    restart: unless-stopped
-
-  # ----------------------------------------------------
-  # 4. AI Strategy Layer (Decision Engine)
+  # 3. SilverTrade Strategy Engine (AI Decisions)
   # ----------------------------------------------------
   trade_strategies:
     build:
@@ -83,9 +60,8 @@ services:
       - ./Trade_Strategies/.env:/app/.env
     restart: unless-stopped
 
-
   # ----------------------------------------------------
-  # 5. Premium Dashboard (Next.js UI)
+  # 4. SilverTrade UI (Next.js Dashboard)
   # ----------------------------------------------------
   ui:
     build:

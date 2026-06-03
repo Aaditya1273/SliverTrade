@@ -21,16 +21,6 @@ module.exports = {
       }
     },
     {
-      name: 'SilverTrade-Financial',
-      script: 'venv/bin/python3',
-      args: 'financial_app.py',
-      cwd: './Financial_Layer',
-      interpreter: 'none',
-      env: {
-        PORT: 5006,
-      }
-    },
-    {
       name: 'SilverTrade-AI-Engine',
       script: 'venv/bin/python3',
       args: 'strategies_app.py',

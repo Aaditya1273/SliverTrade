@@ -45,3 +45,17 @@ htmlcov/
 
 # Include local libraries (don't ignore static/lib/)
 !static/lib/
+
+# Junk / generated files
+*.zip
+*.bin
+images/
+
+# Platform ignores
+Platfrom/frontend/dist/
+Platfrom/strategies/
+Platfrom/db/*.db
+Platfrom/log/strategies/
+
+# Docker
+.dockerenv
