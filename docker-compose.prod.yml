@@ -1,0 +1,435 @@
+# =============================================================================
+# SilverTrade AI — Production Docker Compose
+# =============================================================================
+# Orchestrates all SilverTrade services behind an nginx reverse proxy with
+# PostgreSQL, Redis, automatic SSL via LetsEncrypt, and Prometheus/Grafana
+# monitoring stack.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml logs -f
+# =============================================================================
+
+networks:
+  silvertrade-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  platform-db:
+    driver: local
+  platform-log:
+    driver: local
+  certbot-www:
+    driver: local
+  certbot-conf:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+
+services:
+  # ----------------------------------------------------
+  # 1. PostgreSQL (Production Database)
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: silvertrade-postgres
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:5432:5432"  # Only expose on loopback
+    environment:
+      POSTGRES_USER: silvertrade
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-silvertrade}
+      POSTGRES_DB: silvertrade
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U silvertrade"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # 2. Redis (Caching, Rate Limiting, Sessions)
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: silvertrade-redis
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:6379:6379"  # Only expose on loopback
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------
+  # 3. SilverTrade Platform (Main API Gateway)
+  # ----------------------------------------------------
+  platform:
+    build:
+      context: ./Platfrom
+      dockerfile: Dockerfile
+    container_name: silvertrade-platform
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:5000:5000"  # Only accessible through nginx
+    environment:
+      - APP_MODE=standalone
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - DATABASE_URL=postgresql://silvertrade:${POSTGRES_PASSWORD:-silvertrade}@postgres:5432/silvertrade
+      - REDIS_URL=redis://redis:6379/0
+      - HOST_SERVER=${HOST_SERVER:-https://your-domain.com}
+      - REDIRECT_URL=${REDIRECT_URL:-https://your-domain.com/zerodha/callback}
+      - BROKER_API_KEY=${BROKER_API_KEY:-}
+      - BROKER_API_SECRET=${BROKER_API_SECRET:-}
+      - APP_KEY=${APP_KEY:-}
+      - API_KEY_PEPPER=${API_KEY_PEPPER:-}
+      - WEBSOCKET_URL=${WEBSOCKET_URL:-wss://your-domain.com/ws}
+      - DATA_FETCH_URL=http://data_fetch:5005
+      - TRADE_STRATEGIES_URL=http://trade_strategies:5007
+    volumes:
+      - platform-db:/app/db
+      - platform-log:/app/log
+      - ./Platfrom/.env:/app/.env:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ----------------------------------------------------
+  # 4. SilverTrade Data Fetch (Market Data Aggregation)
+  # ----------------------------------------------------
+  data_fetch:
+    build:
+      context: ./data_fetch
+      dockerfile: Dockerfile
+    container_name: silvertrade-data-fetch
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:5005:5005"
+    environment:
+      - SILVERTRADE_HOST=http://platform:5000
+      - SILVERTRADE_API_KEY=${SILVERTRADE_API_KEY:-}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5005
+      - FLASK_DEBUG=False
+      - FLASK_ENV=production
+    volumes:
+      - ./data_fetch/.env:/app/.env:ro
+    depends_on:
+      platform:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5005/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # 5. SilverTrade Strategy Engine (AI Decisions)
+  # ----------------------------------------------------
+  trade_strategies:
+    build:
+      context: ./Trade_Strategies
+      dockerfile: Dockerfile
+    container_name: silvertrade-strategies
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:5007:5007"
+    environment:
+      - SILVERTRADE_HOST=http://platform:5000
+      - SILVERTRADE_API_KEY=${SILVERTRADE_API_KEY:-}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5007
+      - FLASK_DEBUG=False
+    depends_on:
+      platform:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5007/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # 6. SilverTrade UI (Next.js Dashboard)
+  # ----------------------------------------------------
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: silvertrade-ui
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${HOST_SERVER:-https://your-domain.com}/api/v1
+      - NEXT_PUBLIC_WS_URL=wss://${HOST_SERVER:-your-domain.com}/ws
+    depends_on:
+      - platform
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000',r=>process.exit(r.statusCode===200?0:1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # 7. Nginx Reverse Proxy (with SSL termination)
+  # ----------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: silvertrade-nginx
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot-www:/var/www/certbot:ro
+      - certbot-conf:/etc/letsencrypt:ro
+    depends_on:
+      - platform
+      - ui
+      - data_fetch
+      - trade_strategies
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------
+  # 8. Certbot (SSL Certificate Management)
+  # ----------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: silvertrade-certbot
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    volumes:
+      - certbot-www:/var/www/certbot
+      - certbot-conf:/etc/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet
+        && sleep 12h
+        || sleep 1h; done"
+    depends_on:
+      - nginx
+
+  # ================================================================
+  # MONITORING STACK
+  # ================================================================
+
+  # ----------------------------------------------------
+  # 9. PostgreSQL Exporter (DB metrics for Prometheus)
+  # ----------------------------------------------------
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: silvertrade-pg-exporter
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    environment:
+      DATA_SOURCE_NAME: "postgresql://silvertrade:${POSTGRES_PASSWORD:-silvertrade}@postgres:5432/silvertrade?sslmode=disable"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9187/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------
+  # 10. Redis Exporter (Redis metrics for Prometheus)
+  # ----------------------------------------------------
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: silvertrade-redis-exporter
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9121/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------
+  # 11. cAdvisor (Docker container metrics)
+  # ----------------------------------------------------
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: silvertrade-cadvisor
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg:ro
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+
+  # ----------------------------------------------------
+  # 12. node-exporter (Host machine metrics)
+  # ----------------------------------------------------
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: silvertrade-node-exporter
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+  # ----------------------------------------------------
+  # 13. Prometheus (Metrics collection & alerting)
+  # ----------------------------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: silvertrade-prometheus
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    depends_on:
+      - postgres-exporter
+      - redis-exporter
+      - cadvisor
+      - node-exporter
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------
+  # 14. AlertManager (Alert routing & notifications)
+  # ----------------------------------------------------
+  alertmanager:
+    build:
+      context: ./monitoring/alertmanager
+      dockerfile: Dockerfile
+    container_name: silvertrade-alertmanager
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:9093:9093"
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PAGERDUTY_ROUTING_KEY=${PAGERDUTY_ROUTING_KEY:-}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - ALERTMANAGER_URL=${HOST_SERVER:-https://your-domain.com}/alertmanager
+    volumes:
+      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - ./monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - alertmanager-data:/alertmanager
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9093/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ----------------------------------------------------
+  # 15. Grafana (Dashboards & visualization)
+  # ----------------------------------------------------
+  grafana:
+    image: grafana/grafana:latest
+    container_name: silvertrade-grafana
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "127.0.0.1:3001:3000"  # 3001 to avoid conflict with Next.js on 3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-silvertrade}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=${HOST_SERVER:-https://your-domain.com}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards/silvertrade
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s

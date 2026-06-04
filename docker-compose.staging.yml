@@ -1,0 +1,175 @@
+# =============================================================================
+# SilverTrade AI — Staging Docker Compose
+# =============================================================================
+# Lightweight staging environment with PostgreSQL 16, Redis 7, and all
+# SilverTrade services. No monitoring stack or SSL — designed for CI/CD
+# pre-production validation and manual staging testing.
+#
+# Usage:
+#   docker compose -f docker-compose.staging.yml up -d
+#   docker compose -f docker-compose.staging.yml logs -f
+# =============================================================================
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+
+services:
+  # ----------------------------------------------------
+  # PostgreSQL (Production-like DB for staging)
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: silvertrade-staging-postgres
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: silvertrade
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-silvertrade}
+      POSTGRES_DB: silvertrade
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U silvertrade"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # Redis (Caching, Rate Limiting, Sessions)
+  # ----------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: silvertrade-staging-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ----------------------------------------------------
+  # Platform API (Main Gateway)
+  # ----------------------------------------------------
+  platform:
+    build:
+      context: ./Platfrom
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY:-marketcalls/silvertrade}/platform:staging
+    container_name: silvertrade-staging-platform
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      - APP_MODE=standalone
+      - FLASK_ENV=staging
+      - FLASK_DEBUG=False
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://silvertrade:${POSTGRES_PASSWORD:-silvertrade}@postgres:5432/silvertrade
+      - REDIS_URL=redis://redis:6379/0
+      - HOST_SERVER=${STAGING_HOST:-https://staging.silvertrade.ai}
+      - REDIRECT_URL=${STAGING_HOST:-https://staging.silvertrade.ai}/zerodha/callback
+      - DATA_FETCH_URL=http://data_fetch:5005
+      - TRADE_STRATEGIES_URL=http://trade_strategies:5007
+      - APP_KEY=${APP_KEY:-staging-app-key-not-secure}
+      - API_KEY_PEPPER=${API_KEY_PEPPER:-staging-pepper-not-secure}
+    volumes:
+      - ./Platfrom/.env:/app/.env:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ----------------------------------------------------
+  # Data Fetch Service
+  # ----------------------------------------------------
+  data_fetch:
+    build:
+      context: ./data_fetch
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY:-marketcalls/silvertrade}/data-fetch:staging
+    container_name: silvertrade-staging-data-fetch
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5005:5005"
+    environment:
+      - SILVERTRADE_HOST=http://platform:5000
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5005
+      - FLASK_DEBUG=False
+      - FLASK_ENV=staging
+    depends_on:
+      platform:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5005/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # Strategy Engine
+  # ----------------------------------------------------
+  trade_strategies:
+    build:
+      context: ./Trade_Strategies
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY:-marketcalls/silvertrade}/strategy-engine:staging
+    container_name: silvertrade-staging-strategies
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5007:5007"
+    environment:
+      - SILVERTRADE_HOST=http://platform:5000
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5007
+      - FLASK_DEBUG=False
+    depends_on:
+      platform:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5007/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ----------------------------------------------------
+  # Next.js UI
+  # ----------------------------------------------------
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    image: ghcr.io/${GITHUB_REPOSITORY:-marketcalls/silvertrade}/ui:staging
+    container_name: silvertrade-staging-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${STAGING_HOST:-https://staging.silvertrade.ai}/api/v1
+      - NEXT_PUBLIC_WS_URL=wss://${STAGING_HOST:-staging.silvertrade.ai}/ws
+    depends_on:
+      - platform
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3000',r=>process.exit(r.statusCode===200?0:1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

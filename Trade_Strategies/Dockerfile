@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Ensure Flask and Flask-CORS are installed since it might not be in requirements
-RUN pip install --no-cache-dir flask flask-cors pandas numpy requests
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
