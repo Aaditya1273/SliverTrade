@@ -1,0 +1,127 @@
+# =============================================================================
+# SilverTrade AI — Prometheus Configuration
+# =============================================================================
+# Scrapes metrics from all SilverTrade microservices, infrastructure
+# (PostgreSQL, Redis, Nginx), and Docker hosts (cadvisor, node-exporter).
+# =============================================================================
+
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  scrape_timeout:      10s
+  external_labels:
+    monitor: 'silvertrade'
+    env:     'production'
+
+# ── Alerting ────────────────────────────────────────────────────────────────
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# ── Rule Files ──────────────────────────────────────────────────────────────
+rule_files:
+  - '/etc/prometheus/alerts/*.yml'
+
+# ── Scrape Targets ──────────────────────────────────────────────────────────
+scrape_configs:
+  # ── SilverTrade Platform (primary metrics source) ─────────────────────
+  - job_name: 'silvertrade-platform'
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['platform:5000']
+        labels:
+          service: 'platform'
+          tier: 'backend'
+
+  # ── Data Fetch Service ────────────────────────────────────────────────
+  - job_name: 'silvertrade-data-fetch'
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['data_fetch:5005']
+        labels:
+          service: 'data-fetch'
+          tier: 'backend'
+
+  # ── Strategy Engine ───────────────────────────────────────────────────
+  - job_name: 'silvertrade-strategies'
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['trade_strategies:5007']
+        labels:
+          service: 'strategy-engine'
+          tier: 'backend'
+
+  # ── Next.js UI ────────────────────────────────────────────────────────
+  - job_name: 'silvertrade-ui'
+    metrics_path: '/api/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['ui:3000']
+        labels:
+          service: 'ui'
+          tier: 'frontend'
+
+  # ── Nginx (via stub_status / vts) ─────────────────────────────────────
+  - job_name: 'silvertrade-nginx'
+    metrics_path: '/nginx-status'
+    scheme: http
+    static_configs:
+      - targets: ['nginx:80']
+        labels:
+          service: 'nginx'
+          tier: 'infra'
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────
+  - job_name: 'silvertrade-postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          tier: 'infra'
+
+  # ── Redis ─────────────────────────────────────────────────────────────
+  - job_name: 'silvertrade-redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+          tier: 'infra'
+
+  # ── Docker Host Metrics (via cadvisor) ────────────────────────────────
+  - job_name: 'silvertrade-containers'
+    metrics_path: '/metrics'
+    scheme: http
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'docker-containers'
+          tier: 'infra'
+
+  # ── Host Metrics (CPU, Memory, Disk via node-exporter) ────────────────
+  - job_name: 'silvertrade-hosts'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'host-metrics'
+          tier: 'infra'
+
+  # ── Prometheus self-metrics ──────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+          tier: 'monitoring'
+
+  # ── Grafana ───────────────────────────────────────────────────────────
+  - job_name: 'silvertrade-grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+        labels:
+          service: 'grafana'
+          tier: 'monitoring'

@@ -1,0 +1,152 @@
+# =============================================================================
+# SilverTrade AI — Prometheus Alerting Rules
+# =============================================================================
+# Alerts for service degradation, downtime, high latency, and resource
+# exhaustion across all SilverTrade microservices.
+# =============================================================================
+
+groups:
+  - name: silvertrade-service-down
+    interval: 30s
+    rules:
+      # ── Service Downtime ────────────────────────────────────────────────
+      - alert: PlatformDown
+        expr: up{job="silvertrade-platform"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: platform
+        annotations:
+          summary: "SilverTrade Platform is down"
+          description: "Platform API has been unreachable for >1 minute."
+          action: "Check platform container: docker compose logs platform"
+
+      - alert: DataFetchDown
+        expr: up{job="silvertrade-data-fetch"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: data-fetch
+        annotations:
+          summary: "Data Fetch Service is down"
+          description: "Market data service has been unreachable for >1 minute."
+          action: "Check data_fetch container: docker compose logs data_fetch"
+
+      - alert: StrategyEngineDown
+        expr: up{job="silvertrade-strategies"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: strategy-engine
+        annotations:
+          summary: "Strategy Engine is down"
+          description: "AI decision engine has been unreachable for >1 minute."
+          action: "Check trade_strategies container: docker compose logs trade_strategies"
+
+      - alert: UIDown
+        expr: up{job="silvertrade-ui"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ui
+        annotations:
+          summary: "UI Dashboard is down"
+          description: "Next.js frontend has been unreachable for >1 minute."
+          action: "Check ui container: docker compose logs ui"
+
+      - alert: NginxDown
+        expr: up{job="silvertrade-nginx"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: nginx
+        annotations:
+          summary: "Nginx reverse proxy is down"
+          description: "Nginx has been unreachable for >1 minute. All external traffic affected."
+          action: "Check nginx container: docker compose logs nginx"
+
+      # ── Infrastructure Downtime ─────────────────────────────────────────
+      - alert: PostgreSQLDown
+        expr: up{job="silvertrade-postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: postgres
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Production database has been unreachable for >1 minute."
+          action: "Check postgres container: docker compose logs postgres"
+
+      - alert: RedisDown
+        expr: up{job="silvertrade-redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis has been unreachable for >1 minute."
+          action: "Check redis container: docker compose logs redis"
+
+      # ── High Error Rates ────────────────────────────────────────────────
+      - alert: PlatformHighErrorRate
+        expr: rate(flask_http_request_duration_seconds_count{status=~"5.."}[5m]) / rate(flask_http_request_duration_seconds_count[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+        annotations:
+          summary: "High error rate on Platform API"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes (threshold: 5%)."
+
+      - alert: PlatformHighLatency
+        expr: histogram_quantile(0.95, rate(flask_http_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+        annotations:
+          summary: "High latency on Platform API"
+          description: "P95 latency is {{ $value }}s over the last 5 minutes (threshold: 2s)."
+
+      # ── Resource Exhaustion ─────────────────────────────────────────────
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: container
+        annotations:
+          summary: "High CPU usage on container {{ $labels.name }}"
+          description: "CPU usage is {{ $value | humanizePercentage }} for the last 10 minutes."
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: container
+        annotations:
+          summary: "High memory usage on container {{ $labels.name }}"
+          description: "Memory usage is {{ $value | humanizePercentage }} for the last 10 minutes."
+
+      # ── Host Resource Alerts ────────────────────────────────────────────
+      - alert: HostDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: "Low disk space on host"
+          description: "Disk is {{ $value | humanizePercentage }} free (threshold: 10%)."
+
+      - alert: HostHighLoad
+        expr: node_load15 / count(node_cpu_seconds_total{mode="idle"}) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "High system load on host"
+          description: "15-min load average is {{ $value }} (threshold: 0.8 * CPU cores)."

@@ -146,3 +146,4 @@ zipp==3.23.1
 zmq==0.0.0
 gunicorn>=25.0,<26
 eventlet
+prometheus_flask_exporter>=0.23.0

@@ -1,0 +1,235 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "SilverTrade AI — Platform Overview",
+  "uid": "silvertrade-platform-overview",
+  "version": 1,
+  "schemaVersion": 39,
+  "tags": ["silvertrade", "production"],
+  "timezone": "browser",
+  "editable": false,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Service Health",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 2, "x": 0, "y": 0},
+      "targets": [{"expr": "count(up{job=~\"silvertrade-.*\"} == 1)", "legendFormat": "Healthy"}],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": 0}, {"color": "orange", "value": 1}, {"color": "green", "value": 8}]},
+          "unit": "none"
+        }
+      },
+      "description": "Number of healthy SilverTrade services"
+    },
+    {
+      "id": 2,
+      "title": "API Request Rate",
+      "type": "graph",
+      "gridPos": {"h": 4, "w": 5, "x": 2, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(flask_http_request_duration_seconds_count[5m]))", "legendFormat": "Total"},
+        {"expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"2..\"}[5m]))", "legendFormat": "2xx"},
+        {"expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"4..\"}[5m]))", "legendFormat": "4xx"},
+        {"expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[5m]))", "legendFormat": "5xx"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "reqps"}},
+      "description": "HTTP request rate by status class"
+    },
+    {
+      "id": 3,
+      "title": "P95 Latency",
+      "type": "graph",
+      "gridPos": {"h": 4, "w": 5, "x": 7, "y": 0},
+      "targets": [
+        {"expr": "histogram_quantile(0.95, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P95"},
+        {"expr": "histogram_quantile(0.50, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P50"},
+        {"expr": "histogram_quantile(0.99, sum(rate(flask_http_request_duration_seconds_bucket[5m])) by (le))", "legendFormat": "P99"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "description": "Request latency percentiles"
+    },
+    {
+      "id": 4,
+      "title": "Error Rate",
+      "type": "graph",
+      "gridPos": {"h": 4, "w": 5, "x": 12, "y": 0},
+      "targets": [
+        {"expr": "sum(rate(flask_http_request_duration_seconds_count{status=~\"5..\"}[5m])) / sum(rate(flask_http_request_duration_seconds_count[5m])) * 100", "legendFormat": "Error %"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}
+        }
+      },
+      "description": "Percentage of 5xx responses"
+    },
+    {
+      "id": 5,
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 17, "y": 0},
+      "targets": [{"expr": "flask_websocket_connections_active", "legendFormat": "Active"}],
+      "fieldConfig": {"defaults": {"unit": "none"}},
+      "description": "Currently active WebSocket connections"
+    },
+    {
+      "id": 6,
+      "title": "Container CPU Usage",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+      "targets": [
+        {"expr": "rate(container_cpu_usage_seconds_total{name=~\"silvertrade-.*\"}[5m])", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent"}},
+      "description": "CPU usage per SilverTrade container"
+    },
+    {
+      "id": 7,
+      "title": "Container Memory Usage",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 4},
+      "targets": [
+        {"expr": "container_memory_usage_bytes{name=~\"silvertrade-.*\"} / 1048576", "legendFormat": "{{name}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "MB"}},
+      "description": "Memory usage per SilverTrade container (MB)"
+    },
+    {
+      "id": 8,
+      "title": "Network I/O",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 4},
+      "targets": [
+        {"expr": "rate(container_network_receive_bytes_total{name=~\"silvertrade-.*\"}[5m]) / 1048576", "legendFormat": "{{name}} RX"},
+        {"expr": "rate(container_network_transmit_bytes_total{name=~\"silvertrade-.*\"}[5m]) / 1048576", "legendFormat": "{{name}} TX"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "MB/s"}},
+      "description": "Network throughput per container"
+    },
+    {
+      "id": 9,
+      "title": "PostgreSQL Connections",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 4, "x": 0, "y": 10},
+      "targets": [
+        {"expr": "pg_stat_activity_count", "legendFormat": "Active"},
+        {"expr": "pg_stat_activity_max", "legendFormat": "Max"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none"}},
+      "description": "PostgreSQL active vs max connections"
+    },
+    {
+      "id": 10,
+      "title": "Redis Memory Usage",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 4, "x": 4, "y": 10},
+      "targets": [
+        {"expr": "redis_memory_used_bytes / 1048576", "legendFormat": "Used (MB)"},
+        {"expr": "redis_memory_max_bytes / 1048576", "legendFormat": "Max (MB)"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "MB"}},
+      "description": "Redis memory usage"
+    },
+    {
+      "id": 11,
+      "title": "Redis Hit Rate",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 4, "x": 8, "y": 10},
+      "targets": [
+        {"expr": "rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) * 100", "legendFormat": "Hit Rate %"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent"}},
+      "description": "Redis cache hit rate percentage"
+    },
+    {
+      "id": 12,
+      "title": "Host Disk Usage",
+      "type": "gauge",
+      "gridPos": {"h": 5, "w": 4, "x": 12, "y": 10},
+      "targets": [
+        {"expr": "(node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100", "legendFormat": "Free %"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": 0}, {"color": "orange", "value": 10}, {"color": "red", "value": 5}]}
+        }
+      },
+      "description": "Available disk space"
+    },
+    {
+      "id": 13,
+      "title": "System Load",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 4, "x": 16, "y": 10},
+      "targets": [
+        {"expr": "node_load1", "legendFormat": "1m"},
+        {"expr": "node_load5", "legendFormat": "5m"},
+        {"expr": "node_load15", "legendFormat": "15m"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "none"}},
+      "description": "System load averages"
+    },
+    {
+      "id": 14,
+      "title": "Active Alerts",
+      "type": "alertlist",
+      "gridPos": {"h": 5, "w": 4, "x": 0, "y": 15},
+      "targets": [{"expr": "ALERTS{severity=~\"critical|warning\"}"}],
+      "description": "Currently firing alerts"
+    },
+    {
+      "id": 15,
+      "title": "Service Uptime",
+      "type": "table",
+      "gridPos": {"h": 5, "w": 8, "x": 4, "y": 15},
+      "targets": [
+        {"expr": "time() - process_start_time_seconds{job=~\"silvertrade-.*\"}", "legendFormat": "{{job}}"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "s"}},
+      "description": "Uptime of each SilverTrade service"
+    },
+    {
+      "id": 16,
+      "title": "Request Rate by Endpoint (Top 10)",
+      "type": "table",
+      "gridPos": {"h": 5, "w": 8, "x": 12, "y": 15},
+      "targets": [
+        {"expr": "topk(10, sum(rate(flask_http_request_duration_seconds_count[5m])) by (path))"}
+      ],
+      "description": "Top 10 most requested API endpoints"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {"value": "Prometheus"},
+        "hide": 0,
+        "label": "Data Source"
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "type": "tags",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "tags": ["deployment", "release"]
+      }
+    ]
+  },
+  "links": [
+    {"title": "Prometheus", "url": "http://prometheus:9090"},
+    {"title": "AlertManager", "url": "http://alertmanager:9093"},
+    {"title": "GitHub", "url": "https://github.com/marketcalls/silvertrade"}
+  ]
+}

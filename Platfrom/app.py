@@ -132,6 +132,11 @@ def create_app():
     # Initialize SocketIO
     socketio.init_app(app)  # Link SocketIO to the Flask app
 
+    # Initialize Prometheus metrics exporter (auto-creates /metrics endpoint)
+    from blueprints.metrics import init_metrics
+
+    init_metrics(app)
+
     # Initialize EventBus subscribers
     from subscribers import register_all as register_event_subscribers
 

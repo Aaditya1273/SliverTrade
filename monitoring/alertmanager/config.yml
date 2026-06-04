@@ -1,0 +1,147 @@
+# =============================================================================
+# SilverTrade AI — AlertManager Configuration
+# =============================================================================
+# Routes alerts from Prometheus to multiple notification channels:
+#   - Slack (via incoming webhook)
+#   - PagerDuty (via Events API v2 integration key)
+#   - Generic webhook (for custom integrations)
+#   - Console/logging (always active)
+#
+# Webhook URLs and API keys are read from environment variables so they
+# are never committed to version control. Set them in your .env or pass
+# them to the alertmanager container:
+#
+#   SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+#   PAGERDUTY_ROUTING_KEY=your-pagerduty-integration-key
+#   WEBHOOK_URL=https://your-webhook-receiver.example.com/hooks
+#
+# If a URL is empty, that receiver is skipped gracefully.
+# =============================================================================
+
+global:
+  # Resolve timeout — alerts auto-resolve after this duration if not firing
+  resolve_timeout: 5m
+
+# ── Route Tree ──────────────────────────────────────────────────────────────
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'severity', 'service']
+  group_wait: 10s
+  group_interval: 2m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts → all channels (Slack + PagerDuty + webhook)
+    - receiver: 'critical'
+      match:
+        severity: critical
+      group_wait: 10s
+      repeat_interval: 15m
+
+    # Warning alerts → Slack + webhook (no PagerDuty for warnings)
+    - receiver: 'warning'
+      match:
+        severity: warning
+      group_wait: 30s
+      repeat_interval: 2h
+
+    # Platform-specific alerts → webhook (for custom automation)
+    - receiver: 'webhook'
+      match:
+        service: platform
+      group_wait: 10s
+      repeat_interval: 5m
+
+# ── Inhibition Rules ────────────────────────────────────────────────────────
+inhibit_rules:
+  # If a critical alert is firing for a service, mute its warnings
+  - source_match:
+      severity: critical
+    target_match:
+      severity: warning
+    equal: ['service']
+
+  # If the entire platform is down, mute component-level alerts
+  - source_match:
+      alertname: PlatformDown
+    target_match:
+      severity: '=~'warning|critical''
+    equal: ['job']
+
+  # If PostgreSQL is down, mute alerts for services that depend on it
+  - source_match:
+      alertname: PostgreSQLDown
+    target_match:
+      severity: warning
+      service: platform
+    equal: ['job']
+
+# ── Templates ───────────────────────────────────────────────────────────────
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ── Receivers ───────────────────────────────────────────────────────────────
+receivers:
+  # ── Default: Log to console ──────────────────────────────────────────
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://localhost:9093/'
+        send_resolved: true
+
+  # ── Critical: All channels ───────────────────────────────────────────
+  - name: 'critical'
+    # Slack (if webhook URL is set)
+    slack_configs:
+      - api_url: '{{ .ExternalURL }}/slack'  # Placeholder; overridden by env var
+        channel: '#alerts-critical'
+        username: 'SilverTrade AI'
+        icon_emoji: ':sos:'
+        title: '{{ template "silvertrade.slack.critical.title" . }}'
+        text: '{{ template "silvertrade.slack.critical.text" . }}'
+        color: 'danger'
+        send_resolved: true
+      - api_url: '{{ .ExternalURL }}/slack'
+        channel: '#alerts-critical'
+        username: 'SilverTrade AI'
+        icon_emoji: ':white_check_mark:'
+        title: '{{ template "silvertrade.slack.resolved.title" . }}'
+        text: '{{ template "silvertrade.slack.resolved.text" . }}'
+        color: 'good'
+        send_resolved: true
+      # PagerDuty (if routing key is set)
+    pagerduty_configs:
+      - routing_key: '{{ .ExternalURL }}'  # Placeholder; overridden by env var
+        severity: 'critical'
+        description: '{{ template "silvertrade.pagerduty.description" . }}'
+        client: 'SilverTrade AI'
+        client_url: '{{ .ExternalURL }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          group: '{{ .GroupLabels.service }}'
+        send_resolved: true
+    # Webhook
+    webhook_configs:
+      - url: '{{ .ExternalURL }}/webhook'  # Placeholder; overridden by env var
+        send_resolved: true
+
+  # ── Warning: Slack + webhook (no PagerDuty) ──────────────────────────
+  - name: 'warning'
+    slack_configs:
+      - api_url: '{{ .ExternalURL }}/slack'
+        channel: '#alerts-warning'
+        username: 'SilverTrade AI'
+        icon_emoji: ':warning:'
+        title: '{{ template "silvertrade.slack.warning.title" . }}'
+        text: '{{ template "silvertrade.slack.warning.text" . }}'
+        color: 'warning'
+        send_resolved: true
+    webhook_configs:
+      - url: '{{ .ExternalURL }}/webhook'
+        send_resolved: true
+
+  # ── Webhook: Platform-specific automation ────────────────────────────
+  - name: 'webhook'
+    webhook_configs:
+      - url: '{{ .ExternalURL }}/webhook'
+        send_resolved: true

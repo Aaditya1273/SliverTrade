@@ -1,0 +1,127 @@
+{{/* ============================================================================
+   SilverTrade AI — AlertManager Notification Templates
+   ============================================================================
+   Custom Go templates for Slack and PagerDuty alert notifications.
+
+   Reference: https://prometheus.io/docs/alerting/latest/notification_examples/
+   ============================================================================ */}}
+
+{{- /* ── Helper: Alert status emoji ───────────────────────────────────── */ -}}
+{{- define "silvertrade.emoji" -}}
+  {{- if eq .Status "firing" -}}🔴{{- else -}}✅{{- end -}}
+{{- end -}}
+
+{{- /* ── Helper: Format duration in human-readable form ──────────────── */ -}}
+{{- define "silvertrade.duration" -}}
+  {{- if gt .ActiveAt 0 -}}
+    {{- $dur := now.Sub .ActiveAt -}}
+    {{- $hours := div $dur 3600000000000 -}}
+    {{- $minutes := div (mod $dur 3600000000000) 60000000000 -}}
+    {{- if gt $hours 0 -}}{{$hours}}h {{$minutes}}m{{- else -}}{{$minutes}}m{{- end -}}
+  {{- else -}}just now{{- end -}}
+{{- end -}}
+
+{{- /* ── Helper: List all firing alerts with details ─────────────────── */ -}}
+{{- define "silvertrade.alert_list" -}}
+  {{- range .Alerts.Firing -}}
+• *{{ .Labels.alertname }}* ({{ .Labels.severity }})
+  Service: `{{ .Labels.service }}`
+  {{- if .Annotations.description }}
+  {{ .Annotations.description }}
+  {{- end }}
+  {{- if .Annotations.action }}
+  ▶ Action: {{ .Annotations.action }}
+  {{- end }}
+  Value: {{ .Annotations.value | default "N/A" }} | Since: {{ .StartsAt.Format "15:04:05 UTC" }}
+  {{- end }}
+{{- end -}}
+
+{{- /* ── Helper: List all resolved alerts ────────────────────────────── */ -}}
+{{- define "silvertrade.resolved_list" -}}
+  {{- range .Alerts.Resolved -}}
+• ✅ *{{ .Labels.alertname }}* — Resolved at {{ .EndsAt.Format "15:04:05 UTC" }}
+  {{- end }}
+{{- end -}}
+
+{{/* =====================================================================
+   Slack: Critical Alert Title
+   ===================================================================== */}}
+{{- define "silvertrade.slack.critical.title" -}}
+🔴 [CRITICAL] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service | default "SilverTrade AI" }}
+{{- end }}
+
+{{/* =====================================================================
+   Slack: Critical Alert Body
+   ===================================================================== */}}
+{{- define "silvertrade.slack.critical.text" -}}
+*Severity:* Critical 🚨
+*Environment:* Production
+*Alerts Firing:* {{ .Alerts.Firing | len }}
+
+{{- if .Alerts.Firing }}
+*── Active Alerts ──*
+{{ template "silvertrade.alert_list" . }}
+{{- end }}
+
+{{- if .Alerts.Resolved }}
+*── Resolved Alerts ──*
+{{ template "silvertrade.resolved_list" . }}
+{{- end }}
+
+*Recommended Action:*
+1. Check service logs: `docker compose logs {{ .GroupLabels.service }}`
+2. Verify container status: `docker compose ps`
+3. Escalate to: #oncall-sre
+{{- end }}
+
+{{/* =====================================================================
+   Slack: Warning Alert Title
+   ===================================================================== */}}
+{{- define "silvertrade.slack.warning.title" -}}
+⚠️ [WARNING] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service | default "SilverTrade AI" }}
+{{- end }}
+
+{{/* =====================================================================
+   Slack: Warning Alert Body
+   ===================================================================== */}}
+{{- define "silvertrade.slack.warning.text" -}}
+*Severity:* Warning ⚠️
+*Environment:* Production
+*Alerts Firing:* {{ .Alerts.Firing | len }}
+
+{{- if .Alerts.Firing }}
+*── Active Alerts ──*
+{{ template "silvertrade.alert_list" . }}
+{{- end }}
+
+{{- if .Alerts.Resolved }}
+*── Resolved Alerts ──*
+{{ template "silvertrade.resolved_list" . }}
+{{- end }}
+{{- end }}
+
+{{/* =====================================================================
+   Slack: Alert Resolved Title
+   ===================================================================== */}}
+{{- define "silvertrade.slack.resolved.title" -}}
+✅ [RESOLVED] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service | default "SilverTrade AI" }}
+{{- end }}
+
+{{/* =====================================================================
+   Slack: Alert Resolved Body
+   ===================================================================== */}}
+{{- define "silvertrade.slack.resolved.text" -}}
+*All {{ .Alerts.Resolved | len }} alerts for* `{{ .GroupLabels.service }}` *have been resolved.*
+
+{{- if .Alerts.Resolved }}
+*── Resolved Alerts ──*
+{{ template "silvertrade.resolved_list" . }}
+{{- end }}
+{{- end }}
+
+{{/* =====================================================================
+   PagerDuty: Alert Description
+   ===================================================================== */}}
+{{- define "silvertrade.pagerduty.description" -}}
+[{{ .Status | upper }}] {{ .GroupLabels.alertname }} — {{ .GroupLabels.service }} ({{ .Alerts.Firing | len }} firing, {{ .Alerts.Resolved | len }} resolved)
+{{- end }}

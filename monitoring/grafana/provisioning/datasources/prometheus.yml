@@ -1,0 +1,30 @@
+# =============================================================================
+# SilverTrade AI — Grafana Datasource Configuration
+# =============================================================================
+# Automatically provisions the Prometheus datasource on Grafana startup.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "30s"
+      httpMethod: "POST"
+      prometheusType: "Prometheus"
+      prometheusVersion: "2.50.0"
+
+  - name: Loki (Logs)
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: 5000
