@@ -2,7 +2,7 @@ import re
 
 from marshmallow import Schema, ValidationError, fields, validate
 
-from utils.constants import VALID_EXCHANGES
+from utils.constants import FNO_EXCHANGES, VALID_EXCHANGES
 
 
 # Custom validator for date or timestamp string
@@ -145,8 +145,8 @@ class ExpirySchema(Schema):
     apikey = fields.Str(required=True, validate=validate.Length(min=1, max=256))  # API Key for authentication
     symbol = fields.Str(required=True)  # Underlying symbol (e.g., NIFTY, BANKNIFTY)
     exchange = fields.Str(
-        required=True, validate=validate.OneOf(["NFO", "BFO", "MCX", "CDS", "CRYPTO"])
-    )  # Exchange (e.g., NFO, BFO, MCX, CDS, CRYPTO)
+        required=True, validate=validate.OneOf(list(FNO_EXCHANGES))
+    )  # Exchange (e.g., NFO, BFO, MCX, CDS, CRYPTO, NCDEX, NCO)
     instrumenttype = fields.Str(
         required=True, validate=validate.OneOf(["futures", "options"])
     )  # futures or options
@@ -177,8 +177,8 @@ class OptionGreeksSchema(Schema):
     apikey = fields.Str(required=True, validate=validate.Length(min=1, max=256))  # API Key for authentication
     symbol = fields.Str(required=True)  # Option symbol (e.g., NIFTY28NOV2424000CE)
     exchange = fields.Str(
-        required=True, validate=validate.OneOf(["NFO", "BFO", "CDS", "MCX", "CRYPTO"])
-    )  # Exchange (NFO, BFO, CDS, MCX, CRYPTO)
+        required=True, validate=validate.OneOf(list(FNO_EXCHANGES))
+    )  # Exchange (NFO, BFO, CDS, MCX, CRYPTO, NCDEX, NCO)
     interest_rate = fields.Float(
         required=False, validate=validate.Range(min=0, max=100)
     )  # Risk-free interest rate (annualized %). Optional, defaults per exchange
@@ -237,7 +237,7 @@ class OptionSymbolRequest(Schema):
     """Schema for a single option symbol request in batch"""
 
     symbol = fields.Str(required=True)  # Option symbol (e.g., NIFTY28NOV2424000CE)
-    exchange = fields.Str(required=True, validate=validate.OneOf(["NFO", "BFO", "CDS", "MCX", "CRYPTO"]))
+    exchange = fields.Str(required=True, validate=validate.OneOf(list(FNO_EXCHANGES)))
     underlying_symbol = fields.Str(required=False)  # Optional: Specify underlying symbol
     underlying_exchange = fields.Str(required=False)  # Optional: Specify underlying exchange
 

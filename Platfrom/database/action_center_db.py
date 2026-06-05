@@ -1,14 +1,12 @@
 # database/action_center_db.py
 
 import json
-import os
 from datetime import datetime
 
 import pytz
-from sqlalchemy import Column, DateTime, Index, Integer, String, Text, create_engine
+from sqlalchemy import Column, DateTime, Index, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 from utils.logging import get_logger
@@ -16,15 +14,9 @@ from utils.logging import get_logger
 # Initialize logger
 logger = get_logger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+from database.db_config import get_db_engine
 
-# Conditionally create engine based on DB type
-if DATABASE_URL and "sqlite" in DATABASE_URL:
-    engine = create_engine(
-        DATABASE_URL, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    engine = create_engine(DATABASE_URL, pool_size=50, max_overflow=100, pool_timeout=10)
+engine = get_db_engine()
 
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()

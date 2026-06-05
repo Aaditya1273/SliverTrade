@@ -17,11 +17,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
-    create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 from utils.logging import get_logger
@@ -36,15 +34,9 @@ load_dotenv()
 # Get from environment variable or use default path in /db directory
 SANDBOX_DATABASE_URL = os.getenv("SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.db")
 
-# Conditionally create engine based on DB type
-if SANDBOX_DATABASE_URL and "sqlite" in SANDBOX_DATABASE_URL:
-    # SQLite: Use NullPool to prevent connection pool exhaustion
-    engine = create_engine(
-        SANDBOX_DATABASE_URL, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    engine = create_engine(SANDBOX_DATABASE_URL, pool_size=20, max_overflow=40, pool_timeout=10)
+from database.db_config import get_db_engine
+
+engine = get_db_engine("SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.db", pool_size=20, max_overflow=40)
 
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()

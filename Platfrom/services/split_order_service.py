@@ -361,6 +361,7 @@ def split_order_with_auth(
 
     # Process orders sequentially with rate limiting
     results = []
+    successful_order_ids = []  # Track placed orders for potential reversal
     order_delay = get_order_rate_limit()
 
     # Place full-size orders
@@ -371,6 +372,11 @@ def split_order_with_auth(
         order_data["quantity"] = str(split_size)
         result = place_single_order(order_data, broker_module, auth_token, i + 1, total_orders)
         results.append(result)
+        if result.get("status") == "success" and result.get("orderid"):
+            successful_order_ids.append({
+                "orderid": result["orderid"],
+                "order_num": result.get("order_num", 0),
+            })
 
     # Place remaining quantity order if any
     if remaining_qty > 0:
@@ -382,6 +388,41 @@ def split_order_with_auth(
             order_data, broker_module, auth_token, total_orders, total_orders
         )
         results.append(result)
+        if result.get("status") == "success" and result.get("orderid"):
+            successful_order_ids.append({
+                "orderid": result["orderid"],
+                "order_num": result.get("order_num", 0),
+            })
+
+    # If ALL orders failed, return error (no reversal needed)
+    total_errors = sum(1 for r in results if r.get("status") == "error")
+    if total_errors == len(results) and len(results) > 0:
+        response_data = {
+            "status": "error",
+            "message": "All split orders failed",
+            "total_quantity": total_quantity,
+            "split_size": split_size,
+            "results": results,
+        }
+        bus.publish(SplitCompletedEvent(
+            mode="live",
+            api_type="splitorder",
+            strategy=split_data.get("strategy", ""),
+            symbol=split_data.get("symbol", ""),
+            exchange=split_data.get("exchange", ""),
+            action=split_data.get("action", ""),
+            pricetype=split_data.get("pricetype", ""),
+            product=split_data.get("product", ""),
+            total_quantity=total_quantity,
+            split_size=split_size,
+            results=results,
+            successful=0,
+            total=len(results),
+            request_data=split_request_data,
+            response_data=response_data,
+            api_key=original_data.get("apikey", ""),
+        ))
+        return False, response_data, 400
 
     # Log the split order results
     response_data = {

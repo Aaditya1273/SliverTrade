@@ -13,11 +13,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 from database.settings_db import get_security_settings
@@ -27,24 +25,9 @@ logger = logging.getLogger(__name__)
 # Use a separate database for logs
 LOGS_DATABASE_URL = os.getenv("LOGS_DATABASE_URL", "sqlite:///db/logs.db")
 
-# Conditionally create engine based on DB type
-if LOGS_DATABASE_URL and "sqlite" in LOGS_DATABASE_URL:
-    # SQLite: Use NullPool — each checkout creates a fresh connection, and
-    # closing it returns the FD immediately.  Session cleanup (which prevents
-    # FD leaks) is handled by:
-    #   - app.py teardown_appcontext (removes all scoped sessions per request)
-    #   - traffic_logger.py (logs_session.remove() in finally block)
-    #   - security_middleware.py (logs_session.remove() for banned-IP path)
-    # StaticPool (single shared connection) must NOT be used here: concurrent
-    # requests on the same SQLite connection cause "bad parameter or other API
-    # misuse" and "cannot commit — SQL statements in progress" errors on all
-    # platforms (Windows, Mac, Linux).
-    logs_engine = create_engine(
-        LOGS_DATABASE_URL, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    logs_engine = create_engine(LOGS_DATABASE_URL, pool_size=50, max_overflow=100, pool_timeout=10)
+from database.db_config import get_db_engine
+
+logs_engine = get_db_engine("LOGS_DATABASE_URL", "sqlite:///db/logs.db")
 
 logs_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=logs_engine))
 LogBase = declarative_base()

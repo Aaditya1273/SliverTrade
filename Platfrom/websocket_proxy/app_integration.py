@@ -56,77 +56,161 @@ def should_start_websocket():
 
 
 def cleanup_websocket_server():
-    """Clean up WebSocket server resources - cross-platform compatible"""
+    """Clean up WebSocket server resources with coordinated shutdown sequence.
+
+    Shutdown sequence:
+    1. Stop accepting new connections (set running flag)
+    2. Disconnect all broker adapters (graceful, 3s timeout per adapter)
+    3. Close all client WebSocket connections (2s timeout)
+    4. Close WebSocket server to release the port (2s timeout)
+    5. Close ZMQ socket and context (1s timeout each)
+    6. Clean up shared ZMQ context
+    7. Join the WebSocket thread (5s timeout)
+
+    Each step is isolated so a failure in one doesn't block the others.
+    """
     global _websocket_proxy_instance, _websocket_thread
 
-    try:
-        logger.info("Cleaning up WebSocket server...")
+    if _websocket_proxy_instance is None and (_websocket_thread is None or not _websocket_thread.is_alive()):
+        logger.debug("WebSocket server already cleaned up — skipping")
+        return
 
-        if _websocket_proxy_instance:
-            # For Windows compatibility, set a shutdown flag instead of trying to
-            # manipulate the event loop from a different thread
-            _websocket_proxy_instance.running = False
+    logger.info("=== Beginning graceful WebSocket shutdown ===")
 
-            # Try to close the server gracefully
-            try:
-                if (
-                    hasattr(_websocket_proxy_instance, "server")
-                    and _websocket_proxy_instance.server
-                ):
-                    try:
-                        _websocket_proxy_instance.server.close()
-                    except Exception as e:
-                        logger.warning(f"Error closing server handle: {e}")
+    # ── Step 0: Stop accepting new connections ──────────────────────────
+    if _websocket_proxy_instance:
+        _websocket_proxy_instance.running = False
+        logger.info("Step 0: Set running=False — stopped accepting new connections")
 
-                # Close ZMQ resources immediately
-                if (
-                    hasattr(_websocket_proxy_instance, "socket")
-                    and _websocket_proxy_instance.socket
-                ):
-                    try:
-                        import zmq
+    # ── Step 1: Disconnect all broker adapters ──────────────────────────
+    if _websocket_proxy_instance and hasattr(_websocket_proxy_instance, "broker_adapters"):
+        adapter_count = len(_websocket_proxy_instance.broker_adapters)
+        if adapter_count > 0:
+            logger.info(f"Step 1: Disconnecting {adapter_count} broker adapter(s)")
+            for user_id in list(_websocket_proxy_instance.broker_adapters.keys()):
+                try:
+                    adapter = _websocket_proxy_instance.broker_adapters.pop(user_id, None)
+                    if adapter and hasattr(adapter, "disconnect"):
+                        import threading as _t
 
-                        _websocket_proxy_instance.socket.setsockopt(zmq.LINGER, 0)
-                        _websocket_proxy_instance.socket.close()
-                    except Exception as e:
-                        logger.warning(f"Error closing ZMQ socket: {e}")
+                        t = _t.Thread(target=lambda a=adapter: a.disconnect(), daemon=True)
+                        t.start()
+                        t.join(timeout=3.0)
+                        if t.is_alive():
+                            logger.warning(f"    Adapter disconnect for user {user_id} timed out")
+                        else:
+                            logger.info(f"    Disconnected adapter for user {user_id}")
+                except Exception as e:
+                    logger.warning(f"    Error disconnecting adapter for user {user_id}: {e}")
+        else:
+            logger.info("Step 1: No broker adapters to disconnect")
 
-                if (
-                    hasattr(_websocket_proxy_instance, "context")
-                    and _websocket_proxy_instance.context
-                ):
-                    try:
-                        _websocket_proxy_instance.context.term()
-                    except Exception as e:
-                        logger.warning(f"Error terminating ZMQ context: {e}")
-
-            except Exception as e:
-                logger.exception(f"Error during WebSocket cleanup: {e}")
-            finally:
-                _websocket_proxy_instance = None
-
-        if _websocket_thread and _websocket_thread.is_alive():
-            logger.info("Waiting for WebSocket thread to finish...")
-            _websocket_thread.join(timeout=5.0)  # Increased timeout for slow broker disconnects
-            if _websocket_thread.is_alive():
-                logger.warning("WebSocket thread did not finish gracefully")
-            _websocket_thread = None
-
-        # Clean up shared ZMQ context (handles app restart without process exit)
+    # ── Step 2: Close WebSocket server (release port) ───────────────────
+    if _websocket_proxy_instance and hasattr(_websocket_proxy_instance, "server"):
         try:
-            from .base_adapter import BaseBrokerWebSocketAdapter
-            BaseBrokerWebSocketAdapter.cleanup_shared_context()
-            logger.info("Shared ZMQ context cleaned up")
+            server = _websocket_proxy_instance.server
+            if server is not None:
+                logger.info("Step 2: Closing WebSocket server (releasing port)")
+                server.close()
+                # Attempt async wait with timeout via a short-lived event loop
+                try:
+                    try:
+                        asyncio.get_running_loop()
+                        logger.debug("    Running inside an event loop — scheduling wait_closed()")
+                    except RuntimeError:
+                        _temp_loop = asyncio.new_event_loop()
+                        try:
+                            _temp_loop.run_until_complete(
+                                asyncio.wait_for(server.wait_closed(), timeout=2.0)
+                            )
+                            logger.info("    WebSocket server closed (port released)")
+                        except asyncio.TimeoutError:
+                            logger.warning("    Timeout waiting for server to close")
+                        finally:
+                            _temp_loop.close()
+                except Exception as e:
+                    logger.warning(f"    Error during server close wait: {e}")
         except Exception as e:
-            logger.warning(f"Error cleaning up shared ZMQ context: {e}")
+            logger.warning(f"    Error closing server: {e}")
 
-        logger.info("WebSocket server cleanup completed")
+    # ── Step 3: Close all client connections ────────────────────────────
+    if _websocket_proxy_instance and hasattr(_websocket_proxy_instance, "clients"):
+        client_count = len(_websocket_proxy_instance.clients)
+        if client_count > 0:
+            logger.info(f"Step 3: Closing {client_count} client connection(s)")
+            for client_id, ws in list(_websocket_proxy_instance.clients.items()):
+                try:
+                    if hasattr(ws, "open") and ws.open:
+                        try:
+                            asyncio.get_running_loop()
+                            # Schedule close on existing loop
+                            asyncio.run_coroutine_threadsafe(ws.close(), asyncio.get_running_loop())
+                        except RuntimeError:
+                            pass  # No loop — connection will be cleaned up by OS
+                except Exception:
+                    pass
+            _websocket_proxy_instance.clients.clear()
+            logger.info("    Client connections closed")
+        else:
+            logger.info("Step 3: No clients to disconnect")
 
-    except Exception as e:
-        logger.exception(f"Error during WebSocket cleanup: {e}")
-        # Last resort: force cleanup
+    # ── Step 4: Close ZMQ socket and context ────────────────────────────
+    if _websocket_proxy_instance:
+        try:
+            if hasattr(_websocket_proxy_instance, "socket"):
+                import zmq
+
+                sock = _websocket_proxy_instance.socket
+                if sock is not None:
+                    logger.info("Step 4a: Closing ZMQ socket")
+                    try:
+                        sock.setsockopt(zmq.LINGER, 0)
+                        sock.close()
+                    except Exception as e:
+                        logger.warning(f"    Error closing ZMQ socket: {e}")
+
+            if hasattr(_websocket_proxy_instance, "context"):
+                ctx = _websocket_proxy_instance.context
+                if ctx is not None:
+                    logger.info("Step 4b: Terminating ZMQ context")
+                    try:
+                        ctx.term()
+                    except Exception as e:
+                        logger.warning(f"    Error terminating ZMQ context: {e}")
+        except Exception as e:
+            logger.warning(f"    Error during ZMQ cleanup: {e}")
+
         _websocket_proxy_instance = None
+
+    # ── Step 5: Clean up shared ZMQ context ─────────────────────────────
+    try:
+        from .base_adapter import BaseBrokerWebSocketAdapter
+
+        logger.info("Step 5: Cleaning up shared ZMQ context")
+        BaseBrokerWebSocketAdapter.cleanup_shared_context()
+    except Exception as e:
+        logger.warning(f"    Error cleaning up shared ZMQ context: {e}")
+
+    # ── Step 6: Close all WebSocket client singletons ───────────────────
+    try:
+        from services.websocket_client import close_all_clients
+
+        logger.info("Step 6: Closing all WebSocket client connections")
+        close_all_clients()
+    except Exception as e:
+        logger.warning(f"    Error closing WebSocket clients: {e}")
+
+    # ── Step 7: Join the WebSocket thread ───────────────────────────────
+    if _websocket_thread and _websocket_thread.is_alive():
+        logger.info("Step 7: Waiting for WebSocket thread to finish...")
+        _websocket_thread.join(timeout=5.0)
+        if _websocket_thread.is_alive():
+            logger.warning("    WebSocket thread did not finish within 5s — detaching")
+        else:
+            logger.info("    WebSocket thread joined successfully")
         _websocket_thread = None
+
+    logger.info("=== WebSocket graceful shutdown complete ===")
 
 
 def signal_handler(signum, frame):

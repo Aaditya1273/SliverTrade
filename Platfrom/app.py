@@ -83,6 +83,7 @@ from blueprints.tv_json import tv_json_bp
 from blueprints.websocket_example import websocket_bp  # Import the websocket example blueprint
 from cors import cors  # Import the CORS instance
 from csp import apply_csp_middleware  # Import the CSP middleware
+from extensions import init_redis  # Import Redis initialisation
 from database.action_center_db import init_db as ensure_action_center_tables_exists
 from database.analyzer_db import init_db as ensure_analyzer_tables_exists
 from database.apilog_db import init_db as ensure_api_log_tables_exists
@@ -131,6 +132,9 @@ def create_app():
 
     # Initialize SocketIO
     socketio.init_app(app)  # Link SocketIO to the Flask app
+
+    # Initialize Redis client (optional — graceful fallback if unavailable)
+    init_redis()
 
     # Initialize Prometheus metrics exporter (auto-creates /metrics endpoint)
     from blueprints.metrics import init_metrics

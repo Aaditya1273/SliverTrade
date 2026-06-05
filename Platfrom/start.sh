@@ -103,6 +103,19 @@ SMART_ORDER_RATE_LIMIT = '${SMART_ORDER_RATE_LIMIT:-10 per second}'
 WEBHOOK_RATE_LIMIT = '${WEBHOOK_RATE_LIMIT:-100 per minute}'
 STRATEGY_RATE_LIMIT = '${STRATEGY_RATE_LIMIT:-200 per minute}'
 
+# Rate Limit Storage (empty = in-memory, set to redis://... for multi-worker)
+RATE_LIMIT_STORAGE_URL = '${RATE_LIMIT_STORAGE_URL:-}'
+
+# Database Connection Pool Tuning (PostgreSQL only; SQLite ignores these)
+# For 1000+ concurrent users, tune based on your PG max_connections:
+#   pool_size × workers + overflow < PG max_connections
+# Example: 50 × 9 workers + 100 = 550 connections
+POOL_SIZE = '${POOL_SIZE:-50}'
+MAX_OVERFLOW = '${MAX_OVERFLOW:-100}'
+POOL_TIMEOUT = '${POOL_TIMEOUT:-30}'
+POOL_RECYCLE = '${POOL_RECYCLE:-3600}'
+POOL_PRE_PING = '${POOL_PRE_PING:-True}'
+
 # API Configuration
 SESSION_EXPIRY_TIME = '${SESSION_EXPIRY_TIME:-03:00}'
 
@@ -329,13 +342,13 @@ echo "[SilverTrade] Starting application on port ${APP_PORT} with eventlet..."
 # Create gunicorn worker temp directory (must be inside container, not mounted volume)
 mkdir -p /tmp/gunicorn_workers
 
+# Use gunicorn.conf.py for all configuration (auto-scales workers to CPU cores).
+# Override any setting via environment variables defined in gunicorn.conf.py.
+# For single-worker eventlet mode (original behaviour), set:
+#   GUNICORN_WORKERS=1
+GUNICORN_BIND="0.0.0.0:${APP_PORT}"
+export GUNICORN_BIND
+
 exec /app/.venv/bin/gunicorn \
-    --worker-class eventlet \
-    --workers 1 \
-    --bind 0.0.0.0:${APP_PORT} \
-    --timeout 300 \
-    --graceful-timeout 30 \
-    --worker-tmp-dir /tmp/gunicorn_workers \
-    --no-control-socket \
-    --log-level warning \
+    --config /app/gunicorn.conf.py \
     app:app

@@ -20,6 +20,9 @@ def _coerce_quantity_to_int(data):
 
 
 class OrderSchema(Schema):
+    class Meta:
+        unknown = EXCLUDE
+
     apikey = fields.Str(required=True, validate=validate.Length(min=1, max=256))
     strategy = fields.Str(required=True)
     exchange = fields.Str(required=True, validate=validate.OneOf(VALID_EXCHANGES))

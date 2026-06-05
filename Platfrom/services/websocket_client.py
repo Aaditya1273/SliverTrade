@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 import websockets
 from dotenv import load_dotenv
 
+from utils.circuit_breaker import CircuitBreaker, CircuitBreakerOpenError
 from utils.logging import get_logger
 
 # Import the original threading module to run the asyncio event loop in a real
@@ -55,6 +56,16 @@ class WebSocketClient:
         self.connected = False
         self.authenticated = False
         self.running = False
+
+        # Circuit breakers for reconnection resilience
+        self._connect_circuit_breaker = CircuitBreaker(
+            name=f"ws_client_connect_{api_key[:8]}",
+            failure_threshold=3,
+            recovery_timeout=15.0,
+            half_open_max_attempts=2,
+        )
+        self._reconnect_attempts = 0
+        self._max_reconnect_attempts = 5
 
         # Message handling
         self.message_queue = Queue()
@@ -325,45 +336,78 @@ class WebSocketClient:
 
     async def _connect_and_run(self):
         """Connect to WebSocket and handle messages"""
-        retry_count = 0
-        max_retries = 5
+        self._reconnect_attempts = 0
 
-        while self.running and retry_count < max_retries:
+        while self.running and self._reconnect_attempts < self._max_reconnect_attempts:
             try:
-                async with websockets.connect(self.ws_url) as websocket:
-                    self.ws = websocket
-                    self.connected = True
-                    logger.info(f"Connected to WebSocket server at {self.ws_url}")
-
-                    # Authenticate immediately after connection
-                    await self._authenticate()
-
-                    # Handle messages
-                    async for message in websocket:
-                        if not self.running:
-                            break
-                        await self._handle_message(message)
-
-            except websockets.exceptions.ConnectionClosed as e:
-                logger.warning(f"WebSocket connection closed: {e}")
-                self.connected = False
-                self.authenticated = False
-
-                if self.running:
-                    retry_count += 1
-                    wait_time = min(2**retry_count, 30)  # Exponential backoff
-                    logger.info(
-                        f"Reconnecting in {wait_time} seconds... (attempt {retry_count}/{max_retries})"
+                # Check circuit breaker before attempting connection
+                if self._connect_circuit_breaker.is_open():
+                    logger.warning(
+                        "Connect circuit breaker is OPEN for %s — waiting for recovery",
+                        self.ws_url,
                     )
-                    await asyncio.sleep(wait_time)
+                    await asyncio.sleep(5)
+                    continue
+
+                try:
+                    async with websockets.connect(self.ws_url) as websocket:
+                        self.ws = websocket
+                        self.connected = True
+                        self._reconnect_attempts = 0
+                        logger.info(f"Connected to WebSocket server at {self.ws_url}")
+
+                        # Record success to help close the circuit
+                        self._connect_circuit_breaker.record_success()
+
+                        # Authenticate immediately after connection
+                        await self._authenticate()
+
+                        # Handle messages
+                        async for message in websocket:
+                            if not self.running:
+                                break
+                            await self._handle_message(message)
+
+                except websockets.exceptions.ConnectionClosed as e:
+                    logger.warning(f"WebSocket connection closed: {e}")
+                    self.connected = False
+                    self.authenticated = False
+                    self._connect_circuit_breaker.record_failure()
+
+                    if self.running:
+                        self._reconnect_attempts += 1
+                        wait_time = min(2**self._reconnect_attempts, 30)  # Exponential backoff
+                        logger.info(
+                            f"Reconnecting in {wait_time}s... (attempt {self._reconnect_attempts}/{self._max_reconnect_attempts})"
+                        )
+                        await asyncio.sleep(wait_time)
+
+                except (OSError, ConnectionError, asyncio.TimeoutError) as e:
+                    logger.warning(
+                        f"Connection failed to {self.ws_url}: {e}"
+                    )
+                    self.connected = False
+                    self.authenticated = False
+                    self._connect_circuit_breaker.record_failure()
+
+                    if self.running:
+                        self._reconnect_attempts += 1
+                        await asyncio.sleep(min(2**self._reconnect_attempts, 30))
+
+            except CircuitBreakerOpenError:
+                logger.warning(
+                    "Circuit breaker rejected connection attempt — cooling down"
+                )
+                await asyncio.sleep(self._connect_circuit_breaker.stats()["recovery_timeout"])
 
             except Exception as e:
-                logger.exception(f"Error in WebSocket connection: {e}")
+                logger.exception(f"Error in WebSocket connection loop: {e}")
                 self.connected = False
                 self.authenticated = False
+                self._connect_circuit_breaker.record_failure()
 
                 if self.running:
-                    retry_count += 1
+                    self._reconnect_attempts += 1
                     await asyncio.sleep(5)
 
     async def _authenticate(self):

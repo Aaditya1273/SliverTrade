@@ -3,10 +3,9 @@ import logging
 import os
 from datetime import datetime, date, timedelta
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, Text, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import NullPool
 
 logger = logging.getLogger(__name__)
 
@@ -19,19 +18,9 @@ DB_PATH = os.getenv("DATABASE_URL", "sqlite:///db/silvertrade.db")
 # Ensure the directory exists
 os.makedirs(os.path.dirname(DB_PATH.replace("sqlite:///", "")), exist_ok=True)
 
-# Create the engine and session
-# Conditionally create engine based on DB type
-if DB_PATH and "sqlite" in DB_PATH:
-    # SQLite: Use NullPool to prevent connection pool exhaustion
-    engine = create_engine(
-        DB_PATH,
-        echo=False,
-        poolclass=NullPool,
-        connect_args={"check_same_thread": False, "timeout": 30},
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    engine = create_engine(DB_PATH, echo=False, pool_size=50, max_overflow=100, pool_timeout=10)
+from database.db_config import get_db_engine
+
+engine = get_db_engine("DATABASE_URL", "sqlite:///db/silvertrade.db")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

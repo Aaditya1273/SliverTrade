@@ -22,11 +22,9 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 from utils.logging import get_logger
@@ -43,12 +41,10 @@ _user_credentials_cache = TTLCache(maxsize=10000, ttl=1800)  # 30 minutes TTL
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db/telegram.db")
 if DATABASE_URL.startswith("sqlite:///") and ":memory:" not in DATABASE_URL:
-    # Ensure the directory exists for file-based SQLite, but not for in-memory
     db_path = DATABASE_URL.replace("sqlite:///", "")
-    if os.path.dirname(db_path):  # Only create if a directory is specified
+    if os.path.dirname(db_path):
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-# Encryption setup for API keys
 TELEGRAM_KEY_SALT = os.getenv("TELEGRAM_KEY_SALT", "telegram-silvertrade-salt").encode()
 
 
@@ -68,18 +64,9 @@ def get_encryption_key():
 # Initialize Fernet cipher for API key encryption
 fernet = get_encryption_key()
 
-# Create engine and session
-# Conditionally create engine based on DB type
-if DATABASE_URL and "sqlite" in DATABASE_URL:
-    # SQLite: Use NullPool to prevent connection pool exhaustion
-    engine = create_engine(
-        DATABASE_URL, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    engine = create_engine(
-        DATABASE_URL, pool_pre_ping=True, pool_recycle=3600, pool_size=50, max_overflow=100
-    )
+from database.db_config import get_db_engine
+
+engine = get_db_engine("DATABASE_URL", "sqlite:///db/telegram.db")
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 
 Base = declarative_base()

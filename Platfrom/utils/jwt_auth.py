@@ -287,10 +287,10 @@ def _is_token_blacklisted(token_jti: str) -> bool:
     Returns:
         True if the token is blacklisted, False otherwise.
     """
+    from extensions import redis_client
+    if redis_client is None:
+        return False
     try:
-        from extensions import redis_client
-        if redis_client is None:
-            return False
         return redis_client.exists(f"token_blacklist:{token_jti}") > 0
     except Exception:
         return False
@@ -303,11 +303,11 @@ def blacklist_token(token_jti: str, expires_at: Optional[datetime.datetime] = No
         token_jti: The unique identifier of the token to blacklist.
         expires_at: When the token naturally expires (used for TTL).
     """
-    try:
-        from extensions import redis_client
-        if redis_client is None:
-            return
+    from extensions import redis_client
+    if redis_client is None:
+        return
 
+    try:
         # Calculate TTL: how long until the token would expire naturally
         if expires_at:
             now = datetime.datetime.now(datetime.timezone.utc)
@@ -321,7 +321,7 @@ def blacklist_token(token_jti: str, expires_at: Optional[datetime.datetime] = No
             # Default TTL: 7 days
             redis_client.setex(f"token_blacklist:{token_jti}", 604800, "1")
     except Exception:
-        pass  # Redis unavailable — blacklist best-effort
+        pass
 
 
 # ---------------------------------------------------------------------------

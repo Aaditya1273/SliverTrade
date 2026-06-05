@@ -1,5 +1,7 @@
 from marshmallow import INCLUDE, Schema, fields, validate
 
+from utils.constants import VALID_EXCHANGES
+
 
 class FundsSchema(Schema):
     apikey = fields.Str(required=True, validate=validate.Length(min=1, max=256))
@@ -31,7 +33,7 @@ class OpenPositionSchema(Schema):
     apikey = fields.Str(required=True, validate=validate.Length(min=1, max=256))
     strategy = fields.Str(required=True)
     symbol = fields.Str(required=True)
-    exchange = fields.Str(required=True)
+    exchange = fields.Str(required=True, validate=validate.OneOf(VALID_EXCHANGES))
     product = fields.Str(required=True, validate=validate.OneOf(["MIS", "NRML", "CNC"]))
 
 

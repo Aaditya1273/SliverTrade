@@ -157,14 +157,29 @@ def close_position_with_auth(
 
     if status_code == 200:
         response_data = {"status": "success", "message": "All Open Positions Squared Off"}
-        bus.publish(PositionClosedEvent(
-            mode="live", api_type=API_TYPE,
-            symbol=position_data.get("symbol", ""), exchange=position_data.get("exchange", ""),
-            product=position_data.get("product_type", "") or position_data.get("product", ""),
-            orderid="", message="All Open Positions Squared Off",
-            request_data=position_request_data, response_data=response_data,
-            api_key=original_data.get("apikey", ""),
-        ))
+
+        # NOTE: Position close is NOT reversible — once positions are squared
+        # off at the broker, they cannot be "un-closed." If the event publish
+        # fails here, we still report success because the broker action was
+        # completed. The only consequence is that the user won't get a real-
+        # time socket notification. We log a warning instead of attempting
+        # a reversal (which is impossible for close-position).
+        try:
+            bus.publish(PositionClosedEvent(
+                mode="live", api_type=API_TYPE,
+                symbol=position_data.get("symbol", ""), exchange=position_data.get("exchange", ""),
+                product=position_data.get("product_type", "") or position_data.get("product", ""),
+                orderid="", message="All Open Positions Squared Off",
+                request_data=position_request_data, response_data=response_data,
+                api_key=original_data.get("apikey", ""),
+            ))
+        except Exception as e:
+            logger.warning(
+                "Positions closed at broker but event publish failed: %s. "
+                "User may not see real-time notification.",
+                e,
+            )
+
         return True, response_data, 200
     else:
         message = (

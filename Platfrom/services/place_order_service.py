@@ -217,24 +217,52 @@ def place_order_with_auth(
         return False, error_response, 500
 
     if res.status == 200:
-        order_response_data = {"status": "success", "orderid": order_id}
+        order_id_str = str(order_id)
+        order_response_data = {"status": "success", "orderid": order_id_str}
 
-        if emit_event:
-            bus.publish(OrderPlacedEvent(
-                mode="live",
-                api_type="placeorder",
-                strategy=order_data.get("strategy", ""),
-                symbol=order_data.get("symbol", ""),
-                exchange=order_data.get("exchange", ""),
-                action=order_data.get("action", ""),
-                quantity=int(order_data.get("quantity", 0)),
-                pricetype=order_data.get("pricetype", ""),
-                product=order_data.get("product", ""),
-                orderid=str(order_id),
-                request_data=order_request_data,
-                response_data=order_response_data,
+        try:
+            if emit_event:
+                bus.publish(OrderPlacedEvent(
+                    mode="live",
+                    api_type="placeorder",
+                    strategy=order_data.get("strategy", ""),
+                    symbol=order_data.get("symbol", ""),
+                    exchange=order_data.get("exchange", ""),
+                    action=order_data.get("action", ""),
+                    quantity=int(order_data.get("quantity", 0)),
+                    pricetype=order_data.get("pricetype", ""),
+                    product=order_data.get("product", ""),
+                    orderid=order_id_str,
+                    request_data=order_request_data,
+                    response_data=order_response_data,
+                    api_key=api_key,
+                ))
+        except Exception as e:
+            # CRITICAL: Broker accepted order but post-processing failed.
+            # Attempt to reverse the order at the broker immediately.
+            logger.critical(
+                "CRITICAL: Order %s for %s succeeded at broker but event publish failed: %s. "
+                "Attempting reversal...",
+                order_id_str,
+                order_data.get("symbol", "unknown"),
+                e,
+            )
+            _attempt_order_reversal(
+                order_id=order_id_str,
+                auth_token=auth_token,
+                broker_module=broker_module,
+                symbol=order_data.get("symbol", "unknown"),
                 api_key=api_key,
-            ))
+            )
+            return (
+                False,
+                {
+                    "status": "error",
+                    "message": "Order placed at broker but internal processing failed. "
+                    f"If not reversed automatically, contact support with order ref: {order_id_str}",
+                },
+                500,
+            )
 
         return True, order_response_data, 200
     else:
@@ -255,6 +283,47 @@ def place_order_with_auth(
             error_message=message,
         ))
         return False, error_response, res.status if res.status != 200 else 500
+
+
+def _attempt_order_reversal(
+    order_id: str,
+    auth_token: str,
+    broker_module: Any,
+    symbol: str,
+    api_key: str = "",
+) -> None:
+    """
+    Attempt to cancel/reverse an order at the broker that was placed but
+    could not be confirmed internally.
+
+    Logs at CRITICAL level if reversal fails — an engineer MUST intervene.
+    """
+    try:
+        cancel_res, cancel_status = broker_module.cancel_order(order_id, auth_token)
+        if cancel_status == 200:
+            logger.info(
+                "ORDER SUCCESSFULLY REVERSED: %s (order_id=%s, symbol=%s)",
+                order_id,
+                order_id,
+                symbol,
+            )
+        else:
+            logger.critical(
+                "EMERGENCY: Reversal ATTEMPTED for order %s (symbol=%s) "
+                "but broker returned status %s. Order may still be live! "
+                "Manual intervention required.",
+                order_id,
+                symbol,
+                cancel_status,
+            )
+    except Exception as e:
+        logger.critical(
+            "EMERGENCY: Reversal FAILED for order %s (symbol=%s) with exception: %s. "
+            "Order is ORPHANED — manual intervention required immediately!",
+            order_id,
+            symbol,
+            e,
+        )
 
 
 def place_order(

@@ -19,18 +19,18 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy import (
     Boolean, Column, DateTime, ForeignKey, Integer, String, Text,
-    create_engine, UniqueConstraint,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declarative_base
 
-from database.db_config import create_db_engine
+from database.db_config import get_db_engine
 
 # ---------------------------------------------------------------------------
 # Database Setup
 # ---------------------------------------------------------------------------
 
-engine = create_db_engine("DATABASE_URL", "sqlite:///db/silvertrade.db")
+engine = get_db_engine("DATABASE_URL", "sqlite:///db/silvertrade.db")
 Base = declarative_base()
 
 
@@ -274,9 +274,9 @@ def create_organization(
     """
     # Import session
     from sqlalchemy.orm import scoped_session, sessionmaker
-    from database.db_config import create_db_engine
+    from database.db_config import get_db_engine
     
-    engine = create_db_engine()
+    engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
     
@@ -349,7 +349,7 @@ def get_organization(org_id: str) -> Optional[Organization]:
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
     
-    engine = create_db_engine()
+    engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
     
@@ -381,7 +381,7 @@ def add_member(
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
     
-    engine = create_db_engine()
+    engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
     
@@ -483,7 +483,7 @@ def delete_organization(org_id: str) -> bool:
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
     
-    engine = create_db_engine()
+    engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
     

@@ -190,6 +190,64 @@ def place_single_split_order_for_leg(
         }
 
 
+# Track all placed order IDs across legs for potential reversal on failure
+_placed_leg_orders: list[dict[str, Any]] = []
+
+
+def _attempt_leg_reversal(auth_token: str | None, broker: str | None, api_key: str) -> None:
+    """
+    Attempt to reverse ALL previously placed legs in a multiorder.
+    Called when a subsequent leg fails — best-effort cleanup.
+    """
+    global _placed_leg_orders
+    if not _placed_leg_orders:
+        return
+
+    import importlib
+
+    # Import the broker module for cancel operations
+    broker_module = None
+    if broker:
+        try:
+            module_path = f"broker.{broker}.api.order_api"
+            broker_module = importlib.import_module(module_path)
+        except ImportError:
+            pass
+
+    if not broker_module or not auth_token:
+        logger.critical(
+            "EMERGENCY: Cannot reverse %d placed legs — no broker module or auth token available. "
+            "Manual intervention required!",
+            len(_placed_leg_orders),
+        )
+        return
+
+    for placed in reversed(_placed_leg_orders):
+        order_id = placed.get("orderid", "")
+        symbol = placed.get("symbol", "unknown")
+        if not order_id:
+            continue
+        try:
+            _, cancel_status = broker_module.cancel_order(order_id, auth_token)
+            if cancel_status == 200:
+                logger.info(
+                    "REVERSED leg order %s (symbol=%s)",
+                    order_id, symbol,
+                )
+            else:
+                logger.critical(
+                    "EMERGENCY: Reversal of leg order %s (symbol=%s) returned status %s. "
+                    "Order may still be live!",
+                    order_id, symbol, cancel_status,
+                )
+        except Exception as e:
+            logger.critical(
+                "EMERGENCY: Reversal of leg order %s (symbol=%s) FAILED: %s. "
+                "Manual intervention required!",
+                order_id, symbol, e,
+            )
+
+
 def resolve_and_place_leg(
     leg_data: dict[str, Any],
     common_data: dict[str, Any],
@@ -502,11 +560,19 @@ def process_multiorder_with_auth(
         except Exception as e:
             logger.debug(f"Multiquotes pre-fetch failed for multiorder, falling back to per-leg fetch: {e}")
 
+    # Reset the global tracker for this multiorder session
+    global _placed_leg_orders
+    _placed_leg_orders = []
+
     # Process all legs sequentially (avoids ThreadPoolExecutor + eventlet hang)
-    # Process BUY legs first
-    for i, (orig_idx, leg) in enumerate(buy_legs):
+    # Process BUY legs first, then SELL legs
+    all_sorted_legs = buy_legs + sell_legs
+    any_leg_failed = False
+
+    for i, (orig_idx, leg) in enumerate(all_sorted_legs):
         if order_delay and i > 0:
             time.sleep(order_delay)
+
         result = resolve_and_place_leg(
             leg, common_data, api_key, orig_idx, total_legs, auth_token, broker, underlying_ltp,
             leg_quote_cache=leg_quote_cache,
@@ -514,16 +580,22 @@ def process_multiorder_with_auth(
         if result:
             results.append(result)
 
-    # Then process SELL legs
-    for i, (orig_idx, leg) in enumerate(sell_legs):
-        if order_delay and (i > 0 or buy_legs):
-            time.sleep(order_delay)
-        result = resolve_and_place_leg(
-            leg, common_data, api_key, orig_idx, total_legs, auth_token, broker, underlying_ltp,
-            leg_quote_cache=leg_quote_cache,
-        )
-        if result:
-            results.append(result)
+            # Track successful leg orders for possible reversal
+            if result.get("status") == "success" and result.get("orderid"):
+                _placed_leg_orders.append({
+                    "orderid": result["orderid"],
+                    "symbol": result.get("symbol", "unknown"),
+                })
+
+            # If a leg failed, attempt to reverse previously placed legs
+            if result.get("status") == "error":
+                any_leg_failed = True
+                logger.warning(
+                    "Leg %d failed. Attempting to reverse %d previously placed leg orders...",
+                    result.get("leg", 0),
+                    len(_placed_leg_orders),
+                )
+                _attempt_leg_reversal(auth_token, broker, api_key)
 
     # Sort results by leg number
     results.sort(key=lambda x: x.get("leg", 0))

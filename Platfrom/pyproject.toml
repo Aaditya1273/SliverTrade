@@ -106,6 +106,7 @@ dependencies = [
   "Pygments==2.20.0",
   "PyJWT==2.12.1",
   "pyngrok==7.5.1",
+  "redis>=5.2.0",
   "pyotp==2.9.0",
   "pytest==9.0.3",
   "pytest-timeout==2.4.0",
@@ -207,11 +208,43 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning",
 ]
 
+# Coverage configuration — 20% target per Phase 3 plan
+[tool.coverage.run]
+source = ["."]
+omit = [
+    ".venv/*",
+    "test/*",
+    "migrations/*",
+    "frontend/*",
+    "node_modules/*",
+    "__pycache__/*",
+    "db/*",
+    "log/*",
+    "strategies/*",
+]
+
+[tool.coverage.report]
+fail_under = 20
+show_missing = true
+skip_covered = false
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
 [dependency-groups]
 dev = [
     "bandit[sarif]>=1.9.3",
     "detect-secrets>=1.5.0",
     "pip-audit>=2.10.0",
+    "locust>=2.32.0",
+    "numpy>=2.4.4",
+    "pytest-cov>=6.1.0",
     "pytest-timeout>=2.4.0",
     "ruff>=0.14.14",
 ]

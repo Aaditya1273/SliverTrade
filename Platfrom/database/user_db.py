@@ -6,21 +6,18 @@ import pyotp
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from cachetools import TTLCache
-from sqlalchemy import Boolean, Column, Integer, String, create_engine
+from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 
+from database.db_config import get_db_engine
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 # Initialize Argon2 hasher
 ph = PasswordHasher()
-
-# Database connection details
-DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Security: Require API_KEY_PEPPER environment variable (fail fast if missing)
 # Pepper must be at least 32 bytes (64 hex characters) for cryptographic security
@@ -38,18 +35,7 @@ if len(_pepper_value) < 32:
     )
 PASSWORD_PEPPER = _pepper_value
 
-# Engine and session setup
-# Conditionally create engine based on DB type
-if DATABASE_URL and "sqlite" in DATABASE_URL:
-    # SQLite: Use NullPool to prevent connection pool exhaustion
-    engine = create_engine(
-        DATABASE_URL, echo=False, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    engine = create_engine(
-        DATABASE_URL, echo=False, pool_size=50, max_overflow=100, pool_timeout=10
-    )
+engine = get_db_engine()
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()
 Base.query = db_session.query_property()

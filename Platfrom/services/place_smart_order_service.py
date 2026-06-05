@@ -232,20 +232,56 @@ def place_smart_order_with_auth(
 
         # Log successful order immediately after placement
         if res and res.status == 200:
-            order_response_data = {"status": "success", "orderid": order_id}
-            bus.publish(OrderPlacedEvent(
-                mode="live", api_type="placesmartorder",
-                strategy=order_data.get("strategy", ""),
-                symbol=order_data.get("symbol", ""),
-                exchange=order_data.get("exchange", ""),
-                action=order_data.get("action", ""),
-                quantity=int(order_data.get("quantity", 0)),
-                pricetype=order_data.get("pricetype", ""),
-                product=order_data.get("product", ""),
-                orderid=str(order_id),
-                request_data=order_request_data, response_data=order_response_data,
-                api_key=api_key,
-            ))
+            order_id_str = str(order_id)
+            order_response_data = {"status": "success", "orderid": order_id_str}
+
+            try:
+                bus.publish(OrderPlacedEvent(
+                    mode="live", api_type="placesmartorder",
+                    strategy=order_data.get("strategy", ""),
+                    symbol=order_data.get("symbol", ""),
+                    exchange=order_data.get("exchange", ""),
+                    action=order_data.get("action", ""),
+                    quantity=int(order_data.get("quantity", 0)),
+                    pricetype=order_data.get("pricetype", ""),
+                    product=order_data.get("product", ""),
+                    orderid=order_id_str,
+                    request_data=order_request_data, response_data=order_response_data,
+                    api_key=api_key,
+                ))
+            except Exception as e:
+                # CRITICAL: Broker accepted order but post-processing failed.
+                # Attempt to reverse the order at the broker immediately.
+                logger.critical(
+                    "CRITICAL: Smart order %s for %s succeeded at broker but event publish failed: %s. "
+                    "Attempting reversal...",
+                    order_id_str,
+                    order_data.get("symbol", "unknown"),
+                    e,
+                )
+                try:
+                    cancel_res, cancel_status = broker_module.cancel_order(order_id_str, auth_token)
+                    if cancel_status == 200:
+                        logger.info("SUCCESSFULLY REVERSED smart order: %s", order_id_str)
+                    else:
+                        logger.critical(
+                            "EMERGENCY: Reversal of smart order %s returned status %s. May still be live!",
+                            order_id_str, cancel_status,
+                        )
+                except Exception as cancel_e:
+                    logger.critical(
+                        "EMERGENCY: Reversal of smart order %s FAILED: %s. Manual intervention required!",
+                        order_id_str, cancel_e,
+                    )
+                return (
+                    False,
+                    {
+                        "status": "error",
+                        "message": "Order placed at broker but internal processing failed. "
+                        f"If not reversed automatically, contact support with ref: {order_id_str}",
+                    },
+                    500,
+                )
 
     except Exception as e:
         logger.exception(f"Error in broker_module.place_smartorder_api: {e}")

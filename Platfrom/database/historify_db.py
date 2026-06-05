@@ -2505,6 +2505,11 @@ def export_to_parquet(
         combined = combined.sort_values(["symbol", "exchange", "interval", "timestamp"])
 
         # pyarrow's "none" isn't a valid codec — translate the API value
+        # Validate compression against allowlist (defense-in-depth)
+        VALID_PARQUET_COMPRESSIONS = {"zstd", "snappy", "gzip", "none"}
+        if compression not in VALID_PARQUET_COMPRESSIONS:
+            compression = "zstd"
+
         pq_compression = None if compression == "none" else compression
         combined.to_parquet(abs_output, compression=pq_compression, index=False)
 

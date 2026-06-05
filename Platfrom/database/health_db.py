@@ -18,10 +18,9 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, create_engine
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.pool import NullPool
 from sqlalchemy.sql import func
 
 logger = logging.getLogger(__name__)
@@ -29,17 +28,9 @@ logger = logging.getLogger(__name__)
 # Use a separate database for health monitoring
 HEALTH_DATABASE_URL = os.getenv("HEALTH_DATABASE_URL", "sqlite:///db/health.db")
 
-# Conditionally create engine based on DB type
-if HEALTH_DATABASE_URL and "sqlite" in HEALTH_DATABASE_URL:
-    # SQLite: Use NullPool to prevent connection pool exhaustion
-    health_engine = create_engine(
-        HEALTH_DATABASE_URL, poolclass=NullPool, connect_args={"check_same_thread": False}
-    )
-else:
-    # For other databases like PostgreSQL, use connection pooling
-    health_engine = create_engine(
-        HEALTH_DATABASE_URL, pool_size=50, max_overflow=100, pool_timeout=10
-    )
+from database.db_config import get_db_engine
+
+health_engine = get_db_engine("HEALTH_DATABASE_URL", "sqlite:///db/health.db")
 
 health_session = scoped_session(
     sessionmaker(autocommit=False, autoflush=False, bind=health_engine)
