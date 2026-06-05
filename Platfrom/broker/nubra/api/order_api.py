@@ -13,7 +13,7 @@ from broker.nubra.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,7 +32,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     device_id = "SILVERTRADE"  # Fixed device ID, same as auth_api.py
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -45,11 +44,11 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 
     for attempt in range(_MAX_RETRIES):
         if method == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            response = client.post(url, headers=headers, content=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         else:
-            response = client.request(method, url, headers=headers, content=payload)
+            response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
         # Handle rate limiting with exponential backoff
         if response.status_code == 429:
@@ -259,12 +258,11 @@ def place_order_api(data, auth):
     logger.info(f"Nubra place order payload: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Make the request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{NUBRA_BASE_URL}/orders/v2/single",
             headers=headers,
             content=payload,
@@ -507,7 +505,6 @@ def cancel_order(orderid, auth):
     device_id = "SILVERTRADE"  # Fixed device ID, same as auth_api.py
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Set up the request headers
     headers = {
@@ -520,7 +517,7 @@ def cancel_order(orderid, auth):
     # Make the DELETE request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = client.delete(
+        response = request_with_circuit_breaker("DELETE", 
             f"{NUBRA_BASE_URL}/orders/{orderid}",
             headers=headers,
         )
@@ -587,7 +584,6 @@ def modify_order(data, auth):
     device_id = "SILVERTRADE"  # Fixed device ID, same as auth_api.py
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Transform SilverTrade AI data to Nubra modify order format
     # Note: token/ref_id is not needed for modify order
@@ -610,7 +606,7 @@ def modify_order(data, auth):
     # Make the POST request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{NUBRA_BASE_URL}/orders/v2/modify/{orderid}",
             headers=headers,
             content=payload,

@@ -45,9 +45,7 @@ def get_quotes(symbol, exchange, auth_token):
         api_session_key, susertoken, api_token = auth_token.split(":::")
 
         # Use httpx client for consistency
-        from utils.httpx_client import get_httpx_client
-
-        client = get_httpx_client()
+        from utils.httpx_client import request_with_circuit_breaker
 
         # Get token for the symbol
         from database.token_db import get_token
@@ -72,7 +70,7 @@ def get_quotes(symbol, exchange, auth_token):
         # But the full path includes /dart/v1
         url = f"https://integrate.definedgesecurities.com/dart/v1/quotes/{api_exchange}/{token_id}"
 
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
 
         logger.debug(f"Quotes API Response Status: {response.status_code}")
 
@@ -279,10 +277,8 @@ class BrokerData:
             headers = {"Authorization": api_session_key}
 
             # Use shared httpx client for connection pooling
-            from utils.httpx_client import get_httpx_client
-
-            client = get_httpx_client()
-            http_response = client.get(url, headers=headers, timeout=10.0)
+            from utils.httpx_client import request_with_circuit_breaker
+            http_response = request_with_circuit_breaker("GET", url, headers=headers, timeout=10.0)
 
             if http_response.status_code != 200:
                 return {
@@ -335,7 +331,7 @@ class BrokerData:
             url = f"https://integrate.definedgesecurities.com/dart/v1/quotes/{api_exchange}/{token}"
             headers = {"Authorization": api_session_key}
 
-            http_response = await client.get(url, headers=headers)
+            http_response = await request_with_circuit_breaker("GET", url, headers=headers)
 
             if http_response.status_code != 200:
                 return {
@@ -603,13 +599,11 @@ class BrokerData:
 
                 try:
                     # Use httpx client for consistency
-                    from utils.httpx_client import get_httpx_client
-
-                    client = get_httpx_client()
+                    from utils.httpx_client import request_with_circuit_breaker
 
                     headers = {"Authorization": api_session_key}
 
-                    response = client.get(url, headers=headers)
+                    response = request_with_circuit_breaker("GET", url, headers=headers)
 
                     logger.debug(f"Debug - Response status: {response.status_code}")
                     logger.debug(f"Debug - Response headers: {dict(response.headers)}")

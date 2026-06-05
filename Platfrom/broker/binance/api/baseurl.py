@@ -24,7 +24,7 @@ from typing import Any
 import httpx
 from urllib.parse import urlencode
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -156,30 +156,28 @@ def get_api_response(
     if query_params:
         full_url = url + "?" + urlencode(sorted(query_params.items()))
 
-    client = get_httpx_client()
-
     try:
         method_upper = method.upper()
         logger.debug(f"[Binance] {method_upper} {endpoint}")
 
         if method_upper == "GET":
-            response = client.get(full_url, headers=headers)
+            response = request_with_circuit_breaker("GET", full_url, headers=headers)
         elif method_upper == "POST":
             ct_headers = dict(headers)
             if payload:
                 ct_headers.setdefault("Content-Type", "application/json")
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 full_url if not payload else url,
                 headers=ct_headers,
                 content=payload if payload else None,
                 params=query_params if payload else None,
             )
         elif method_upper == "DELETE":
-            response = client.request("DELETE", full_url, headers=headers)
+            response = request_with_circuit_breaker("DELETE", full_url, headers=headers)
         elif method_upper == "PUT":
-            response = client.put(full_url, headers=headers)
+            response = request_with_circuit_breaker("PUT", full_url, headers=headers)
         else:
-            response = client.request(method_upper, full_url, headers=headers)
+            response = request_with_circuit_breaker(method_upper, full_url, headers=headers)
 
     except Exception as e:
         logger.error(f"[Binance] Request error: {e}")

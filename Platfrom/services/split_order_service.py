@@ -4,7 +4,7 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.settings_db import get_analyze_mode
 from events import AnalyzerErrorEvent, OrderFailedEvent, SplitCompletedEvent
 from utils.constants import (
@@ -14,6 +14,7 @@ from utils.constants import (
     VALID_PRICE_TYPES,
     VALID_PRODUCT_TYPES,
 )
+from utils.broker_failover import get_failover_manager, make_token_resolver
 from utils.event_bus import bus
 from utils.logging import get_logger
 
@@ -498,6 +499,23 @@ def split_order(
             error_response = {"status": "error", "message": "Invalid silvertrade apikey"}
             # Skip logging for invalid API keys to prevent database flooding
             return False, error_response, 403
+
+        # Register user with failover manager (circuit breaker per broker)
+        user_id = verify_api_key(api_key)
+        if user_id:
+            fm = get_failover_manager()
+            fm.register_user(user_id, [broker_name])
+
+            return fm.execute_with_failover(
+                user_id=user_id,
+                operation="split_order",
+                fn=split_order_with_auth,
+                split_data=split_data,
+                auth_token=AUTH_TOKEN,
+                broker=broker_name,
+                original_data=original_data,
+                token_resolver=make_token_resolver(api_key),
+            )
 
         return split_order_with_auth(split_data, AUTH_TOKEN, broker_name, original_data)
 

@@ -3,7 +3,7 @@ import os
 import httpx
 
 from broker.mstock.database import master_contract_db
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -31,8 +31,7 @@ def get_margin_data(auth_token):
     }
 
     try:
-        client = get_httpx_client()
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.mstock.trade/openapi/typeb/user/fundsummary", headers=headers, timeout=10.0
         )
         logger.info(f"Fund summary API response status: {response.status_code}")

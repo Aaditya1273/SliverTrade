@@ -10,7 +10,7 @@ import pandas as pd
 
 from broker.tradejini.api.nxtradstream import NxtradStream
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -965,10 +965,9 @@ class BrokerData:
             logger.debug(f"Making historical data request to {url} with params: {params}")
 
             # Get the shared httpx client
-            client = get_httpx_client()
 
             # Make the GET request
-            response = client.get(url, params=params, headers=headers, timeout=30.0)
+            response = request_with_circuit_breaker("GET", url, params=params, headers=headers, timeout=30.0)
 
             logger.debug(f"Response status: {response.status_code}")
             response.raise_for_status()

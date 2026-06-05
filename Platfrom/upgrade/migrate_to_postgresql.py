@@ -204,8 +204,9 @@ def fix_sqlite_defaults_for_pg(sql, table_name, columns):
 DATABASE_CONFIGS = [
     {
         "name": "Main Database",
-        # openalgo.db is the actual file (corrupted — will be recreated fresh)
+        # Prefer legacy openalgo.db; fall back to silvertrade.db for fresh installs
         "sqlite_relative": "db/openalgo.db",
+        "alt_sqlite_relative": "db/silvertrade.db",
         "pg_url_key": "DATABASE_URL",
         "schema": "public",
         "description": "auth, users, settings, strategies, symbols, telegram, flow, etc.",
@@ -246,10 +247,17 @@ def migrate_database(config, dry_run=False, force=False):
     name = config["name"]
     pg_url = os.getenv(config["pg_url_key"], "")
 
-    # SQLite path is deterministic — read it directly from the known project path.
-    # We do NOT read from env vars here because the user has already updated
-    # .env to point at PostgreSQL by the time they run the migration.
+    # SQLite path supports a fallback via "alt_sqlite_relative"
     sqlite_path = PROJECT_ROOT / config["sqlite_relative"]
+    
+    # If the primary SQLite path doesn't exist, try the alternate
+    alt_sqlite_relative = config.get("alt_sqlite_relative")
+    if not sqlite_path.exists() and alt_sqlite_relative:
+        alt_path = PROJECT_ROOT / alt_sqlite_relative
+        if alt_path.exists():
+            print(f"  ℹ️  Primary SQLite not found at {config['sqlite_relative']}")
+            print(f"     Using alternate: {alt_sqlite_relative}")
+            sqlite_path = alt_path
 
     if not sqlite_path.exists():
         print(f"  ⏭️  {name}: SQLite database not found at {sqlite_path}, skipping")

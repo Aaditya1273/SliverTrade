@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -50,9 +50,8 @@ def authenticate_broker(
         }
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
-        totp_response = client.post(
+        totp_response = request_with_circuit_breaker("POST", 
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/TOTPLogin",
             json=totp_login_data,
             headers=headers,
@@ -79,7 +78,7 @@ def authenticate_broker(
 
         logger.debug(f"The Access Token request is :{json.dumps(access_token_data)}")
 
-        token_response = client.post(
+        token_response = request_with_circuit_breaker("POST", 
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken",
             json=access_token_data,
             headers=headers,

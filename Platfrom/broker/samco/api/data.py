@@ -7,7 +7,7 @@ import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,7 +43,6 @@ def safe_int(value, default=0):
 def get_api_response(endpoint, auth, method="GET", payload=None, max_retries=3):
     """Helper function to make API calls to Samco with retry logic for rate limits"""
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Accept": "application/json",
@@ -56,11 +55,11 @@ def get_api_response(endpoint, auth, method="GET", payload=None, max_retries=3):
     for attempt in range(max_retries + 1):
         try:
             if method == "GET":
-                response = client.get(url, headers=headers)
+                response = request_with_circuit_breaker("GET", url, headers=headers)
             elif method == "POST":
-                response = client.post(url, headers=headers, json=payload)
+                response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
             else:
-                response = client.request(method, url, headers=headers, json=payload)
+                response = request_with_circuit_breaker(method, url, headers=headers, json=payload)
 
             # Add status attribute for compatibility with the existing codebase
             response.status = response.status_code

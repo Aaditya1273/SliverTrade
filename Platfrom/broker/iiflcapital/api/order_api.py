@@ -9,7 +9,7 @@ from broker.iiflcapital.mapping.transform_data import (
     transform_modify_order_data,
 )
 from database.token_db import get_br_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -52,19 +52,18 @@ def _headers(auth: str) -> dict:
 
 
 def _request(endpoint: str, auth: str, method: str = "GET", payload=None, params=None):
-    client = get_httpx_client()
     url = f"{BASE_URL}{endpoint}"
 
     if method == "GET":
-        response = client.get(url, headers=_headers(auth), params=params)
+        response = request_with_circuit_breaker("GET", url, headers=_headers(auth), params=params)
     elif method == "POST":
-        response = client.post(url, headers=_headers(auth), json=payload)
+        response = request_with_circuit_breaker("POST", url, headers=_headers(auth), json=payload)
     elif method == "PUT":
-        response = client.put(url, headers=_headers(auth), json=payload)
+        response = request_with_circuit_breaker("PUT", url, headers=_headers(auth), json=payload)
     elif method == "DELETE":
-        response = client.delete(url, headers=_headers(auth), params=params)
+        response = request_with_circuit_breaker("DELETE", url, headers=_headers(auth), params=params)
     else:
-        response = client.request(method, url, headers=_headers(auth), json=payload, params=params)
+        response = request_with_circuit_breaker(method, url, headers=_headers(auth), json=payload, params=params)
 
     try:
         data = response.json()

@@ -2,7 +2,7 @@
 
 import json
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -24,14 +24,13 @@ def get_margin_data(auth_token):
         api_session_key, susertoken, api_token = auth_token.split(":::")
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         headers = {"Authorization": api_session_key, "Content-Type": "application/json"}
 
         url = "https://integrate.definedgesecurities.com/dart/v1/limits"
 
         logger.info("=== FETCHING FUNDS/LIMITS FROM DEFINEDGE ===")
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
 
         # Log raw response for debugging
         logger.info(f"Definedge Limits API Response Status: {response.status_code}")

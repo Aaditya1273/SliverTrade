@@ -2,7 +2,7 @@ import json
 import os
 from urllib.parse import urlencode
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,9 +44,8 @@ def authenticate_broker(password=None, twofa=None, twofa_type=None):
         data = {"password": password, "twoFa": twofa, "twoFaTyp": twofa_type}
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
-        response = client.post(url, data=data, headers=headers)
+        response = request_with_circuit_breaker("POST", url, data=data, headers=headers)
         response_data = response.json()
 
         # Print the full response for debugging
@@ -107,8 +106,7 @@ def authenticate_broker_oauth(code):
         }
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
-        response = client.post(url, data=data)
+        response = request_with_circuit_breaker("POST", url, data=data)
 
         if response.status_code == 200:
             response_data = response.json()

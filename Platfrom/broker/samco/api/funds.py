@@ -3,7 +3,7 @@
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,11 +16,10 @@ def get_margin_data(auth_token):
     """Fetch margin data from Samco's API using the provided auth token."""
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {"Accept": "application/json", "x-session-token": auth_token}
 
-    response = client.get(f"{BASE_URL}/limit/getLimits", headers=headers)
+    response = request_with_circuit_breaker("GET", f"{BASE_URL}/limit/getLimits", headers=headers)
 
     # Add status attribute for compatibility with the existing codebase
     response.status = response.status_code

@@ -13,7 +13,7 @@ from broker.flattrade.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     payload = "jData=" + data + "&jKey=" + AUTH_TOKEN
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     if endpoint == "/PiConnectAPI/Holdings":
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -41,7 +40,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         headers = {"Content-Type": "application/json"}
 
     url = f"https://piconnect.flattrade.in{endpoint}"
-    response = client.request(method, url, content=payload, headers=headers)
+    response = request_with_circuit_breaker(method, url, content=payload, headers=headers)
     data = response.text
 
     return json.loads(data)
@@ -160,10 +159,9 @@ def place_order_api(data, auth):
 
     logger.info(f"{payload}")
     # Get the shared httpx client
-    client = get_httpx_client()
 
     url = "https://piconnect.flattrade.in/PiConnectAPI/PlaceOrder"
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     response_data = res.json()
 
     # Add status attribute for backward compatibility
@@ -330,10 +328,9 @@ def cancel_order(orderid, auth):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
     # Get the shared httpx client and send the request
-    client = get_httpx_client()
 
     url = "https://piconnect.flattrade.in/PiConnectAPI/CancelOrder"
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     data = res.json()
     logger.info(f"{data}")
 
@@ -368,10 +365,9 @@ def modify_order(data, auth):
     logger.info(f"Modify Order Data: {transformed_data}")
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     url = "https://piconnect.flattrade.in/PiConnectAPI/ModifyOrder"
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     response = res.json()
 
     logger.info(f"Modify Order Response: {response}")

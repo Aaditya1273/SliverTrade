@@ -1,25 +1,14 @@
 venopenalgo
 .venv/
-.env
-openalgo.db
+.openalgo.db
 *.db-shm
 *.db-wal
 *.db-journal
-.env
 .flaskenv
 *.pyc
 __pycache__/
 instance/
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-.claude/settings.json
-.claude/settings.local.json
-.python-version
-config.ini
 .venvv
-.cloudflared/*.json
 
 #DB Files, CSV Files and Log/Tmp Files
 
@@ -91,3 +80,94 @@ yarn-error.log*
 
 # Windows NUL file
 nul
+
+# =============================================================================
+# Security — API keys, secrets, and sensitive config
+# =============================================================================
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+!.sample.env
+config.ini
+secrets/
+
+# SSL/TLS certificates
+*.crt
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks
+*.cert
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+*.pem
+
+# Service account keys (GCP, AWS, Azure)
+*-service-account.json
+*-service-account.key
+credentials.json
+*.credentials
+
+# Known secret files
+broker_api_key.txt
+api_key.txt
+token.txt
+refresh_token.txt
+
+# Database backups (may contain sensitive data)
+db/backups/**
+*.sql
+*.sql.gz
+*.dump
+
+# =============================================================================
+# IDE, OS, and tooling artifacts
+# =============================================================================
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# AI assistant config
+.claude/**
+.claude/settings.json
+.claude/settings.local.json
+
+# Python tools
+.python-version
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+**/node_modules/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Cloudflare tunnel
+.cloudflared/*.json

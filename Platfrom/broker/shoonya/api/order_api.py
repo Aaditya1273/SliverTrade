@@ -13,7 +13,7 @@ from broker.shoonya.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -34,7 +34,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     payload_str = "jData=" + data
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     headers = {
         "Content-Type": "text/plain",
@@ -42,7 +41,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     }
     url = f"https://api.shoonya.com{endpoint}"
 
-    response = client.request(method, url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker(method, url, content=payload_str, headers=headers)
     data = response.text
 
     try:
@@ -162,10 +161,9 @@ def place_order_api(data, auth):
     logger.info(f"{payload_str}")
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://api.shoonya.com/NorenWClientAPI/PlaceOrder"
 
-    response = client.post(url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
     response_data = json.loads(response.text)
 
     # Add compatibility for service layer that expects .status attribute
@@ -331,10 +329,9 @@ def cancel_order(orderid, auth):
     }
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://api.shoonya.com/NorenWClientAPI/CancelOrder"
 
-    response = client.post(url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
     data = json.loads(response.text)
     logger.info(f"CancelOrder Response: {data}")
 
@@ -373,10 +370,9 @@ def modify_order(data, auth):
     payload_str = "jData=" + json.dumps(transformed_data)
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://api.shoonya.com/NorenWClientAPI/ModifyOrder"
 
-    response = client.post(url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
     response_data = json.loads(response.text)
     logger.info(f"Modify order response: {response_data}")
 

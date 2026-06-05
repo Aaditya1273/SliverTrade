@@ -16,7 +16,7 @@ from broker.paytm.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,14 +30,12 @@ def get_api_response(endpoint, auth, method="GET", payload="", max_retries=3, re
         "Accept": "application/json",
     }
 
-    client = get_httpx_client()
-
     for attempt in range(max_retries):
         try:
             if method == "GET":
-                response = client.get(f"{base_url}{endpoint}", headers=headers, timeout=30.0)
+                response = request_with_circuit_breaker("GET", f"{base_url}{endpoint}", headers=headers, timeout=30.0)
             else:
-                response = client.post(
+                response = request_with_circuit_breaker("POST", 
                     f"{base_url}{endpoint}", headers=headers, content=payload, timeout=30.0
                 )
 

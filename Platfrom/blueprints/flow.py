@@ -255,7 +255,7 @@ def activate_workflow(workflow_id):
 
     except Exception as e:
         logger.exception(f"Failed to activate workflow {workflow_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to activate workflow"}), 500
 
 
 @flow_bp.route("/api/workflows/<int:workflow_id>/deactivate", methods=["POST"])
@@ -292,7 +292,7 @@ def deactivate_workflow(workflow_id):
 
     except Exception as e:
         logger.exception(f"Failed to deactivate workflow {workflow_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to deactivate workflow"}), 500
 
 
 # === Execution Routes ===
@@ -318,7 +318,7 @@ def execute_workflow_now(workflow_id):
         return jsonify(result)
     except Exception as e:
         logger.exception(f"Failed to execute workflow {workflow_id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Workflow execution failed"}), 500
 
 
 @flow_bp.route("/api/workflows/<int:workflow_id>/executions", methods=["GET"])
@@ -593,7 +593,7 @@ def _execute_webhook(token, webhook_data=None, url_secret=None):
         )
     except Exception as e:
         logger.exception(f"Webhook execution failed for workflow {workflow.id}: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Webhook execution failed"}), 500
 
 
 @flow_bp.route("/webhook/<token>", methods=["POST"])

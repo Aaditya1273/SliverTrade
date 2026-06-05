@@ -8,7 +8,7 @@ import httpx
 
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 from ..mapping.order_data import map_trade_data, transform_holdings_data, transform_tradebook_data
@@ -57,17 +57,16 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
         }
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Make API request
         if method == "GET":
-            response = client.get(
+            response = request_with_circuit_breaker("GET", 
                 f"https://api.tradejini.com/v2{endpoint}",
                 headers=headers,
                 params=params if params else data,
             )
         elif method == "DELETE":
-            response = client.delete(
+            response = request_with_circuit_breaker("DELETE", 
                 f"https://api.tradejini.com/v2{endpoint}", headers=headers, params=params
             )
         else:  # POST/PUT
@@ -76,7 +75,7 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
                 data_str = "&".join([f"{k}={v}" for k, v in data.items()])
                 logger.debug(f"get_api_response - Sending data: {data_str}")
 
-            response = client.put(
+            response = request_with_circuit_breaker("PUT", 
                 f"https://api.tradejini.com/v2{endpoint}",
                 headers=headers,
                 data=data_str if data else None,
@@ -90,17 +89,17 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
         if response.status_code == 404:
             logger.warning("get_api_response - API endpoint not found. Trying without /v2 prefix")
             if method == "GET":
-                response = client.get(
+                response = request_with_circuit_breaker("GET", 
                     f"https://api.tradejini.com{endpoint}",
                     headers=headers,
                     params=params if params else data,
                 )
             elif method == "DELETE":
-                response = client.delete(
+                response = request_with_circuit_breaker("DELETE", 
                     f"https://api.tradejini.com{endpoint}", headers=headers, params=params
                 )
             else:
-                response = client.put(
+                response = request_with_circuit_breaker("PUT", 
                     f"https://api.tradejini.com{endpoint}",
                     headers=headers,
                     data=data_str if data else None,
@@ -134,7 +133,6 @@ def get_order_book(auth):
             raise ValueError("Error: BROKER_API_SECRET not set")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Create auth header
         auth_header = f"{api_key}:{auth}"
@@ -148,7 +146,7 @@ def get_order_book(auth):
         # print(f"[DEBUG] get_order_book - Query params: {{'symDetails': 'true'}}")
 
         # Make API request
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.tradejini.com/v2/api/oms/orders",
             headers=headers,
             params={"symDetails": "true"},
@@ -239,7 +237,6 @@ def get_trade_book(auth):
             raise ValueError("Error: BROKER_API_SECRET not set")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Create auth header
         auth_header = f"{api_key}:{auth}"
@@ -247,7 +244,7 @@ def get_trade_book(auth):
 
         # Make API request
         logger.info("get_trade_book - Making request to TradeJini API")
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.tradejini.com/v2/api/oms/trades",
             headers=headers,
             params={"symDetails": "true"},
@@ -367,14 +364,13 @@ def get_positions(auth):
             raise ValueError("Error: BROKER_API_SECRET not set")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Create auth header
         auth_header = f"{api_key}:{auth}"
         headers = {"Authorization": f"Bearer {auth_header}", "Content-Type": "application/json"}
 
         # Make API request directly - not using any helper functions
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.tradejini.com/v2/api/oms/positions",
             headers=headers,
             params={"symDetails": "true"},
@@ -925,13 +921,12 @@ def place_order_api(data, auth):
 
         # Make API request
         try:
-            client = get_httpx_client()
             url = "https://api.tradejini.com/v2/oms/place-order"
 
             logger.info(f"place_order_api - Sending request to {url}")
             logger.debug(f"place_order_api - Headers: {headers}")
 
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 url,
                 headers=headers,
                 data=payload,

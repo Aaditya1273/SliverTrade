@@ -1,7 +1,7 @@
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,14 +35,13 @@ def get_margin_data(auth_token):
             return {}
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Set up authentication header
         auth_header = f"{api_key}:{auth_token}"
         headers = {"Authorization": f"Bearer {auth_header}", "Content-Type": "application/json"}
 
         # Make request to get limits
-        response = client.get("https://api.tradejini.com/v2/api/oms/limits", headers=headers)
+        response = request_with_circuit_breaker("GET", "https://api.tradejini.com/v2/api/oms/limits", headers=headers)
 
         # Print response for debugging
         logger.info(f"Tradejini Funds Response: {response.status_code}")

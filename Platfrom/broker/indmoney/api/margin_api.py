@@ -3,7 +3,7 @@ import os
 
 from broker.indmoney.api.baseurl import get_url
 from broker.indmoney.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -49,7 +49,6 @@ def calculate_margin_api(positions, auth):
     }
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # IndMoney API processes single orders, so we need to calculate margin for each position
     # and aggregate the results
@@ -67,7 +66,7 @@ def calculate_margin_api(positions, auth):
             logger.info(f"Margin calculation payload for {position.get('securityID')}: {payload}")
 
             # Make the GET request with JSON body (as per IndMoney API spec)
-            response = client.request(
+            response = request_with_circuit_breaker(
                 method="GET", url=get_url("/margin"), headers=headers, content=payload
             )
 

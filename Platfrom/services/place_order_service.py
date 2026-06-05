@@ -2,7 +2,7 @@ import copy
 import importlib
 from typing import Any, Dict, Optional, Tuple
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.settings_db import get_analyze_mode
 from events import AnalyzerErrorEvent, OrderFailedEvent, OrderPlacedEvent
 from restx_api.schemas import OrderSchema
@@ -13,6 +13,7 @@ from utils.constants import (
     VALID_PRICE_TYPES,
     VALID_PRODUCT_TYPES,
 )
+from utils.broker_failover import get_failover_manager, make_token_resolver
 from utils.event_bus import bus
 from utils.logging import get_logger
 
@@ -384,7 +385,7 @@ def place_order(
         ))
         return False, error_response, 400
 
-    # Case 1: API-based authentication
+    # Case 1: API-based authentication (with broker failover)
     if api_key and not (auth_token and broker):
         AUTH_TOKEN, broker_name = get_auth_token_broker(api_key)
         if AUTH_TOKEN is None:
@@ -392,7 +393,33 @@ def place_order(
             # Skip logging for invalid API keys to prevent database flooding
             return False, error_response, 403
 
-        return place_order_with_auth(order_data, AUTH_TOKEN, broker_name, original_data, emit_event, prefetched_quote)
+        # Register user with failover manager (circuit breaker per broker)
+        user_id = verify_api_key(api_key)
+        if user_id:
+            fm = get_failover_manager()
+            fm.register_user(user_id, [broker_name])
+
+            # Wrap with failover — provides:
+            # 1. Circuit breaker (fail-fast when broker is unhealthy)
+            # 2. Automatic retry on connection errors
+            # 3. Failover to secondary brokers when configured
+            return fm.execute_with_failover(
+                user_id=user_id,
+                operation="place_order",
+                fn=place_order_with_auth,
+                order_data=order_data,
+                auth_token=AUTH_TOKEN,
+                broker=broker_name,
+                original_data=original_data,
+                emit_event=emit_event,
+                prefetched_quote=prefetched_quote,
+                token_resolver=make_token_resolver(api_key),
+            )
+
+        return place_order_with_auth(
+            order_data, AUTH_TOKEN, broker_name, original_data,
+            emit_event, prefetched_quote,
+        )
 
     # Case 2: Direct internal call with auth_token and broker
     elif auth_token and broker:

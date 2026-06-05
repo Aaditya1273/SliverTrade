@@ -3,7 +3,7 @@
 import os
 
 from broker.rmoney.baseurl import INTERACTIVE_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -11,11 +11,10 @@ logger = get_logger(__name__)
 
 def get_margin_data(auth_token):
     """Fetch margin data from RMoney's API using the provided auth token."""
-    client = get_httpx_client()
 
     headers = {"authorization": auth_token, "Content-Type": "application/json"}
 
-    response = client.get(f"{INTERACTIVE_URL}/user/balance", headers=headers)
+    response = request_with_circuit_breaker("GET", f"{INTERACTIVE_URL}/user/balance", headers=headers)
 
     margin_data = response.json()
 

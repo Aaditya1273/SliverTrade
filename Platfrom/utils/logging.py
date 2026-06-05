@@ -3,11 +3,12 @@ import logging
 import os
 import re
 import sys
+import threading
 import traceback
 from datetime import datetime, timedelta
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 # Load environment variables if .env file exists
 try:
@@ -326,6 +327,115 @@ class JSONErrorFormatter(logging.Formatter):
         return json.dumps(entry, default=str)
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# Log Context — per-request / per-thread structured context
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class _LogContext(threading.local):
+    """Thread-local storage for structured logging context.
+
+    Fields set here are automatically included in JSON-format log records.
+    Typical usage::
+
+        from utils.logging import log_context
+
+        log_context.request_id = "abc-123"
+        log_context.user_id = 42
+        log_context.broker = "zerodha"
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.request_id: str | None = None
+        self.user_id: str | None = None
+        self.broker: str | None = None
+        self.session_id: str | None = None
+
+
+log_context = _LogContext()
+"""Thread-local structured log context."""
+
+
+def set_log_context(**kwargs: Any) -> None:
+    """Set one or more fields on the current thread's log context."""
+    for key, value in kwargs.items():
+        if hasattr(log_context, key):
+            setattr(log_context, key, value)
+
+
+def clear_log_context() -> None:
+    """Reset the current thread's log context to defaults."""
+    log_context.request_id = None
+    log_context.user_id = None
+    log_context.broker = None
+    log_context.session_id = None
+
+
+def get_log_context() -> dict[str, Any]:
+    """Return non-None log context fields as a dict."""
+    return {
+        key: value
+        for key in ("request_id", "user_id", "broker", "session_id")
+        if (value := getattr(log_context, key, None)) is not None
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Structured JSON Formatter (all levels)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class StructuredFormatter(logging.Formatter):
+    """Formats all log records as single-line JSON.
+
+    Includes thread-local context fields (request_id, user_id, broker)
+    when present.  Output is written to ``stdout`` when structured logging
+    is enabled (via ``LOG_STRUCTURED=true``).
+
+    Example output::
+
+        {"ts":"2026-01-30T10:15:30","level":"INFO","logger":"my.module",
+         "message":"Order placed","request_id":"abc-123","broker":"zerodha",
+         "duration_ms":45.2}
+    """
+
+    def __init__(self, datefmt: str | None = None):
+        super().__init__(datefmt=datefmt)
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry: dict[str, Any] = {
+            "ts": datetime.fromtimestamp(record.created).strftime(
+                self.datefmt or "%Y-%m-%dT%H:%M:%S"
+            ),
+            "level": record.levelname,
+            "logger": record.name,
+            "module": record.module,
+            "file": f"{record.pathname}:{record.lineno}",
+            "message": record.getMessage(),
+        }
+
+        # Include thread-local context
+        ctx = get_log_context()
+        if ctx:
+            entry.update(ctx)
+
+        # Include extra fields passed via ``extra={...}`` at call site
+        if hasattr(record, "extra_fields") and record.extra_fields:
+            entry.update(record.extra_fields)  # type: ignore[attr-defined]
+
+        # Capture traceback for ERROR+
+        if record.exc_info and record.exc_info[0] is not None:
+            entry["exception"] = traceback.format_exception(*record.exc_info)
+
+        return json.dumps(entry, default=str)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Existing helpers below -- unchanged
+# ═══════════════════════════════════════════════════════════════════════
+
+
 def cleanup_old_logs(log_dir: Path, retention_days: int):
     """Remove log files older than retention_days."""
     if not log_dir.exists():
@@ -353,6 +463,7 @@ def setup_logging():
     log_format = os.getenv("LOG_FORMAT", "[%(asctime)s] %(levelname)s in %(module)s: %(message)s")
     log_retention = int(os.getenv("LOG_RETENTION", "14"))
     log_colors = os.getenv("LOG_COLORS", "True").lower() == "true"
+    log_structured = os.getenv("LOG_STRUCTURED", "False").lower() == "true"
 
     # Configure root logger
     root_logger = logging.getLogger()
@@ -366,14 +477,21 @@ def setup_logging():
     console_formatter = ColoredFormatter(log_format, enable_colors=log_colors)
     # Regular formatter for file output (no colors)
     file_formatter = logging.Formatter(log_format)
+    # Structured JSON formatter (when LOG_STRUCTURED=true)
+    structured_formatter = StructuredFormatter()
 
     # Add sensitive data filter
     sensitive_filter = SensitiveDataFilter()
 
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(console_formatter)
-    console_handler.addFilter(sensitive_filter)
+    # Console handler — use structured JSON when enabled
+    if log_structured:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(structured_formatter)
+        console_handler.addFilter(sensitive_filter)
+    else:
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(console_formatter)
+        console_handler.addFilter(sensitive_filter)
     root_logger.addHandler(console_handler)
 
     # File handler (if enabled)
@@ -393,7 +511,10 @@ def setup_logging():
             backupCount=log_retention,
             encoding="utf-8",
         )
-        file_handler.setFormatter(file_formatter)
+        if log_structured:
+            file_handler.setFormatter(structured_formatter)
+        else:
+            file_handler.setFormatter(file_formatter)
         file_handler.addFilter(sensitive_filter)
         root_logger.addHandler(file_handler)
 
@@ -419,6 +540,17 @@ def setup_logging():
     json_handler.setFormatter(JSONErrorFormatter())
     json_handler.addFilter(sensitive_filter)
     root_logger.addHandler(json_handler)
+
+    # Structured JSON file — full structured output to separate file when enabled
+    if log_structured:
+        structured_file = errors_dir / "structured.jsonl"
+        structured_handler = logging.FileHandler(
+            filename=str(structured_file),
+            encoding="utf-8",
+        )
+        structured_handler.setFormatter(structured_formatter)
+        structured_handler.addFilter(sensitive_filter)
+        root_logger.addHandler(structured_handler)
 
     # Suppress noisy third-party loggers
     logging.getLogger("werkzeug").setLevel(logging.WARNING)

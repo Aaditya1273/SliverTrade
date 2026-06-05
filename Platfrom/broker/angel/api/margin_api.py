@@ -2,7 +2,7 @@ import json
 import os
 
 from broker.angel.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -56,12 +56,10 @@ def calculate_margin_api(positions, auth):
 
     logger.info(f"Margin calculation payload: {payload}")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     try:
-        # Make the request using the shared client
-        response = client.post(
+        # Make the request using the circuit-breaker-protected client
+        response = request_with_circuit_breaker(
+            "POST",
             "https://apiconnect.angelone.in/rest/secure/angelbroking/margin/v1/batch",
             headers=headers,
             content=payload,

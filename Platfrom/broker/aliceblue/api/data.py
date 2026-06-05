@@ -11,7 +11,7 @@ import pandas as pd
 
 from database.auth_db import Auth
 from database.token_db import get_br_symbol, get_brexchange, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 from .alicebluewebsocket import AliceBlueWebSocket
@@ -823,9 +823,8 @@ class BrokerData:
             logger.debug(f"Historical API request: {symbol}:{exchange} res={aliceblue_timeframe} token={token} payload={payload}")
 
             # Make request to historical API
-            client = get_httpx_client()
             try:
-                response = client.post(HISTORICAL_API_URL, headers=headers, json=payload, timeout=15)
+                response = request_with_circuit_breaker("POST", HISTORICAL_API_URL, headers=headers, json=payload, timeout=15)
                 response.raise_for_status()
                 data = response.json()
             except httpx.HTTPStatusError as http_err:

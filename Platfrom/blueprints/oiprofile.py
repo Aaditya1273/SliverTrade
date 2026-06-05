@@ -127,4 +127,4 @@ def intervals():
 
     except Exception as e:
         logger.exception(f"Error fetching intervals: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch intervals"}), 500

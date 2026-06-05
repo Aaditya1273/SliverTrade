@@ -11,12 +11,13 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.settings_db import get_analyze_mode
 from events import AnalyzerErrorEvent, MultiOrderCompletedEvent
 from services.option_symbol_service import get_option_symbol, parse_underlying_symbol
 from services.place_order_service import place_order
 from services.quotes_service import get_quotes
+from utils.broker_failover import get_failover_manager, make_token_resolver
 from utils.event_bus import bus
 from utils.logging import get_logger
 
@@ -190,39 +191,32 @@ def place_single_split_order_for_leg(
         }
 
 
-# Track all placed order IDs across legs for potential reversal on failure
-_placed_leg_orders: list[dict[str, Any]] = []
-
-
-def _attempt_leg_reversal(auth_token: str | None, broker: str | None, api_key: str) -> None:
+def _attempt_leg_reversal(
+    placed_leg_orders: list[dict[str, Any]],
+    auth_token: str | None,
+    broker_module: Any | None,
+) -> None:
     """
     Attempt to reverse ALL previously placed legs in a multiorder.
     Called when a subsequent leg fails — best-effort cleanup.
+
+    Args:
+        placed_leg_orders: List of dicts with 'orderid' and 'symbol' keys
+        auth_token: Broker auth token
+        broker_module: Already-imported broker module (avoids re-import)
     """
-    global _placed_leg_orders
-    if not _placed_leg_orders:
+    if not placed_leg_orders:
         return
-
-    import importlib
-
-    # Import the broker module for cancel operations
-    broker_module = None
-    if broker:
-        try:
-            module_path = f"broker.{broker}.api.order_api"
-            broker_module = importlib.import_module(module_path)
-        except ImportError:
-            pass
 
     if not broker_module or not auth_token:
         logger.critical(
             "EMERGENCY: Cannot reverse %d placed legs — no broker module or auth token available. "
             "Manual intervention required!",
-            len(_placed_leg_orders),
+            len(placed_leg_orders),
         )
         return
 
-    for placed in reversed(_placed_leg_orders):
+    for placed in reversed(placed_leg_orders):
         order_id = placed.get("orderid", "")
         symbol = placed.get("symbol", "unknown")
         if not order_id:
@@ -560,14 +554,22 @@ def process_multiorder_with_auth(
         except Exception as e:
             logger.debug(f"Multiquotes pre-fetch failed for multiorder, falling back to per-leg fetch: {e}")
 
-    # Reset the global tracker for this multiorder session
-    global _placed_leg_orders
-    _placed_leg_orders = []
+    # Per-call tracker — NOT a global. Each multiorder execution gets its own
+    # list so concurrent multiorders cannot corrupt each other's state.
+    _placed_leg_orders: list[dict[str, Any]] = []
+
+    # Import broker module once, pass to _attempt_leg_reversal
+    import importlib as _il
+    broker_module = None
+    if broker:
+        try:
+            broker_module = _il.import_module(f"broker.{broker}.api.order_api")
+        except ImportError:
+            logger.error(f"Failed to import broker module for {broker}")
 
     # Process all legs sequentially (avoids ThreadPoolExecutor + eventlet hang)
     # Process BUY legs first, then SELL legs
     all_sorted_legs = buy_legs + sell_legs
-    any_leg_failed = False
 
     for i, (orig_idx, leg) in enumerate(all_sorted_legs):
         if order_delay and i > 0:
@@ -595,7 +597,7 @@ def process_multiorder_with_auth(
                     result.get("leg", 0),
                     len(_placed_leg_orders),
                 )
-                _attempt_leg_reversal(auth_token, broker, api_key)
+                _attempt_leg_reversal(_placed_leg_orders, auth_token, broker_module)
 
     # Sort results by leg number
     results.sort(key=lambda x: x.get("leg", 0))
@@ -688,6 +690,30 @@ def place_options_multiorder(
         if AUTH_TOKEN is None:
             error_response = {"status": "error", "message": "Invalid silvertrade apikey"}
             return False, error_response, 403
+
+        # Register user with failover manager (circuit breaker per broker)
+        user_id = verify_api_key(api_key)
+        if user_id:
+            fm = get_failover_manager()
+            fm.register_user(user_id, [broker_name])
+
+            # Wrapper adapts process_multiorder_with_auth's non-standard signature
+            # (multiorder_data, auth_token, broker, api_key, original_data) to the
+            # standard (order_data, auth_token, broker, original_data) pattern that
+            # execute_with_failover expects.
+            def _executor(o: Any, a: str, b: str, od: dict) -> tuple[bool, dict, int]:
+                return process_multiorder_with_auth(o, a, b, api_key, od)
+
+            return fm.execute_with_failover(
+                user_id=user_id,
+                operation="options_multiorder",
+                fn=_executor,
+                order_data=multiorder_data,
+                auth_token=AUTH_TOKEN,
+                broker=broker_name,
+                original_data=original_data,
+                token_resolver=make_token_resolver(api_key),
+            )
 
         return process_multiorder_with_auth(
             multiorder_data, AUTH_TOKEN, broker_name, api_key, original_data

@@ -9,7 +9,7 @@ from broker.dhan_sandbox.mapping.margin_data import (
     transform_margin_position,
 )
 from database.auth_db import get_user_id, verify_api_key
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -80,14 +80,13 @@ def calculate_single_margin(position_data, auth, client_id):
     )
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Get the URL for margin calculator endpoint
         url = get_url("/v2/margincalculator")
 
         # Make the request
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         # Add status attribute for compatibility
         response.status = response.status_code
@@ -156,11 +155,9 @@ def calculate_multi_margin(positions, auth, client_id):
     payload_json = json.dumps(payload)
     logger.info("Multi-margin request scripts_count=%s", len(positions))
 
-    client = get_httpx_client()
-
     try:
         url = get_url("/v2/margincalculator/multi")
-        response = client.post(url, headers=headers, content=payload_json)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload_json)
         response.status = response.status_code
 
         try:

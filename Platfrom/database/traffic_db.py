@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
+from typing import Optional
 
 from sqlalchemy import (
     Boolean,
@@ -21,6 +22,66 @@ from sqlalchemy.sql import func
 from database.settings_db import get_security_settings
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Redis-backed IP ban cache — persists bans across restarts & workers
+# ---------------------------------------------------------------------------
+
+_REDIS_BAN_KEY_PREFIX = "ip_ban:"
+"""Redis key prefix for cached ban entries."""
+
+
+def _get_redis():
+    """Get Redis client from extensions (or None if unavailable)."""
+    try:
+        from extensions import redis_client
+        return redis_client
+    except ImportError:
+        return None
+
+
+def _ban_cache_key(ip_address: str) -> str:
+    """Generate Redis key for an IP ban.
+
+    Uses the IP address directly (no hashing) since Redis keys are
+    only visible to authenticated Redis connections, and the IP is
+    already stored in plaintext in the Redis value payload.
+    """
+    return f"{_REDIS_BAN_KEY_PREFIX}{ip_address}"
+
+
+def _sync_bans_to_redis() -> int:
+    """Sync ALL active SQLite bans into Redis. Called at startup.
+
+    Returns count of synced bans.
+    """
+    redis = _get_redis()
+    if not redis:
+        return 0
+
+    try:
+        bans = IPBan.query.all()
+        synced = 0
+        for ban in bans:
+            key = _ban_cache_key(ban.ip_address)
+            payload = json.dumps({
+                "ip": ban.ip_address,
+                "reason": ban.ban_reason or "",
+                "permanent": ban.is_permanent,
+                "expires_at": ban.expires_at.isoformat() if ban.expires_at else None,
+            })
+            if ban.is_permanent:
+                redis.set(key, payload)
+            elif ban.expires_at:
+                ttl = int((ban.expires_at - datetime.utcnow()).total_seconds())
+                if ttl > 0:
+                    redis.setex(key, ttl, payload)
+                    synced += 1
+                # else: expired, skip
+        return synced
+    except Exception:
+        logger.exception("Failed to sync IP bans to Redis")
+        return 0
 
 # Use a separate database for logs
 LOGS_DATABASE_URL = os.getenv("LOGS_DATABASE_URL", "sqlite:///db/logs.db")
@@ -132,24 +193,71 @@ class IPBan(LogBase):
 
     @staticmethod
     def is_ip_banned(ip_address):
-        """Check if an IP is currently banned"""
+        """Check if an IP is currently banned (Redis-first, SQLite fallback).
+
+        Checks Redis first (O(1), survives restarts), then falls back to
+        SQLite for consistency.  Returns ``True`` if the IP is banned.
+        """
         try:
+            # ── Fast path: Redis check ──
+            redis = _get_redis()
+            if redis:
+                key = _ban_cache_key(ip_address)
+                try:
+                    exists = redis.exists(key)
+                    if exists:
+                        return True
+                except Exception:
+                    pass  # fall through to SQLite
+
+            # ── Slow path: SQLite check ──
             ban = IPBan.query.filter_by(ip_address=ip_address).first()
             if not ban:
                 return False
 
             # Check permanent ban
             if ban.is_permanent:
+                # Ensure Redis has the permanent entry (defence in depth)
+                if redis:
+                    try:
+                        key = _ban_cache_key(ip_address)
+                        redis.set(key, json.dumps({
+                            "ip": ip_address,
+                            "reason": ban.ban_reason or "",
+                            "permanent": True,
+                            "expires_at": None,
+                        }))
+                    except Exception:
+                        pass
                 return True
 
             # Check temporary ban expiry
             if ban.expires_at:
                 if datetime.utcnow() < ban.expires_at.replace(tzinfo=None):
+                    # Ensure Redis has it (defence in depth for distributed workers)
+                    if redis:
+                        try:
+                            key = _ban_cache_key(ip_address)
+                            ttl = int((ban.expires_at - datetime.utcnow()).total_seconds())
+                            if ttl > 0:
+                                redis.setex(key, ttl, json.dumps({
+                                    "ip": ip_address,
+                                    "reason": ban.ban_reason or "",
+                                    "permanent": False,
+                                    "expires_at": ban.expires_at.isoformat(),
+                                }))
+                        except Exception:
+                            pass
                     return True
                 else:
-                    # Ban expired, remove it
+                    # Ban expired, remove it from both stores
                     logs_session.delete(ban)
                     logs_session.commit()
+                    if redis:
+                        try:
+                            redis.delete(_ban_cache_key(ip_address))
+                        except Exception:
+                            pass
                     return False
 
             return False
@@ -160,7 +268,12 @@ class IPBan(LogBase):
 
     @staticmethod
     def ban_ip(ip_address, reason, duration_hours=24, permanent=False, created_by="system"):
-        """Ban an IP address"""
+        """Ban an IP address (SQLite + Redis).
+
+        Writes to both SQLite (source of truth) and Redis (hot cache for
+        fast checks).  Redis entries survive worker restarts because they
+        are persisted in Redis itself, not in ephemeral process memory.
+        """
         try:
             # Never ban localhost
             if ip_address in ["127.0.0.1", "::1", "localhost"]:
@@ -173,6 +286,9 @@ class IPBan(LogBase):
 
             existing_ban = IPBan.query.filter_by(ip_address=ip_address).first()
 
+            is_permanent = permanent
+            expires_at_dt = None if is_permanent else datetime.utcnow() + timedelta(hours=duration_hours)
+
             if existing_ban:
                 # Increment ban count for repeat offender
                 existing_ban.ban_count += 1
@@ -181,30 +297,49 @@ class IPBan(LogBase):
 
                 # After configured number of bans, make it permanent
                 if existing_ban.ban_count >= repeat_limit:
+                    is_permanent = True
+                    expires_at_dt = None
                     existing_ban.is_permanent = True
                     existing_ban.expires_at = None
                     logger.warning(
                         f"IP {ip_address} permanently banned after {existing_ban.ban_count} offenses"
                     )
                 else:
-                    existing_ban.is_permanent = permanent
-                    existing_ban.expires_at = (
-                        None if permanent else datetime.utcnow() + timedelta(hours=duration_hours)
-                    )
+                    existing_ban.is_permanent = is_permanent
+                    existing_ban.expires_at = expires_at_dt
             else:
                 # Create new ban
                 ban = IPBan(
                     ip_address=ip_address,
                     ban_reason=reason,
-                    is_permanent=permanent,
-                    expires_at=None
-                    if permanent
-                    else datetime.utcnow() + timedelta(hours=duration_hours),
+                    is_permanent=is_permanent,
+                    expires_at=expires_at_dt,
                     created_by=created_by,
                 )
                 logs_session.add(ban)
 
             logs_session.commit()
+
+            # ── Write to Redis cache ──
+            redis = _get_redis()
+            if redis:
+                try:
+                    key = _ban_cache_key(ip_address)
+                    payload = json.dumps({
+                        "ip": ip_address,
+                        "reason": reason,
+                        "permanent": is_permanent,
+                        "expires_at": expires_at_dt.isoformat() if expires_at_dt else None,
+                    })
+                    if is_permanent:
+                        redis.set(key, payload)
+                    elif expires_at_dt:
+                        ttl = int((expires_at_dt - datetime.utcnow()).total_seconds())
+                        if ttl > 0:
+                            redis.setex(key, ttl, payload)
+                except Exception:
+                    pass  # Redis write failure is non-fatal
+
             logger.info(f"IP {ip_address} banned: {reason}")
             return True
         except Exception as e:
@@ -214,12 +349,23 @@ class IPBan(LogBase):
 
     @staticmethod
     def unban_ip(ip_address):
-        """Remove IP ban"""
+        """Remove IP ban from both SQLite and Redis."""
         try:
+            # Remove from SQLite
             ban = IPBan.query.filter_by(ip_address=ip_address).first()
             if ban:
                 logs_session.delete(ban)
                 logs_session.commit()
+
+            # Remove from Redis
+            redis = _get_redis()
+            if redis:
+                try:
+                    redis.delete(_ban_cache_key(ip_address))
+                except Exception:
+                    pass
+
+            if ban:
                 logger.info(f"IP {ip_address} unbanned")
                 return True
             return False
@@ -230,19 +376,29 @@ class IPBan(LogBase):
 
     @staticmethod
     def get_all_bans():
-        """Get all current IP bans"""
+        """Get all current IP bans from SQLite.
+
+        Also cleans expired bans from both SQLite and Redis.
+        """
         try:
-            # Remove expired bans first
+            redis = _get_redis()
+
+            # Remove expired bans from SQLite
             expired = IPBan.query.filter(
                 IPBan.is_permanent == False, IPBan.expires_at < datetime.utcnow()
             ).all()
 
             for ban in expired:
+                # Also remove from Redis
+                if redis:
+                    try:
+                        redis.delete(_ban_cache_key(ban.ip_address))
+                    except Exception:
+                        pass
                 logs_session.delete(ban)
 
             logs_session.commit()
 
-            # Return active bans
             return IPBan.query.all()
         except Exception as e:
             logger.exception(f"Error getting IP bans: {e}")
@@ -481,11 +637,9 @@ class InvalidAPIKeyTracker(LogBase):
 
 def init_logs_db():
     """Initialize the logs database"""
-    # Extract directory from database URL and create if it doesn't exist
-    db_path = LOGS_DATABASE_URL.replace("sqlite:///", "")
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+    from database.db_config import ensure_db_dir
+
+    ensure_db_dir(LOGS_DATABASE_URL)
 
     from database.db_init_helper import init_db_with_logging
 

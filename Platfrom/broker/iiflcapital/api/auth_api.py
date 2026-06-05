@@ -3,7 +3,7 @@ import os
 from urllib.parse import quote_plus
 
 from broker.iiflcapital.baseurl import BASE_URL, LOGIN_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 
 def _generate_checksum(client_id: str, auth_code: str, app_secret: str) -> str:
@@ -48,9 +48,7 @@ def authenticate_broker(auth_code: str, client_id: str):
         checksum = _generate_checksum(client_id, auth_code, app_secret)
         payload = {"checkSum": checksum}
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
-        client = get_httpx_client()
-        response = client.post(f"{BASE_URL}/getusersession", json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/getusersession", json=payload, headers=headers)
 
         try:
             data = response.json()

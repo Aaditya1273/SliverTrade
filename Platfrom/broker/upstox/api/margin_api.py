@@ -1,7 +1,7 @@
 import json
 
 from broker.upstox.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -62,11 +62,10 @@ def calculate_margin_api(positions, auth):
     logger.info(f"Upstox margin calculation payload: {json.dumps(payload)}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Make the request using the Upstox margin API
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://api.upstox.com/v2/charges/margin", headers=headers, json=payload
         )
 

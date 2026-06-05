@@ -4,7 +4,7 @@ import json
 import os
 
 from broker.paytm.api.order_api import get_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -22,8 +22,7 @@ def get_margin_data(auth_token):
         }
 
         logger.debug(f"Making request to: {base_url}{request_path}")
-        client = get_httpx_client()
-        response = client.get(f"{base_url}{request_path}", headers=headers)
+        response = request_with_circuit_breaker("GET", f"{base_url}{request_path}", headers=headers)
         margin_data = response.json()
 
         logger.debug(f"Funds Details: {margin_data}")

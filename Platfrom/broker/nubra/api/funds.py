@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +25,6 @@ def get_margin_data(auth_token):
     """Fetch margin data from Nubra's API using the provided auth token."""
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
     base_url = get_base_url()
 
     headers = {
@@ -37,7 +36,7 @@ def get_margin_data(auth_token):
 
     logger.debug(f"Nubra funds request to: {base_url}/portfolio/user_funds_and_margin")
 
-    response = client.get(f"{base_url}/portfolio/user_funds_and_margin", headers=headers)
+    response = request_with_circuit_breaker("GET", f"{base_url}/portfolio/user_funds_and_margin", headers=headers)
 
     # Add status attribute for compatibility with the existing codebase
     response.status = response.status_code

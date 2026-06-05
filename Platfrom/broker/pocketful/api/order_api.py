@@ -12,7 +12,7 @@ from broker.pocketful.mapping.transform_data import (
 )
 from database.auth_db import Auth, db_session
 from database.token_db import get_br_symbol, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -29,7 +29,6 @@ def get_api_response(endpoint, auth_token, method="GET", payload=None):
     Supports GET, POST, PUT, DELETE methods.
     """
     # Get the shared httpx client
-    client = get_httpx_client()
 
     # Set up headers with authorization token
     headers = {"Authorization": f"Bearer {auth_token}", "Content-Type": "application/json"}
@@ -54,16 +53,16 @@ def get_api_response(endpoint, auth_token, method="GET", payload=None):
     try:
         if method == "GET":
             logger.debug(f"DEBUG - Executing GET request to {full_url}")
-            response = client.get(full_url, headers=headers)
+            response = request_with_circuit_breaker("GET", full_url, headers=headers)
         elif method == "POST":
             logger.debug(f"DEBUG - Executing POST request to {full_url}")
-            response = client.post(full_url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("POST", full_url, headers=headers, json=payload)
         elif method == "PUT":
             logger.debug(f"DEBUG - Executing PUT request to {full_url}")
-            response = client.put(full_url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("PUT", full_url, headers=headers, json=payload)
         elif method == "DELETE":
             logger.debug(f"DEBUG - Executing DELETE request to {full_url}")
-            response = client.delete(full_url, headers=headers)
+            response = request_with_circuit_breaker("DELETE", full_url, headers=headers)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -199,8 +198,7 @@ def fetch_orders(auth, client_id, order_type):
 
     try:
         logger.debug(f"DEBUG - Making GET request to {endpoint} with params: {params}")
-        client = get_httpx_client()
-        response = client.get(endpoint, headers=headers, params=params)
+        response = request_with_circuit_breaker("GET", endpoint, headers=headers, params=params)
         logger.debug(f"DEBUG - Response status for {order_type} orders: {response.status_code}")
 
         # Show limited response data to avoid overwhelming logs
@@ -245,13 +243,12 @@ def get_trade_book(auth):
 
     try:
         logger.debug(f"DEBUG - Making GET request to {endpoint} with params: {params}")
-        client = get_httpx_client()
 
         # Set up headers with authorization token
         headers = {"Authorization": f"Bearer {auth}", "Content-Type": "application/json"}
 
         # Make the request
-        response = client.get(endpoint, headers=headers, params=params)
+        response = request_with_circuit_breaker("GET", endpoint, headers=headers, params=params)
         response.status = response.status_code
         logger.debug(f"DEBUG - Response status code: {response.status_code}")
 
@@ -319,13 +316,12 @@ def get_positions(auth):
 
     try:
         logger.debug(f"DEBUG - Making GET request to {endpoint} with params: {params}")
-        client = get_httpx_client()
 
         # Set up headers with authorization token
         headers = {"Authorization": f"Bearer {auth}", "Content-Type": "application/json"}
 
         # Make the request
-        response = client.get(endpoint, headers=headers, params=params)
+        response = request_with_circuit_breaker("GET", endpoint, headers=headers, params=params)
         response.status = response.status_code
         logger.debug(f"DEBUG - Response status code: {response.status_code}")
 
@@ -767,11 +763,10 @@ def close_all_positions(current_api_key, auth):
 
     try:
         # Use httpx client directly
-        client = get_httpx_client()
         headers = {"Authorization": f"Bearer {auth}", "Content-Type": "application/json"}
 
         logger.debug(f"DEBUG - Making direct GET request to {endpoint} with params: {params}")
-        response = client.get(endpoint, headers=headers, params=params)
+        response = request_with_circuit_breaker("GET", endpoint, headers=headers, params=params)
 
         if response.status_code != 200:
             logger.error(f"DEBUG - Error response: {response.status_code} - {response.text}")
@@ -992,7 +987,6 @@ def modify_order(data, auth):
     logger.info(f"Transformed order data: {transformed_data}")
 
     # Use manual httpx client request to avoid URL path manipulation issues
-    client = get_httpx_client()
 
     # Setup correct URL and headers
     url = f"{BASE_URL}/api/v1/orders"
@@ -1003,7 +997,7 @@ def modify_order(data, auth):
 
     try:
         # Make direct request using httpx client - bypass get_api_response to have more control
-        response = client.put(url, headers=headers, json=transformed_data)
+        response = request_with_circuit_breaker("PUT", url, headers=headers, json=transformed_data)
         logger.info(f"Response status: {response.status_code}")
         logger.info(f"Response URL: {response.url}")
         logger.info(f"Response content: {response.text}")
@@ -1062,11 +1056,10 @@ def cancel_all_orders_api(data, auth):
 
     try:
         logger.debug(f"DEBUG - Fetching pending orders for client_id: {client_id}")
-        client = get_httpx_client()
         headers = {"Authorization": f"Bearer {AUTH_TOKEN}", "Content-Type": "application/json"}
 
         logger.debug(f"DEBUG - Making GET request to {endpoint} with params: {params}")
-        response = client.get(endpoint, headers=headers, params=params)
+        response = request_with_circuit_breaker("GET", endpoint, headers=headers, params=params)
         logger.debug(f"DEBUG - Response status for pending orders: {response.status_code}")
 
         if response.status_code != 200:

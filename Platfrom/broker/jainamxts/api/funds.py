@@ -5,7 +5,7 @@ import json
 import os
 
 from broker.jainamxts.baseurl import INTERACTIVE_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,11 +16,9 @@ def get_margin_data(auth_token):
     api_key = os.getenv("BROKER_API_KEY")
     api_secret = os.getenv("BROKER_API_SECRET")
 
-    client = get_httpx_client()
-
     headers = {"authorization": auth_token, "Content-Type": "application/json"}
     logger.debug("Fetching funds with headers")
-    response = client.get(f"{INTERACTIVE_URL}/user/balance", headers=headers)
+    response = request_with_circuit_breaker("GET", f"{INTERACTIVE_URL}/user/balance", headers=headers)
 
     margin_data = response.json()
 

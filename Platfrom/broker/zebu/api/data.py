@@ -10,7 +10,7 @@ import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 # Auto-detect eventlet environment (Docker/standalone uses gunicorn+eventlet)
@@ -45,7 +45,6 @@ def get_api_response(endpoint, auth, method="POST", payload=None):
     payload_str = "jData=" + json.dumps(data)
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     headers = {
         "Content-Type": "text/plain",
@@ -53,7 +52,7 @@ def get_api_response(endpoint, auth, method="POST", payload=None):
     }
     url = f"https://go.mynt.in{endpoint}"
 
-    response = client.request(method, url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker(method, url, content=payload_str, headers=headers)
     data = response.text
 
     return json.loads(data)
@@ -242,7 +241,7 @@ class BrokerData:
             url = "https://go.mynt.in/NorenWClientAPI/GetQuotes"
 
             # Use async httpx client
-            http_response = await client.post(url, content=payload_str, headers=headers)
+            http_response = await request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
             response = http_response.json()
 
             if response.get("stat") != "Ok":

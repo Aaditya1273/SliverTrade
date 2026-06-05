@@ -4,7 +4,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,9 +43,8 @@ def authenticate_broker(code, password=None, totp_code=None):
         logger.debug(f"Request Data: {data}")  # Debug print
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
-        response = client.post(url, json=data)
+        response = request_with_circuit_breaker("POST", url, json=data)
 
         logger.debug(f"Response Status: {response.status_code}")  # Debug print
         logger.debug(f"Response Content: {response.text}")  # Debug print
@@ -88,9 +87,8 @@ def authenticate_broker_oauth(code):
         data = {"api_key": BROKER_API_KEY, "request_code": code, "api_secret": security_hash}
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
-        response = client.post(url, json=data)
+        response = request_with_circuit_breaker("POST", url, json=data)
 
         if response.status_code == 200:
             response_data = response.json()

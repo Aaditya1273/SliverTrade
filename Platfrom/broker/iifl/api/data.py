@@ -12,7 +12,7 @@ from broker.iifl.baseurl import MARKET_DATA_URL
 from broker.iifl.database.master_contract_db import SymToken, db_session
 from database.auth_db import get_feed_token
 from database.token_db import get_br_symbol, get_brexchange, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +28,6 @@ def get_api_response(endpoint, auth, method="GET", payload="", feed_token=None, 
     logger.info(f"Feed Token: {FEED_TOKEN}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "authorization": FEED_TOKEN if feed_token else AUTH_TOKEN,
@@ -58,11 +57,11 @@ def get_api_response(endpoint, auth, method="GET", payload="", feed_token=None, 
 
         # Perform the request
         if method.upper() == "GET":
-            response = client.get(url, headers=headers, params=params)
+            response = request_with_circuit_breaker("GET", url, headers=headers, params=params)
         elif method.upper() == "POST":
-            response = client.post(url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
         else:
-            response = client.request(method, url, headers=headers, json=payload)
+            response = request_with_circuit_breaker(method, url, headers=headers, json=payload)
 
         # Log response details
         logger.info("=== API Response Details ===")

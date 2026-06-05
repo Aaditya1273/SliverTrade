@@ -10,7 +10,7 @@ import httpx
 
 from broker.fyers.api.order_api import get_positions
 from broker.fyers.mapping.order_data import map_position_data
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -72,13 +72,12 @@ def get_margin_data(auth_token: str) -> dict[str, str]:
         return default_response
 
     # Get shared HTTP client with connection pooling
-    client = get_httpx_client()
 
     headers = {"Authorization": f"{api_key}:{auth_token}", "Content-Type": "application/json"}
 
     try:
         # Get the funds data
-        response = client.get("https://api-t1.fyers.in/api/v3/funds", headers=headers, timeout=30.0)
+        response = request_with_circuit_breaker("GET", "https://api-t1.fyers.in/api/v3/funds", headers=headers, timeout=30.0)
         response.raise_for_status()
 
         funds_data = response.json()

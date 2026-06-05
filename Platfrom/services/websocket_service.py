@@ -75,10 +75,10 @@ def get_websocket_connection(username: str) -> tuple[bool, WebSocketClient | Non
 
     except ConnectionError as e:
         logger.error(f"Connection error for user {username}: {e}")
-        return False, None, str(e)
+        return False, None, "WebSocket connection failed"
     except Exception as e:
         logger.exception(f"Error getting WebSocket connection for user {username}: {e}")
-        return False, None, f"Unexpected error: {str(e)}"
+        return False, None, "Failed to establish WebSocket connection"
 
 
 def get_websocket_status(
@@ -129,7 +129,7 @@ def get_websocket_status(
 
     except Exception as e:
         logger.exception(f"Error getting WebSocket status: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get WebSocket status"}, 500
 
 
 def get_websocket_subscriptions(
@@ -167,7 +167,7 @@ def get_websocket_subscriptions(
 
     except Exception as e:
         logger.exception(f"Error getting subscriptions: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get subscriptions"}, 500
 
 
 def subscribe_to_symbols(
@@ -235,7 +235,7 @@ def subscribe_to_symbols(
 
     except Exception as e:
         logger.exception(f"Error subscribing to symbols: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to subscribe to symbols"}, 500
 
 
 def unsubscribe_from_symbols(
@@ -291,7 +291,7 @@ def unsubscribe_from_symbols(
 
     except Exception as e:
         logger.exception(f"Error unsubscribing from symbols: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to unsubscribe from symbols"}, 500
 
 
 def unsubscribe_all(username: str, broker: str) -> tuple[bool, dict[str, Any], int]:
@@ -330,7 +330,7 @@ def unsubscribe_all(username: str, broker: str) -> tuple[bool, dict[str, Any], i
 
     except Exception as e:
         logger.exception(f"Error unsubscribing from all: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to unsubscribe"}, 500
 
 
 def get_supported_brokers_list() -> tuple[bool, dict[str, Any], int]:
@@ -377,7 +377,7 @@ def get_supported_brokers_list() -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error getting supported brokers: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get supported brokers"}, 500
 
 
 def get_market_data(
@@ -408,7 +408,7 @@ def get_market_data(
 
     except Exception as e:
         logger.exception(f"Error getting market data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get market data"}, 500
 
 
 # Helper function to register callbacks for market data updates

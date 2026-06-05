@@ -9,7 +9,7 @@ from broker.firstock.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 import threading
 import time
@@ -24,7 +24,6 @@ def get_api_response(endpoint, auth, method="POST", payload=None):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         api_key = os.getenv("BROKER_API_KEY")
         if not api_key:
@@ -39,7 +38,7 @@ def get_api_response(endpoint, auth, method="POST", payload=None):
         url = f"https://api.firstock.in/V1{endpoint}"
 
         # Make request using shared httpx client
-        response = client.request(method, url, json=payload, headers=headers, timeout=30)
+        response = request_with_circuit_breaker(method, url, json=payload, headers=headers, timeout=30)
 
         # Add status attribute for compatibility
         response.status = response.status_code
@@ -240,13 +239,12 @@ def place_order_api(data, auth):
 
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         headers = {"Content-Type": "application/json"}
         url = "https://api.firstock.in/V1/placeOrder"
 
         # Make request using shared httpx client
-        response = client.request("POST", url, json=transformed_data, headers=headers, timeout=30)
+        response = request_with_circuit_breaker("POST", url, json=transformed_data, headers=headers, timeout=30)
 
         # Add status attribute for compatibility
         response.status = response.status_code
@@ -498,13 +496,12 @@ def cancel_order(orderid, auth):
 
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         headers = {"Content-Type": "application/json"}
         url = "https://api.firstock.in/V1/cancelOrder"
 
         # Make request using shared httpx client
-        response = client.request("POST", url, json=request_data, headers=headers, timeout=30)
+        response = request_with_circuit_breaker("POST", url, json=request_data, headers=headers, timeout=30)
 
         # Add status attribute for compatibility
         response.status = response.status_code
@@ -565,13 +562,12 @@ def modify_order(data, auth):
     # Set up the request
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         headers = {"Content-Type": "application/json"}
         url = "https://api.firstock.in/V1/modifyOrder"
 
         # Make request using shared httpx client
-        response = client.request("POST", url, json=transformed_data, headers=headers, timeout=30)
+        response = request_with_circuit_breaker("POST", url, json=transformed_data, headers=headers, timeout=30)
 
         # Add status attribute for compatibility
         response.status = response.status_code

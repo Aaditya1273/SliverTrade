@@ -12,7 +12,7 @@ from broker.fyers.mapping.transform_data import (
     transform_modify_order_data,
 )
 from database.token_db import get_br_symbol, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         AUTH_TOKEN = auth
         api_key = os.getenv("BROKER_API_KEY")
@@ -45,15 +44,15 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 
         # Make the request
         if method == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 url,
                 headers=headers,
                 json=payload if isinstance(payload, dict) else json.loads(payload),
             )
         else:
-            response = client.request(
+            response = request_with_circuit_breaker(
                 method,
                 url,
                 headers=headers,
@@ -174,7 +173,6 @@ def place_order_api(data, auth):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         AUTH_TOKEN = auth
         BROKER_API_KEY = os.getenv("BROKER_API_KEY")
@@ -191,7 +189,7 @@ def place_order_api(data, auth):
         logger.debug(f"Placing order with payload: {json.dumps(payload, indent=2)}")
 
         # Make the POST request
-        response = client.post(url, headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
         response_data = response.json()
 
         # Add status attribute for compatibility
@@ -326,7 +324,6 @@ def close_all_positions(current_api_key, auth):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         AUTH_TOKEN = auth
         api_key = os.getenv("BROKER_API_KEY")
@@ -339,7 +336,7 @@ def close_all_positions(current_api_key, auth):
         logger.debug("Closing all positions")
 
         # Make the DELETE request with the payload
-        response = client.request("DELETE", url, headers=headers, json=payload)
+        response = request_with_circuit_breaker("DELETE", url, headers=headers, json=payload)
         response_data = response.json()
 
         logger.debug(f"Close all positions response: {json.dumps(response_data, indent=2)}")
@@ -376,7 +373,6 @@ def cancel_order(orderid, auth):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         AUTH_TOKEN = auth
         api_key = os.getenv("BROKER_API_KEY")
@@ -389,7 +385,7 @@ def cancel_order(orderid, auth):
         logger.debug(f"Cancelling order {orderid} with payload: {payload}")
 
         # Make the DELETE request with the order ID in the JSON body
-        response = client.request("DELETE", url, headers=headers, json=payload)
+        response = request_with_circuit_breaker("DELETE", url, headers=headers, json=payload)
         response_data = response.json()
 
         logger.debug(f"Cancel order response: {json.dumps(response_data, indent=2)}")
@@ -426,7 +422,6 @@ def modify_order(data, auth):
     """
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         AUTH_TOKEN = auth
         api_key = os.getenv("BROKER_API_KEY")
@@ -439,7 +434,7 @@ def modify_order(data, auth):
         logger.debug(f"Modifying order with payload: {json.dumps(payload, indent=2)}")
 
         # Make the PATCH request
-        response = client.patch(url, headers=headers, json=payload)
+        response = request_with_circuit_breaker("PATCH", url, headers=headers, json=payload)
         response_data = response.json()
 
         logger.debug(f"Modify order response: {json.dumps(response_data, indent=2)}")

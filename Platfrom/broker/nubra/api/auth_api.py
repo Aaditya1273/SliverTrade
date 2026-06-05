@@ -1,7 +1,7 @@
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,7 +55,6 @@ def authenticate_broker(totp_code):
     device_id = get_device_id()
 
     try:
-        client = get_httpx_client()
 
         # Step 1: Login via TOTP
         logger.info(f"Nubra TOTP login initiated for phone: {phone[:5]}***")
@@ -64,7 +63,7 @@ def authenticate_broker(totp_code):
 
         totp_login_headers = {"Content-Type": "application/json", "x-device-id": device_id}
 
-        totp_response = client.post(
+        totp_response = request_with_circuit_breaker("POST", 
             f"{base_url}/totp/login", json=totp_login_payload, headers=totp_login_headers
         )
 
@@ -92,7 +91,7 @@ def authenticate_broker(totp_code):
             "Authorization": f"Bearer {auth_token}",
         }
 
-        pin_response = client.post(
+        pin_response = request_with_circuit_breaker("POST", 
             f"{base_url}/verifypin", json=verify_pin_payload, headers=verify_pin_headers
         )
 

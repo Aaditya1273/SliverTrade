@@ -63,7 +63,7 @@ def straddle_data():
 
     except Exception as e:
         logger.exception(f"Error in straddle chart API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load straddle chart"}), 500
 
 
 @straddle_bp.route("/straddle/api/intervals", methods=["GET"])
@@ -87,4 +87,4 @@ def straddle_intervals():
 
     except Exception as e:
         logger.exception(f"Error fetching intervals: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch intervals"}), 500

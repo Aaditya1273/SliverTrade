@@ -4,11 +4,10 @@ import time
 import urllib.parse
 from datetime import datetime, timedelta
 
-import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -18,9 +17,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     """Helper function to make API calls to Angel One"""
     AUTH_TOKEN = auth
     api_key = os.getenv("BROKER_API_KEY")
-
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -41,11 +37,11 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 
     try:
         if method == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            response = client.post(url, headers=headers, content=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         else:
-            response = client.request(method, url, headers=headers, content=payload)
+            response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code

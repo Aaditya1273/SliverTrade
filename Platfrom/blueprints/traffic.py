@@ -119,7 +119,7 @@ def get_logs():
         )
     except Exception as e:
         logger.exception(f"Error fetching traffic logs: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch traffic logs"}), 500
 
 
 @traffic_bp.route("/api/stats", methods=["GET"])
@@ -185,7 +185,7 @@ def get_stats():
         return jsonify({"overall": overall_stats, "api": api_stats, "endpoints": endpoint_stats})
     except Exception as e:
         logger.exception(f"Error fetching traffic stats: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch traffic statistics"}), 500
 
 
 @traffic_bp.route("/export", methods=["GET"])
@@ -211,7 +211,7 @@ def export_logs():
 
     except Exception as e:
         logger.exception(f"Error exporting traffic logs: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to export traffic logs"}), 500
 
 
 @traffic_bp.teardown_app_request

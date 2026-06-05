@@ -13,7 +13,7 @@ from broker.upstox.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,8 +36,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         if not api_key:
             logger.error("BROKER_API_KEY environment variable not set.")
             return {"status": "error", "message": "BROKER_API_KEY not set"}
-
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Content-Type": "application/json",
@@ -46,13 +44,13 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         url = f"https://api.upstox.com{endpoint}"
 
         if method == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            response = client.post(url, headers=headers, content=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         elif method == "PUT":
-            response = client.put(url, headers=headers, content=payload)
+            response = request_with_circuit_breaker("PUT", url, headers=headers, content=payload)
         elif method == "DELETE":
-            response = client.delete(url, headers=headers)
+            response = request_with_circuit_breaker("DELETE", url, headers=headers)
         else:
             logger.error(f"Unsupported HTTP method: {method}")
             return {"status": "error", "message": f"Unsupported HTTP method: {method}"}
@@ -207,14 +205,12 @@ def place_order_api(data, auth):
             }
         )
         logger.debug(f"Placing order with payload: {payload}")
-
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://api.upstox.com/v2/order/place", headers=headers, content=payload
         )
         response.raise_for_status()

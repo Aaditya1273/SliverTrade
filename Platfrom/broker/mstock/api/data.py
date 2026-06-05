@@ -8,7 +8,7 @@ import pandas as pd
 from broker.mstock.api.mstockwebsocket import MstockWebSocket
 from broker.mstock.mapping.order_data import transform_holdings_data, transform_positions_data
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +19,6 @@ def get_api_response(endpoint, auth_token, method="GET", payload=None):
     api_key = os.getenv("BROKER_API_SECRET")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "X-Mirae-Version": "1",
@@ -38,14 +37,14 @@ def get_api_response(endpoint, auth_token, method="GET", payload=None):
         if method == "GET":
             if payload:
                 # For GET with JSON body, use json parameter
-                response = client.request("GET", url, headers=headers, json=payload)
+                response = request_with_circuit_breaker("GET", url, headers=headers, json=payload)
             else:
-                response = client.get(url, headers=headers)
+                response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
             # For POST, use json parameter to auto-encode
-            response = client.post(url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
         else:
-            response = client.request(method, url, headers=headers, json=payload)
+            response = request_with_circuit_breaker(method, url, headers=headers, json=payload)
 
         logger.debug(f"API Response - Status: {response.status_code}")
         response.raise_for_status()
@@ -69,8 +68,7 @@ def get_positions(auth_token):
     }
 
     try:
-        client = get_httpx_client()
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.mstock.trade/openapi/typeb/portfolio/positions",
             headers=headers,
         )
@@ -93,8 +91,7 @@ def get_holdings(auth_token):
     }
 
     try:
-        client = get_httpx_client()
-        response = client.get(
+        response = request_with_circuit_breaker("GET", 
             "https://api.mstock.trade/openapi/typeb/portfolio/holdings",
             headers=headers,
         )
@@ -763,7 +760,6 @@ class BrokerData:
 
             # Call intraday API using typeb endpoint
             api_key = os.getenv("BROKER_API_SECRET")
-            client = get_httpx_client()
 
             headers = {
                 "X-Mirae-Version": "1",
@@ -775,7 +771,7 @@ class BrokerData:
 
             url = "https://api.mstock.trade/openapi/typeb/instruments/intraday"
 
-            response = client.post(url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
             logger.debug(f"Debug - Intraday API Response Status: {response.status_code}")
 
             if response.status_code != 200:

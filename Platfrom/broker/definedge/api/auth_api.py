@@ -3,7 +3,7 @@ import os
 import urllib.parse
 from hashlib import sha256
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -66,7 +66,6 @@ def login_step1(api_token=None, api_secret=None):
             api_secret = os.getenv("BROKER_API_SECRET")
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         headers = {"api_secret": api_secret}
 
@@ -74,7 +73,7 @@ def login_step1(api_token=None, api_secret=None):
             f"https://signin.definedgesecurities.com/auth/realms/debroking/dsbpkc/login/{api_token}"
         )
 
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
 
         response_data = response.json()
@@ -94,7 +93,6 @@ def login_step2(otp_token, otp, api_secret):
     """Step 2: Verify OTP with auth code to get session keys"""
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Calculate authentication code using SHA256
         auth_string = f"{otp_token}{otp}{api_secret}"
@@ -106,7 +104,7 @@ def login_step2(otp_token, otp, api_secret):
 
         url = "https://signin.definedgesecurities.com/auth/realms/debroking/dsbpkc/token"
 
-        response = client.post(url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers)
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
 
         return response.json()

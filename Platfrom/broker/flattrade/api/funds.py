@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,7 +32,7 @@ def calculate_pnl(entry):
 def fetch_data(endpoint, payload, headers, client):
     """Send a POST request and return the parsed JSON response using httpx."""
     url = f"https://piconnect.flattrade.in{endpoint}"
-    response = client.post(url, content=payload, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     return response.json()
 
 
@@ -48,7 +48,6 @@ def get_margin_data(auth_token):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     # Fetch margin data
     margin_data = fetch_data("/PiConnectAPI/Limits", payload, headers, client)

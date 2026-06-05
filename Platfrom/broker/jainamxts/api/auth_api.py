@@ -5,7 +5,7 @@ import httpx
 import requests
 
 from broker.jainamxts.baseurl import INTERACTIVE_URL, MARKET_DATA_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -14,7 +14,6 @@ logger = get_logger(__name__)
 def authenticate_broker(request_token):
     try:
         # Get the shared httpx client
-        client = get_httpx_client()
         # Fetching the necessary credentials from environment variables
         BROKER_API_KEY = os.getenv("BROKER_API_KEY")
         BROKER_API_SECRET = os.getenv("BROKER_API_SECRET")
@@ -29,7 +28,7 @@ def authenticate_broker(request_token):
         headers = {"Content-Type": "application/json"}
 
         session_url = f"{INTERACTIVE_URL}/user/session"
-        response = client.post(session_url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", session_url, json=payload, headers=headers)
 
         if response.status_code == 200:
             result = response.json()
@@ -79,8 +78,7 @@ def get_feed_token():
 
         # Get feed token
         feed_url = f"{MARKET_DATA_URL}/auth/login"
-        client = get_httpx_client()
-        feed_response = client.post(feed_url, json=feed_payload, headers=feed_headers)
+        feed_response = request_with_circuit_breaker("POST", feed_url, json=feed_payload, headers=feed_headers)
 
         feed_token = None
         user_id = None

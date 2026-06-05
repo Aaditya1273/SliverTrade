@@ -40,10 +40,9 @@ _user_credentials_cache = TTLCache(maxsize=10000, ttl=1800)  # 30 minutes TTL
 
 # Database configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db/telegram.db")
-if DATABASE_URL.startswith("sqlite:///") and ":memory:" not in DATABASE_URL:
-    db_path = DATABASE_URL.replace("sqlite:///", "")
-    if os.path.dirname(db_path):
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+from database.db_config import ensure_db_dir
+ensure_db_dir(DATABASE_URL)
 
 TELEGRAM_KEY_SALT = os.getenv("TELEGRAM_KEY_SALT", "telegram-silvertrade-salt").encode()
 

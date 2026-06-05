@@ -1,7 +1,7 @@
 import os
 
 from broker.deltaexchange.api.baseurl import BASE_URL, get_auth_headers, get_url
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,10 +44,9 @@ def authenticate_broker(code):
         )
 
         url = get_url(path)
-        client = get_httpx_client()
 
         logger.info("Verifying Delta Exchange credentials via GET /v2/profile")
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
 
         logger.debug(f"Profile response status: {response.status_code}")
         logger.debug(f"Profile response body: {response.text}")

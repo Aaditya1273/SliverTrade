@@ -1,7 +1,7 @@
 import json
 
 from broker.definedge.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -60,11 +60,10 @@ def calculate_margin_api(positions, auth):
     logger.info(f"Definedge margin calculation payload: {json.dumps(payload, indent=2)}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Make the request to Definedge Span Calculator API
-        response = client.post(DEFINEDGE_MARGIN_URL, headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", DEFINEDGE_MARGIN_URL, headers=headers, json=payload)
 
         # Add status attribute for compatibility
         response.status = response.status_code

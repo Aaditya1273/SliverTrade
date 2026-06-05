@@ -4,7 +4,7 @@ import json
 
 from broker.samco.mapping.margin_data import parse_margin_response, transform_margin_position
 from database.token_db import get_br_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -29,7 +29,6 @@ def calculate_margin_api(positions, auth, api_key=None):
         Tuple of (response, response_data)
     """
     # Get the shared httpx client
-    client = get_httpx_client()
 
     headers = {
         "Content-Type": "application/json",
@@ -77,7 +76,7 @@ def calculate_margin_api(positions, auth, api_key=None):
 
     try:
         # Make the POST request to spanMargin endpoint
-        response = client.post(f"{BASE_URL}/spanMargin", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/spanMargin", headers=headers, json=payload)
 
         # Add status attribute for compatibility
         response.status = response.status_code

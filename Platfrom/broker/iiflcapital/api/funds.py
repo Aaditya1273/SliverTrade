@@ -1,5 +1,5 @@
 from broker.iiflcapital.baseurl import BASE_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +36,7 @@ def _extract_result(payload):
 
 def _fetch_limits(client, endpoint, auth_token):
     try:
-        response = client.get(f"{BASE_URL}{endpoint}", headers=_headers(auth_token))
+        response = request_with_circuit_breaker("GET", f"{BASE_URL}{endpoint}", headers=_headers(auth_token))
     except Exception:
         logger.exception(f"IIFL Capital limits request failed for endpoint: {endpoint}")
         return {}
@@ -132,7 +132,6 @@ def get_margin_data(auth_token):
     meaningful and fallback to segment totals when pooled limits are missing
     or zero.
     """
-    client = get_httpx_client()
 
     pooled_limits = _fetch_limits(client, "/limits", auth_token)
     equity_limits = _fetch_limits(client, "/limits/equity", auth_token)

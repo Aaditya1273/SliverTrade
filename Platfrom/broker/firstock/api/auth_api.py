@@ -2,7 +2,7 @@ import hashlib
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -58,7 +58,6 @@ def authenticate_broker(userid, password, totp_code):
 
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Firstock API login URL
         url = "https://api.firstock.in/V1/login"
@@ -79,7 +78,7 @@ def authenticate_broker(userid, password, totp_code):
         logger.info(f"Vendor Code: {vendor_code}")
 
         # Send the POST request to Firstock's API using shared httpx client
-        response = client.post(url, json=payload, headers=headers, timeout=30)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers, timeout=30)
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code

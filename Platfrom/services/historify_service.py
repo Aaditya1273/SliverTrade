@@ -94,7 +94,7 @@ def get_watchlist() -> tuple[bool, dict[str, Any], int]:
         return True, {"status": "success", "data": watchlist, "count": len(watchlist)}, 200
     except Exception as e:
         logger.exception(f"Error getting watchlist: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get watchlist"}, 500
 
 
 def add_to_watchlist(
@@ -139,7 +139,7 @@ def add_to_watchlist(
 
     except Exception as e:
         logger.exception(f"Error adding to watchlist: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to add to watchlist"}, 500
 
 
 def remove_from_watchlist(symbol: str, exchange: str) -> tuple[bool, dict[str, Any], int]:
@@ -166,7 +166,7 @@ def remove_from_watchlist(symbol: str, exchange: str) -> tuple[bool, dict[str, A
 
     except Exception as e:
         logger.exception(f"Error removing from watchlist: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to remove from watchlist"}, 500
 
 
 def bulk_remove_from_watchlist(
@@ -209,7 +209,7 @@ def bulk_remove_from_watchlist(
 
     except Exception as e:
         logger.exception(f"Error bulk removing from watchlist: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to bulk remove from watchlist"}, 500
 
 
 def bulk_add_to_watchlist(symbols: list[dict[str, str]]) -> tuple[bool, dict[str, Any], int]:
@@ -275,7 +275,7 @@ def bulk_add_to_watchlist(symbols: list[dict[str, str]]) -> tuple[bool, dict[str
 
     except Exception as e:
         logger.exception(f"Error bulk adding to watchlist: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to bulk add to watchlist"}, 500
 
 
 # =============================================================================
@@ -373,7 +373,7 @@ def download_data(
 
     except Exception as e:
         logger.exception(f"Error downloading data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to download data"}, 500
 
 
 def download_watchlist_data(
@@ -441,7 +441,7 @@ def download_watchlist_data(
 
     except Exception as e:
         logger.exception(f"Error downloading watchlist data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to download watchlist data"}, 500
 
 
 # =============================================================================
@@ -510,7 +510,7 @@ def get_chart_data(
 
     except Exception as e:
         logger.exception(f"Error getting chart data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get chart data"}, 500
 
 
 def get_data_catalog() -> tuple[bool, dict[str, Any], int]:
@@ -538,7 +538,7 @@ def get_data_catalog() -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error getting data catalog: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get data catalog"}, 500
 
 
 def get_symbol_data_info(
@@ -610,7 +610,7 @@ def get_symbol_data_info(
 
     except Exception as e:
         logger.exception(f"Error getting symbol data info: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get symbol data info"}, 500
 
 
 # =============================================================================
@@ -686,7 +686,7 @@ def export_data_to_csv(
 
     except Exception as e:
         logger.exception(f"Error exporting to CSV: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to export data to CSV"}, 500
 
 
 def get_export_dataframe(
@@ -778,7 +778,7 @@ def get_stats() -> tuple[bool, dict[str, Any], int]:
         return True, {"status": "success", "data": stats}, 200
     except Exception as e:
         logger.exception(f"Error getting stats: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get database stats"}, 500
 
 
 def delete_symbol_data(
@@ -803,7 +803,7 @@ def delete_symbol_data(
             return False, {"status": "error", "message": msg}, 500
     except Exception as e:
         logger.exception(f"Error deleting data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to delete market data"}, 500
 
 
 def bulk_delete_symbol_data(
@@ -846,7 +846,7 @@ def bulk_delete_symbol_data(
 
     except Exception as e:
         logger.exception(f"Error bulk deleting data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to bulk delete market data"}, 500
 
 
 def initialize_historify() -> tuple[bool, dict[str, Any], int]:
@@ -862,7 +862,7 @@ def initialize_historify() -> tuple[bool, dict[str, Any], int]:
         return True, {"status": "success", "message": "Historify database initialized"}, 200
     except Exception as e:
         logger.exception(f"Error initializing Historify: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to initialize Historify database"}, 500
 
 
 # =============================================================================
@@ -962,7 +962,7 @@ def upload_csv_data(
 
     except Exception as e:
         logger.exception(f"Error uploading CSV: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to upload CSV data"}, 500
 
 
 def upload_parquet_data(
@@ -1029,7 +1029,7 @@ def upload_parquet_data(
 
     except Exception as e:
         logger.exception(f"Error uploading Parquet: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to upload Parquet data"}, 500
 
 
 # =============================================================================
@@ -1082,7 +1082,7 @@ def get_fno_underlyings(exchange: str = None) -> tuple[bool, dict[str, Any], int
 
     except Exception as e:
         logger.exception(f"Error getting FNO underlyings: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get FNO underlyings"}, 500
 
 
 def get_fno_expiries(
@@ -1128,7 +1128,7 @@ def get_fno_expiries(
 
     except Exception as e:
         logger.exception(f"Error getting FNO expiries: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get FNO expiries"}, 500
 
 
 def get_fno_chain(
@@ -1195,7 +1195,7 @@ def get_fno_chain(
 
     except Exception as e:
         logger.exception(f"Error getting FNO chain: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get FNO chain"}, 500
 
 
 def get_futures_chain(underlying: str, exchange: str = "NFO") -> tuple[bool, dict[str, Any], int]:
@@ -1288,7 +1288,7 @@ def get_option_chain_symbols(
 
     except Exception as e:
         logger.exception(f"Error getting option chain symbols: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get option chain symbols"}, 500
 
 
 # =============================================================================
@@ -1424,7 +1424,7 @@ def create_and_start_job(
 
     except Exception as e:
         logger.exception(f"Error creating job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to create download job"}, 500
 
 
 def _process_download_job(job_id: str, api_key: str):
@@ -1796,7 +1796,7 @@ def get_job_status(job_id: str) -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error getting job status: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get job status"}, 500
 
 
 def get_all_jobs(status: str = None, limit: int = 50) -> tuple[bool, dict[str, Any], int]:
@@ -1819,7 +1819,7 @@ def get_all_jobs(status: str = None, limit: int = 50) -> tuple[bool, dict[str, A
 
     except Exception as e:
         logger.exception(f"Error getting jobs: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get jobs"}, 500
 
 
 def cancel_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
@@ -1871,7 +1871,7 @@ def cancel_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error cancelling job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to cancel job"}, 500
 
 
 def pause_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
@@ -1917,7 +1917,7 @@ def pause_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error pausing job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to pause job"}, 500
 
 
 def resume_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
@@ -1957,7 +1957,7 @@ def resume_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error resuming job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to resume job"}, 500
 
 
 def delete_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
@@ -1993,7 +1993,7 @@ def delete_job(job_id: str) -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error deleting job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to delete job"}, 500
 
 
 def retry_failed_items(job_id: str, api_key: str) -> tuple[bool, dict[str, Any], int]:
@@ -2052,7 +2052,7 @@ def retry_failed_items(job_id: str, api_key: str) -> tuple[bool, dict[str, Any],
 
     except Exception as e:
         logger.exception(f"Error retrying job: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to retry job items"}, 500
 
 
 # =============================================================================
@@ -2118,7 +2118,7 @@ def enrich_and_save_metadata(symbols: list[dict[str, str]]) -> tuple[bool, dict[
 
     except Exception as e:
         logger.exception(f"Error enriching metadata: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to enrich symbol metadata"}, 500
 
 
 def get_catalog_with_metadata_service() -> tuple[bool, dict[str, Any], int]:
@@ -2148,7 +2148,7 @@ def get_catalog_with_metadata_service() -> tuple[bool, dict[str, Any], int]:
 
     except Exception as e:
         logger.exception(f"Error getting catalog with metadata: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get catalog with metadata"}, 500
 
 
 def get_catalog_grouped_service(group_by: str = "underlying") -> tuple[bool, dict[str, Any], int]:
@@ -2191,7 +2191,7 @@ def get_catalog_grouped_service(group_by: str = "underlying") -> tuple[bool, dic
 
     except Exception as e:
         logger.exception(f"Error getting grouped catalog: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get grouped catalog"}, 500
 
 
 # =============================================================================
@@ -2202,5 +2202,6 @@ def get_catalog_grouped_service(group_by: str = "underlying") -> tuple[bool, dic
 # This runs once when the module is first imported
 try:
     cleanup_zombie_jobs()
-except Exception as e:
-    logger.exception(f"Failed to cleanup zombie jobs on startup: {e}")
+except Exception as e:        logger.exception(f"Failed to cleanup zombie jobs on startup: {e}")
+
+

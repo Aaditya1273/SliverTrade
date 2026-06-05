@@ -2,7 +2,7 @@ import json
 import os
 
 from broker.shoonya.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -59,10 +59,8 @@ def calculate_margin_api(positions, auth):
     safe_payload = {k: v for k, v in margin_data.items() if k not in ("uid", "actid")}
     logger.info(f"Shoonya basket margin payload: {safe_payload}")
 
-    client = get_httpx_client()
-
     try:
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://api.shoonya.com/NorenWClientAPI/GetBasketMargin",
             headers=headers,
             content=payload,

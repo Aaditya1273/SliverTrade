@@ -77,7 +77,7 @@ def simulate():
 
     except Exception as e:
         logger.exception(f"Error in custom straddle API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Straddle simulation failed"}), 500
 
 
 @custom_straddle_bp.route("/straddlepnl/api/lotsize", methods=["GET"])
@@ -110,7 +110,7 @@ def get_lotsize():
 
     except Exception as e:
         logger.exception(f"Error fetching lot size: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch lot size"}), 500
 
 
 @custom_straddle_bp.route("/straddlepnl/api/intervals", methods=["GET"])
@@ -132,4 +132,4 @@ def custom_straddle_intervals():
 
     except Exception as e:
         logger.exception(f"Error fetching intervals: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch intervals"}), 500

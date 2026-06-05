@@ -3,8 +3,6 @@ import os
 import threading
 import time
 
-import httpx
-
 from broker.angel.mapping.transform_data import (
     map_product_type,
     reverse_map_product_type,
@@ -13,7 +11,7 @@ from broker.angel.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -22,9 +20,6 @@ logger = get_logger(__name__)
 def get_api_response(endpoint, auth, method="GET", payload="", max_retries=2):
     AUTH_TOKEN = auth
     api_key = os.getenv("BROKER_API_KEY")
-
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -43,11 +38,11 @@ def get_api_response(endpoint, auth, method="GET", payload="", max_retries=2):
     for attempt in range(max_retries + 1):
         try:
             if method == "GET":
-                response = client.get(url, headers=headers)
+                response = request_with_circuit_breaker("GET", url, headers=headers)
             elif method == "POST":
-                response = client.post(url, headers=headers, content=payload)
+                response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
             else:
-                response = client.request(method, url, headers=headers, content=payload)
+                response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
         except Exception as e:
             logger.error(f"HTTP request failed for {endpoint}: {e}")
             if attempt < max_retries:
@@ -201,11 +196,9 @@ def place_order_api(data, auth):
 
     logger.debug(f"{payload}")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
-    # Make the request using the shared client
-    response = client.post(
+    # Make the request using the circuit-breaker-protected client
+    response = request_with_circuit_breaker(
+        "POST",
         "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/placeOrder",
         headers=headers,
         content=payload,
@@ -372,10 +365,6 @@ def cancel_order(orderid, auth):
     AUTH_TOKEN = auth
     api_key = os.getenv("BROKER_API_KEY")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
-    # Set up the request headers
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
         "Content-Type": "application/json",
@@ -396,8 +385,9 @@ def cancel_order(orderid, auth):
         }
     )
 
-    # Make the request using the shared client
-    response = client.post(
+    # Make the request using the circuit-breaker-protected client
+    response = request_with_circuit_breaker(
+        "POST",
         "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/cancelOrder",
         headers=headers,
         content=payload,
@@ -425,16 +415,12 @@ def modify_order(data, auth):
     AUTH_TOKEN = auth
     api_key = os.getenv("BROKER_API_KEY")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     token = get_token(data["symbol"], data["exchange"])
     data["symbol"] = get_br_symbol(data["symbol"], data["exchange"])
 
     transformed_data = transform_modify_order_data(
         data, token
     )  # You need to implement this function
-    # Set up the request headers
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
         "Content-Type": "application/json",
@@ -448,8 +434,9 @@ def modify_order(data, auth):
     }
     payload = json.dumps(transformed_data)
 
-    # Make the request using the shared client
-    response = client.post(
+    # Make the request using the circuit-breaker-protected client
+    response = request_with_circuit_breaker(
+        "POST",
         "https://apiconnect.angelone.in/rest/secure/angelbroking/order/v1/modifyOrder",
         headers=headers,
         content=payload,

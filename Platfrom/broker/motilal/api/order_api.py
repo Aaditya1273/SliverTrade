@@ -15,7 +15,7 @@ from broker.motilal.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_symbol_info, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +26,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     api_key = os.getenv("BROKER_API_SECRET")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Motilal Oswal Header Parameters as per documentation
     headers = {
@@ -55,11 +54,11 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     url = f"{base_url}{endpoint}"
 
     if method == "GET":
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
     elif method == "POST":
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
     else:
-        response = client.request(method, url, headers=headers, content=payload)
+        response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
     # Add status attribute for compatibility with the existing codebase
     response.status = response.status_code
@@ -305,13 +304,12 @@ def place_order_api(data, auth):
     logger.debug(f"Payload JSON: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Use Production or UAT URL based on environment
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = client.post(f"{base_url}/rest/trans/v1/placeorder", headers=headers, content=payload)
+    response = request_with_circuit_breaker("POST", f"{base_url}/rest/trans/v1/placeorder", headers=headers, content=payload)
 
     # Add status attribute to make response compatible with http.client response
     # as the rest of the codebase expects .status instead of .status_code
@@ -504,7 +502,6 @@ def cancel_order(orderid, auth):
     api_key = os.getenv("BROKER_API_SECRET")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Motilal Oswal Header Parameters
     headers = {
@@ -535,7 +532,7 @@ def cancel_order(orderid, auth):
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         f"{base_url}/rest/trans/v1/cancelorder", headers=headers, content=payload
     )
 
@@ -575,7 +572,6 @@ def modify_order(data, auth):
     api_key = os.getenv("BROKER_API_SECRET")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # First, fetch the order details from order book to get lastmodifiedtime and qtytradedtoday
     orderid = data.get("orderid")
@@ -670,7 +666,7 @@ def modify_order(data, auth):
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         f"{base_url}/rest/trans/v2/modifyorder", headers=headers, content=payload
     )
 

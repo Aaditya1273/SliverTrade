@@ -217,9 +217,10 @@ def broker_callback(broker, para=None):
                 else:
                     session_json = session_data
 
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
+                logger.exception(f"Invalid JSON in compositedge callback")
                 return jsonify(
-                    {"error": f"Invalid JSON format: {str(e)}", "raw_data": session_data}
+                    {"error": "Invalid session data format"}
                 ), 400
 
             # Extract access token
@@ -238,8 +239,8 @@ def broker_callback(broker, para=None):
             forward_url = "broker.html"
 
         except Exception as e:
-            # print(f"Error in compositedge callback: {str(e)}")
-            return jsonify({"error": f"Error processing request: {str(e)}"}), 500
+            logger.exception(f"Error in compositedge callback: {e}")
+            return jsonify({"error": "Error processing broker callback"}), 500
 
     elif broker == "fyers":
         code = request.args.get("auth_code")
@@ -704,9 +705,8 @@ def broker_callback(broker, para=None):
                     logger.error(f"Definedge OTP generation failed: {step1_response}")
                     return jsonify({"status": "error", "message": error_msg}), 500
             except Exception as e:
-                error_msg = f"Error sending OTP: {str(e)}"
                 logger.exception(f"Definedge OTP generation error: {e}")
-                return jsonify({"status": "error", "message": error_msg}), 500
+                return jsonify({"status": "error", "message": "Failed to send OTP"}), 500
 
         elif request.method == "POST":
             action = request.form.get("action")
@@ -729,7 +729,7 @@ def broker_callback(broker, para=None):
                         return jsonify({"status": "error", "message": "Failed to resend OTP"})
                 except Exception as e:
                     logger.exception(f"Definedge OTP resend error: {e}")
-                    return jsonify({"status": "error", "message": str(e)})
+                    return jsonify({"status": "error", "message": "Failed to resend OTP"})
 
             # Handle OTP verification
             else:
@@ -827,11 +827,12 @@ def broker_callback(broker, para=None):
                 oauth_url = f"{RMONEY_INTERACTIVE_URL}/thirdparty?appKey={BROKER_API_KEY_LOCAL}&returnURL={callback_url}"
                 return redirect(oauth_url)
 
-        except json.JSONDecodeError as e:
-            return jsonify({"error": f"Invalid session data format: {str(e)}"}), 400
+        except json.JSONDecodeError:
+            logger.exception("Invalid session data in RMoney callback")
+            return jsonify({"error": "Invalid session data format"}), 400
         except Exception as e:
             logger.exception(f"RMoney callback error: {e}")
-            return jsonify({"error": f"Error processing request: {str(e)}"}), 500
+            return jsonify({"error": "Error processing broker request"}), 500
 
     else:
         code = request.args.get("code") or request.args.get("request_token")

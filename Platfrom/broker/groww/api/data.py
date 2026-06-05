@@ -9,7 +9,7 @@ import pandas as pd
 import pytz
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -44,7 +44,6 @@ def get_api_response(endpoint, auth_token, method="GET", params=None, data=None,
     logger.info(f"Making direct API request to endpoint: {endpoint}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Ensure endpoint starts with a slash
     if not endpoint.startswith("/"):
@@ -64,13 +63,13 @@ def get_api_response(endpoint, auth_token, method="GET", params=None, data=None,
     try:
         # Make the request based on the HTTP method
         if method.upper() == "GET":
-            response = client.get(url, headers=headers, params=params)
+            response = request_with_circuit_breaker("GET", url, headers=headers, params=params)
         elif method.upper() == "POST":
-            response = client.post(url, headers=headers, json=data)
+            response = request_with_circuit_breaker("POST", url, headers=headers, json=data)
         elif method.upper() == "PUT":
-            response = client.put(url, headers=headers, json=data)
+            response = request_with_circuit_breaker("PUT", url, headers=headers, json=data)
         elif method.upper() == "DELETE":
-            response = client.delete(url, headers=headers, params=params)
+            response = request_with_circuit_breaker("DELETE", url, headers=headers, params=params)
         else:
             logger.error(f"Unsupported HTTP method: {method}")
             return {"error": f"Unsupported HTTP method: {method}"}

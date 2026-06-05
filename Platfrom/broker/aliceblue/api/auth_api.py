@@ -4,7 +4,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -39,7 +39,6 @@ def authenticate_broker(userid, authCode):
         logger.debug(f"Authenticating with AliceBlue for user {userid}")
 
         # Step 1: Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Step 2: Generate SHA-256 checksum = hash(userId + authCode + apiSecret)
         logger.debug("Generating checksum for authentication")
@@ -55,7 +54,7 @@ def authenticate_broker(userid, authCode):
         # Step 4: POST to the new vendor getUserDetails endpoint
         logger.debug("Making getUserDetails request to AliceBlue API")
         url = "https://ant.aliceblueonline.com/open-api/od/v1/vendor/getUserDetails"
-        response = client.post(url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers)
 
         logger.debug(f"AliceBlue API response status: {response.status_code}")
         data_dict = response.json()

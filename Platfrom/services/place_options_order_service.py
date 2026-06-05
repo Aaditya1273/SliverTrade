@@ -14,11 +14,12 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.settings_db import get_analyze_mode
 from events import AnalyzerErrorEvent, OptionsOrderCompletedEvent
 from services.option_symbol_service import get_option_symbol
 from services.place_order_service import place_order
+from utils.broker_failover import get_failover_manager
 from utils.event_bus import bus
 from utils.logging import get_logger
 
@@ -150,6 +151,19 @@ def place_options_order(
 
             if should_route_to_pending(api_key, "optionsorder"):
                 return queue_order(api_key, original_data, "optionsorder")
+
+            # Register user with failover manager for circuit breaker coverage.
+            # The actual order placement delegates to place_order() which already
+            # has its own execute_with_failover wrapper — this registration ensures
+            # the user/broker pair is tracked and the circuit breaker is primed.
+            AUTH_TOKEN, broker_name = get_auth_token_broker(api_key)
+            if AUTH_TOKEN is None:
+                return False, {"status": "error", "message": "Invalid silvertrade apikey"}, 403
+
+            user_id = verify_api_key(api_key)
+            if user_id:
+                fm = get_failover_manager()
+                fm.register_user(user_id, [broker_name])
 
         # Extract option-specific parameters
         underlying = options_data.get("underlying")

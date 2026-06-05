@@ -2,7 +2,7 @@ import json
 import os
 
 from broker.firstock.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -54,12 +54,10 @@ def calculate_margin_api(positions, auth):
 
     safe_payload = {k: v for k, v in margin_data.items() if k not in ("userId", "jKey")}
     logger.info(f"Firstock basket margin payload: {safe_payload}")
-
-    client = get_httpx_client()
     headers = {"Content-Type": "application/json"}
 
     try:
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://api.firstock.in/V1/basketMargin",
             headers=headers,
             json=margin_data,

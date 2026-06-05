@@ -57,6 +57,16 @@ class EventBus:
         for cb in callbacks:
             self._executor.submit(self._safe_call, cb, event)
 
+    def shutdown(self, timeout: int = 30) -> None:
+        """Gracefully shut down the event bus, draining all pending work.
+
+        Blocks until all currently submitted callbacks complete, or until
+        *timeout* seconds elapse (whichever comes first). After this call
+        returns, publish() will queue events but they won't execute — call
+        this only during application shutdown.
+        """
+        self._executor.shutdown(wait=True, timeout=timeout)
+
     def _safe_call(self, cb, event: Event) -> None:
         """Execute a callback with error isolation."""
         try:

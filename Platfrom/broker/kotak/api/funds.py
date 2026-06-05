@@ -3,7 +3,7 @@ import json
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +36,6 @@ def get_margin_data(auth_token):
         logger.debug(f"Fetching margin data from {base_url}")
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Prepare payload as per Kotak API docs: jData with seg, exch, prod
         payload = (
@@ -56,7 +55,7 @@ def get_margin_data(auth_token):
 
         logger.debug(f"Making POST request to {url}")
 
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         logger.debug(f"Kotak Limits API Response Status: {response.status_code}")
         logger.debug(f"Kotak Limits API Response: {response.text}")

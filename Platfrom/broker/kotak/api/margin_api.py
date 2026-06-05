@@ -6,7 +6,7 @@ from broker.kotak.mapping.margin_data import (
     parse_margin_response,
     transform_margin_position,
 )
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,7 +30,6 @@ def calculate_single_margin(position_data, auth_token):
     logger.debug(f"MARGIN API - Using baseUrl: {base_url}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Prepare headers
     headers = {
@@ -52,7 +51,7 @@ def calculate_single_margin(position_data, auth_token):
 
     try:
         # Make the request
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         # Add status attribute for compatibility
         response.status = response.status_code

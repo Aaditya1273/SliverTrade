@@ -7,7 +7,7 @@ import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -58,8 +58,7 @@ def get_api_response(endpoint, auth, method="POST", payload=None, custom_timeout
                 response = temp_client.request(method, url, json=data, headers=headers)
         else:
             # Get the shared httpx client with connection pooling for regular requests
-            client = get_httpx_client()
-            response = client.request(method, url, json=data, headers=headers)
+            response = request_with_circuit_breaker(method, url, json=data, headers=headers)
 
         # Add status attribute for compatibility
         response.status = response.status_code
@@ -85,7 +84,7 @@ def get_api_response(endpoint, auth, method="POST", payload=None, custom_timeout
                 ) as temp_client:
                     response = temp_client.request(method, url, json=data, headers=headers)
             else:
-                response = client.request(method, url, json=data, headers=headers)
+                response = request_with_circuit_breaker(method, url, json=data, headers=headers)
             response_text = response.text
             logger.debug(f"Retry Response: {response_text}")
             if not response_text:

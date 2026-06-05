@@ -86,7 +86,7 @@ def configuration():
 
     except Exception as e:
         logger.exception(f"Error updating config: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to update configuration"}), 500
 
 
 @telegram_bp.route("/bot/start", methods=["POST"])
@@ -157,7 +157,7 @@ def start_bot():
 
     except Exception as e:
         logger.exception(f"Error starting bot: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to start bot"}), 500
 
 
 @telegram_bp.route("/bot/stop", methods=["POST"])
@@ -175,7 +175,7 @@ def stop_bot():
 
     except Exception as e:
         logger.exception(f"Error stopping bot: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to stop bot"}), 500
 
 
 @telegram_bp.route("/bot/status", methods=["GET"])
@@ -196,7 +196,7 @@ def bot_status():
 
     except Exception as e:
         logger.exception(f"Error getting bot status: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to get bot status"}), 500
 
 
 @telegram_bp.route("/broadcast", methods=["POST"])
@@ -240,7 +240,7 @@ def broadcast():
 
     except Exception as e:
         logger.exception(f"Error broadcasting: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Broadcast failed"}), 500
 
 
 @telegram_bp.route("/user/<int:telegram_id>/unlink", methods=["POST"])
@@ -257,7 +257,7 @@ def unlink_user(telegram_id):
 
     except Exception as e:
         logger.exception(f"Error unlinking user: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to unlink user"}), 500
 
 
 @telegram_bp.route("/test-message", methods=["POST"])
@@ -307,7 +307,7 @@ def send_test_message():
 
     except Exception as e:
         logger.exception(f"Error sending test message: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to send test message"}), 500
 
 
 @telegram_bp.route("/send-message", methods=["POST"])
@@ -362,7 +362,7 @@ def send_message():
 
     except Exception as e:
         logger.exception(f"Error sending message: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to send message"}), 500
 
 
 # ============================================================================
@@ -430,7 +430,7 @@ def api_index():
 
     except Exception as e:
         logger.exception(f"Error in telegram api index: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load Telegram dashboard"}), 500
 
 
 @telegram_bp.route("/api/config")
@@ -456,7 +456,7 @@ def api_config():
 
     except Exception as e:
         logger.exception(f"Error getting config: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to get configuration"}), 500
 
 
 @telegram_bp.route("/api/users")
@@ -481,7 +481,7 @@ def api_users():
 
     except Exception as e:
         logger.exception(f"Error getting users: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to get users"}), 500
 
 
 @telegram_bp.route("/api/analytics")
@@ -513,4 +513,4 @@ def api_analytics():
 
     except Exception as e:
         logger.exception(f"Error getting analytics: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to get analytics"}), 500

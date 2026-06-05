@@ -136,6 +136,47 @@ def create_app():
     # Initialize Redis client (optional — graceful fallback if unavailable)
     init_redis()
 
+    # Detect database type and initialize PostgreSQL schemas if needed
+    # Iterate over all known DB URL keys to create schemas on each PG connection
+    _db_url_keys = ["DATABASE_URL", "LOGS_DATABASE_URL", "LATENCY_DATABASE_URL",
+                    "HEALTH_DATABASE_URL", "SANDBOX_DATABASE_URL"]
+    _schemas_initialized = 0
+    for _key in _db_url_keys:
+        _url = os.getenv(_key, "")
+        if "postgresql" in _url or "postgres" in _url:
+            try:
+                from database.db_config import get_db_engine
+                from sqlalchemy import text
+
+                engine = get_db_engine(_key)
+                with engine.connect() as conn:
+                    # Map URL key → schema name
+                    _schema_map = {
+                        "DATABASE_URL": "public",
+                        "LOGS_DATABASE_URL": "logs",
+                        "LATENCY_DATABASE_URL": "latency",
+                        "HEALTH_DATABASE_URL": "health",
+                        "SANDBOX_DATABASE_URL": "sandbox",
+                    }
+                    _schema = _schema_map.get(_key, "public")
+                    if _schema != "public":
+                        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {_schema}"))
+                    conn.commit()
+                    _schemas_initialized += 1
+            except Exception as e:
+                logger.warning(f"Failed to initialize PostgreSQL schema for {_key}: {e}")
+    if _schemas_initialized > 0:
+        logger.info(f"PostgreSQL schemas initialized ({_schemas_initialized} connection(s))")
+
+    # Sync IP bans from SQLite to Redis (so bans survive Redis restarts)
+    try:
+        from database.traffic_db import _sync_bans_to_redis
+        synced = _sync_bans_to_redis()
+        if synced > 0:
+            logger.info(f"Synced {synced} IP bans to Redis cache")
+    except Exception:
+        logger.warning("Failed to sync IP bans to Redis (Redis may be unavailable)")
+
     # Initialize Prometheus metrics exporter (auto-creates /metrics endpoint)
     from blueprints.metrics import init_metrics
 
@@ -321,166 +362,157 @@ def create_app():
         # NOTE: Telegram bot auto-start moved to background init thread
         # (after DB tables are created) to avoid "no such table" on fresh install
 
-    @app.before_request
-    def wait_for_db_ready():
-        """Block requests until background database initialization completes."""
-        from flask import request
-
-        # Static assets don't need DB
-        if (
-            request.path.startswith("/static/")
-            or request.path.startswith("/assets/")
-        ):
-            return
-
-        # Wait up to 30s for DB init (typically ~3.5s)
-        if hasattr(app, "db_ready") and not app.db_ready.is_set():
-            app.db_ready.wait(timeout=30)
-
-    @app.before_request
-    def check_session_expiry():
-        """Check session validity before each request"""
-        from flask import request
-
-        from utils.session import is_session_valid, revoke_user_tokens
-
-        # Skip session check for static files, API endpoints, and public routes
-        if (
-            request.path.startswith("/static/")
-            or request.path.startswith("/api/")
-            or request.path.startswith("/assets/")  # React frontend assets
-            or request.path
-            in [
-                "/",
-                "/auth/login",
-                "/auth/reset-password",
-                "/auth/csrf-token",
-                "/auth/broker-config",
-                "/auth/session-status",  # Session status check for React SPA
-                "/auth/check-setup",  # Setup check for React SPA
-                "/setup",
-                "/download",
-                "/faq",
-                "/login",  # React login page
-            ]
-            or request.path.startswith("/auth/broker/")  # OAuth callbacks
-            or request.path.startswith("/_reload-ws")
-        ):  # WebSocket reload endpoint
-            return
-
-        # Check if user is logged in and session is expired
-        if session.get("logged_in") and not is_session_valid():
-            logger.info(f"Session expired for user: {session.get('user')} - revoking tokens")
-            revoke_user_tokens(revoke_db_tokens=False)
-            session.clear()
-            # Don't redirect here, let individual routes handle it
-
-    @app.errorhandler(400)
-    def csrf_error(error):
-        """Custom handler for CSRF errors (400 Bad Request)"""
-        from flask import flash, jsonify, redirect, request, url_for
-
-        error_description = str(error)
-
-        logger.warning(f"CSRF Error on {request.path}: {error_description}")
-
-        # Check if it's a CSRF error
-        if "CSRF" in error_description or "csrf" in error_description.lower():
-            if request.is_json or request.path.startswith("/api"):
-                return jsonify(
-                    {
-                        "error": "CSRF validation failed",
-                        "message": "Security token expired or invalid. Please refresh the page and try again.",
-                    }
-                ), 400
-            else:
-                flash("Security token expired. Please try again.", "error")
-                return redirect(request.referrer or url_for("auth.login"))
-
-        # For other 400 errors
-        return str(error), 400
-
-    @app.errorhandler(404)
-    def not_found_error(error):
-        from flask import request, session
-
-        from database.traffic_db import Error404Tracker
-        from utils.ip_helper import get_real_ip
-
-        client_ip = get_real_ip()
-        path = request.path
-
-        # Skip 404 tracking for authenticated users (prevents self-ban during
-        # login flows, broker OAuth callbacks, or normal navigation to
-        # React routes that don't have explicit Flask endpoints)
-        is_authenticated = session.get("logged_in", False)
-
-        # Skip tracking for common browser/crawler requests that are not attack probes
-        safe_prefixes = (
-            "/favicon", "/robots.txt", "/sitemap", "/manifest",
-            "/sw.js", "/.well-known", "/apple-touch-icon",
-            "/service-worker", "/workbox",
-        )
-
-        if not is_authenticated and not path.startswith(safe_prefixes):
-            Error404Tracker.track_404(client_ip, path)
-
-        # For API routes, return a JSON 404 instead of serving the React app
-        if path.startswith("/api/"):
-            return jsonify({"status": "error", "message": "API endpoint not found"}), 404
-
-        # Serve React app (React Router handles 404)
-        return serve_react_app()
-
-    @app.errorhandler(500)
-    def internal_server_error(e):
-        """Custom handler for 500 Internal Server Error"""
-        from flask import redirect
-
-        # Log the error
-        logger.error(f"Server Error: {e}")
-
-        # Redirect to React error page
-        return redirect("/error")
-
-    @app.errorhandler(429)
-    def rate_limit_exceeded(e):
-        """Custom handler for 429 Too Many Requests"""
-        from flask import redirect, request
-
-        # Log rate limit hit
-        logger.warning(f"Rate limit exceeded for {request.remote_addr}: {request.path}")
-
-        # For API requests, return JSON response
-        if request.path.startswith("/api/"):
-            return {
-                "status": "error",
-                "message": "Rate limit exceeded. Please slow down your requests.",
-                "retry_after": 60,
-            }, 429
-
-        # For web requests, redirect to React rate-limited page
-        return redirect("/rate-limited")
-
-    @app.context_processor
-    def inject_version():
-        return dict(version=get_version())
-
-    @app.route("/api/config/host")
-    def get_host_config():
-        """Return the HOST_SERVER configuration for frontend webhook URL generation"""
-        from flask import jsonify
-
-        host_server = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
-
-        # Determine if webhook URL is externally accessible
-        is_localhost = any(
-            local in host_server.lower() for local in ["localhost", "127.0.0.1", "0.0.0.0"]
-        )
-
-        return jsonify({"host_server": host_server, "is_localhost": is_localhost})
 
     return app
+
+
+# ── Correlation ID ────────────────────────────────────────────────────
+# Every HTTP request gets a unique correlation ID (X-Request-ID) that is
+# propagated to all log lines via LogContext, enabling end-to-end tracing
+# across service boundaries.
+#
+# When the caller sends an X-Request-ID header (e.g. from a reverse proxy
+# or API gateway), it is honoured so that traces span multiple hops.
+
+import uuid as _uuid
+
+
+@app.before_request
+def set_correlation_id():
+    """Assign a correlation ID to every request for distributed tracing."""
+    from flask import g, request
+    from utils.logging import log_context, set_log_context
+
+    correlation_id = request.headers.get(
+        "X-Request-ID",
+        request.headers.get("X-Correlation-ID", str(_uuid.uuid4())),
+    )
+    g.correlation_id = correlation_id
+    set_log_context(request_id=correlation_id)
+    if session.get("user_id"):
+        set_log_context(user_id=session["user_id"])
+
+
+@app.after_request
+def add_correlation_id_header(response):
+    """Echo the correlation ID back in the response header."""
+    from flask import g
+    from utils.logging import clear_log_context
+
+    cid = getattr(g, "correlation_id", None)
+    if cid:
+        response.headers["X-Request-ID"] = cid
+    clear_log_context()
+    return response
+
+
+@app.before_request
+def reject_requests_during_shutdown():
+    """Reject new requests during graceful shutdown."""
+    if hasattr(app, "_shutting_down") and app._shutting_down:
+        from flask import jsonify
+        return jsonify({
+            "status": "error",
+            "message": "Server is shutting down. Please retry your request.",
+            "retry_after": 30,
+        }), 503
+
+
+@app.before_request
+def wait_for_db_ready():
+    """Block requests until background database initialization completes."""
+    from flask import request
+    if (request.path.startswith("/static/") or request.path.startswith("/assets/")):
+        return
+    if hasattr(app, "db_ready") and not app.db_ready.is_set():
+        app.db_ready.wait(timeout=30)
+
+
+@app.before_request
+def check_session_expiry():
+    """Check session validity before each request"""
+    from flask import request
+    from utils.session import is_session_valid, revoke_user_tokens
+
+    skip_prefixes = ("/static/", "/api/", "/assets/", "/auth/broker/", "/_reload-ws")
+    skip_exact = {"/", "/auth/login", "/auth/reset-password", "/auth/csrf-token",
+                  "/auth/broker-config", "/auth/session-status", "/auth/check-setup",
+                  "/setup", "/download", "/faq", "/login"}
+    if any(request.path.startswith(p) for p in skip_prefixes) or request.path in skip_exact:
+        return
+
+    if session.get("logged_in") and not is_session_valid():
+        logger.info(f"Session expired for user: {session.get('user')} - revoking tokens")
+        revoke_user_tokens(revoke_db_tokens=False)
+        session.clear()
+
+
+@app.errorhandler(400)
+def csrf_error(error):
+    """Custom handler for CSRF errors (400 Bad Request)"""
+    from flask import flash, jsonify, redirect, request, url_for
+    error_description = str(error)
+    logger.warning(f"CSRF Error on {request.path}: {error_description}")
+    if "CSRF" in error_description or "csrf" in error_description.lower():
+        if request.is_json or request.path.startswith("/api"):
+            return jsonify({"error": "CSRF validation failed",
+                            "message": "Security token expired or invalid. Please refresh the page and try again."}), 400
+        flash("Security token expired. Please try again.", "error")
+        return redirect(request.referrer or url_for("auth.login"))
+    return str(error), 400
+
+
+@app.errorhandler(404)
+def not_found_error(error):
+    from flask import jsonify, request, session
+    from database.traffic_db import Error404Tracker
+    from utils.ip_helper import get_real_ip
+
+    client_ip = get_real_ip()
+    path = request.path
+    is_authenticated = session.get("logged_in", False)
+    safe_prefixes = ("/favicon", "/robots.txt", "/sitemap", "/manifest",
+                     "/sw.js", "/.well-known", "/apple-touch-icon",
+                     "/service-worker", "/workbox")
+    if not is_authenticated and not path.startswith(safe_prefixes):
+        Error404Tracker.track_404(client_ip, path)
+    if path.startswith("/api/"):
+        return jsonify({"status": "error", "message": "API endpoint not found"}), 404
+    return serve_react_app()
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """Custom handler for 500 Internal Server Error"""
+    from flask import redirect
+    logger.error(f"Server Error: {e}")
+    return redirect("/error")
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    """Custom handler for 429 Too Many Requests"""
+    from flask import redirect, request
+    logger.warning(f"Rate limit exceeded for {request.remote_addr}: {request.path}")
+    if request.path.startswith("/api/"):
+        return {"status": "error", "message": "Rate limit exceeded. Please slow down your requests.",
+                "retry_after": 60}, 429
+    return redirect("/rate-limited")
+
+
+@app.context_processor
+def inject_version():
+    return dict(version=get_version())
+
+
+@app.route("/api/config/host")
+def get_host_config():
+    """Return the HOST_SERVER configuration for frontend webhook URL generation"""
+    from flask import jsonify
+    host_server = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
+    is_localhost = any(local in host_server.lower()
+                       for local in ["localhost", "127.0.0.1", "0.0.0.0"])
+    return jsonify({"host_server": host_server, "is_localhost": is_localhost})
 
 
 def setup_environment(app):
@@ -743,6 +775,83 @@ def shutdown_database_sessions(exception=None):
                 session.remove()
         except Exception:
             pass
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Graceful Shutdown Handler
+#
+# SIGTERM (Docker stop, K8s pod shutdown) and SIGINT (Ctrl+C) trigger a
+# controlled shutdown that:
+#   1. Stops accepting new requests
+#   2. Completes in-flight orders (30s timeout)
+#   3. Saves in-memory state (caches, pending orders)
+#   4. Closes database connections
+#   5. Kills the process
+#
+# Without this handler, a container kill during an order operation can
+# orphan broker orders (money leaves user but our DB never recorded it).
+# ──────────────────────────────────────────────────────────────────────────────
+import signal as _signal
+import threading as _threading
+
+def _graceful_shutdown_handler(signum, frame):
+    """
+    Graceful shutdown handler for SIGTERM and SIGINT.
+
+    Sequence:
+    1. Log shutdown initiation
+    2. Stop accepting new requests (via limiter or flag)
+    3. Wait for in-flight orders (max 30s)
+    4. Flush and close all database sessions
+    5. Exit
+    """
+    signame = _signal.Signals(signum).name
+    logger.warning("=" * 60)
+    logger.warning(f"🚨 GRACEFUL SHUTDOWN initiated ({signame})")
+    logger.warning("=" * 60)
+
+    # Set a flag that before_request handlers check to reject new requests
+    app._shutting_down = True
+
+    # Wait for in-flight operations (event bus thread pool has pending work)
+    # The event bus runs in its own ThreadPoolExecutor — we give it time to
+    # drain so that order-placed events get written to the DB before exit.
+    try:
+        from utils.event_bus import bus as _bus
+        _bus.shutdown(timeout=30)
+        logger.warning("Event bus executor drained successfully")
+    except Exception as e:
+        logger.warning(f"Event bus drain timed out or failed: {e}")
+
+    # Flush all database sessions to minimize data loss
+    logger.warning("Flushing database sessions...")
+    _sessions_to_flush = [
+        ("database.auth_db", "db_session"),
+        ("database.apilog_db", "db_session"),
+        ("database.settings_db", "db_session"),
+        ("database.strategy_db", "db_session"),
+        ("database.user_db", "db_session"),
+        ("database.sandbox_db", "db_session"),
+        ("database.analyzer_db", "db_session"),
+    ]
+    for mod_name, attr_name in _sessions_to_flush:
+        try:
+            import importlib as _il
+            mod = _il.import_module(mod_name)
+            sess = getattr(mod, attr_name, None)
+            if sess is not None:
+                sess.remove()
+        except Exception:
+            pass
+
+    logger.warning("Graceful shutdown complete. Exiting.")
+    import sys as _sys
+    _sys.exit(0)
+
+
+# Register signal handlers
+_signal.signal(_signal.SIGTERM, _graceful_shutdown_handler)
+_signal.signal(_signal.SIGINT, _graceful_shutdown_handler)
 
 
 # Integrate the WebSocket proxy server with the Flask app

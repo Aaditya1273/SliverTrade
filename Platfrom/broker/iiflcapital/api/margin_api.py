@@ -5,7 +5,7 @@ from broker.iiflcapital.mapping.margin_data import (
     parse_margin_response,
     transform_margin_positions,
 )
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,8 +33,6 @@ def calculate_margin_api(positions, auth):
             "status": "error",
             "message": "No valid positions to calculate margin. Check if symbols are valid.",
         }
-
-    client = get_httpx_client()
     headers = {
         "Authorization": f"Bearer {auth}",
         "Content-Type": "application/json",
@@ -44,7 +42,7 @@ def calculate_margin_api(positions, auth):
     logger.info(f"IIFL Capital margin calculation payload: {transformed_positions}")
 
     try:
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{BASE_URL}/spanexposure",
             headers=headers,
             json=transformed_positions,

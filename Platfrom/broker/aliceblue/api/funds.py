@@ -2,7 +2,7 @@
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +16,7 @@ def _get_realized_pnl(client, headers):
     """
     try:
         positions_url = "https://a3.aliceblueonline.com/open-api/od/v1/positions"
-        response = client.get(positions_url, headers=headers)
+        response = request_with_circuit_breaker("GET", positions_url, headers=headers)
         response.raise_for_status()
 
         positions_data = response.json()
@@ -56,7 +56,6 @@ def get_margin_data(auth_token):
 
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         url = "https://a3.aliceblueonline.com/open-api/od/v1/limits/"
         # V2 API uses just the auth_token (JWT) in the Bearer header
@@ -66,7 +65,7 @@ def get_margin_data(auth_token):
         }
 
         # Make the API request using the shared client
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
         response.raise_for_status()
 
         margin_data = response.json()

@@ -12,7 +12,7 @@ from broker.pocketful.api.packet_decoder import (
     decodeSnapquoteData,
     decodeTradeUpdate,
 )
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -200,36 +200,32 @@ class PocketfulSocket:
 
     def get_request(self, url, params):
         """Make GET request using shared httpx client"""
-        client = get_httpx_client()
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = client.get(f"{self.base_url}{url}", params=params, headers=headers)
+        res = request_with_circuit_breaker("GET", f"{self.base_url}{url}", params=params, headers=headers)
         return res.json()
 
     def post_request(self, url, data):
         """Make POST request using shared httpx client"""
-        client = get_httpx_client()
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = client.post(f"{self.base_url}{url}", headers=headers, json=data)
+        res = request_with_circuit_breaker("POST", f"{self.base_url}{url}", headers=headers, json=data)
         logger.info(f"POST Response: {res.status_code}")
         return res.json()
 
     def put_request(self, url, data):
         """Make PUT request using shared httpx client"""
-        client = get_httpx_client()
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = client.put(f"{self.base_url}{url}", headers=headers, json=data)
+        res = request_with_circuit_breaker("PUT", f"{self.base_url}{url}", headers=headers, json=data)
         logger.info(f"PUT Response: {res.status_code}")
         return res.json()
 
     def delete_request(self, url, params):
         """Make DELETE request using shared httpx client"""
-        client = get_httpx_client()
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = client.delete(f"{self.base_url}{url}", params=params, headers=headers)
+        res = request_with_circuit_breaker("DELETE", f"{self.base_url}{url}", params=params, headers=headers)
         return res.json()
 
     def run_socket(self):

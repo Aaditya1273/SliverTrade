@@ -96,7 +96,7 @@ def sandbox_place_order(
             False,
             {
                 "status": "error",
-                "message": f"Sandbox order placement error: {str(e)}",
+                "message": "Sandbox order placement error",
                 "mode": "analyze",
             },
             500,
@@ -135,7 +135,7 @@ def sandbox_modify_order(
             False,
             {
                 "status": "error",
-                "message": f"Sandbox order modification error: {str(e)}",
+                "message": "Sandbox order modification error",
                 "mode": "analyze",
             },
             500,
@@ -165,7 +165,7 @@ def sandbox_cancel_order(
             False,
             {
                 "status": "error",
-                "message": f"Sandbox order cancellation error: {str(e)}",
+                "message": "Sandbox order cancellation error",
                 "mode": "analyze",
             },
             500,
@@ -190,7 +190,7 @@ def sandbox_get_orderbook(
         logger.exception(f"Error in sandbox_get_orderbook: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting orderbook: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting orderbook", "mode": "analyze"},
             500,
         )
 
@@ -217,7 +217,7 @@ def sandbox_get_order_status(
             False,
             {
                 "status": "error",
-                "message": f"Error getting order status: {str(e)}",
+                "message": "Error getting order status",
                 "mode": "analyze",
             },
             500,
@@ -242,7 +242,7 @@ def sandbox_get_positions(
         logger.exception(f"Error in sandbox_get_positions: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting positions: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting positions", "mode": "analyze"},
             500,
         )
 
@@ -265,7 +265,7 @@ def sandbox_get_holdings(
         logger.exception(f"Error in sandbox_get_holdings: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting holdings: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting holdings", "mode": "analyze"},
             500,
         )
 
@@ -288,7 +288,7 @@ def sandbox_get_tradebook(
         logger.exception(f"Error in sandbox_get_tradebook: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting tradebook: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting tradebook", "mode": "analyze"},
             500,
         )
 
@@ -317,7 +317,7 @@ def sandbox_get_funds(
         logger.exception(f"Error in sandbox_get_funds: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting funds: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting funds", "mode": "analyze"},
             500,
         )
 
@@ -401,7 +401,7 @@ def sandbox_close_position(
         logger.exception(f"Error in sandbox_close_position: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error closing position: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error closing position", "mode": "analyze"},
             500,
         )
 
@@ -502,7 +502,7 @@ def sandbox_place_smart_order(
             False,
             {
                 "status": "error",
-                "message": f"Error placing smart order: {str(e)}",
+                "message": "Error placing smart order",
                 "mode": "analyze",
             },
             500,
@@ -580,7 +580,7 @@ def sandbox_cancel_all_orders(
             False,
             {
                 "status": "error",
-                "message": f"Error canceling all orders: {str(e)}",
+                "message": "Error canceling all orders",
                 "mode": "analyze",
             },
             500,
@@ -630,7 +630,7 @@ def sandbox_reload_squareoff_schedule() -> tuple[bool, dict[str, Any], int]:
             False,
             {
                 "status": "error",
-                "message": f"Error reloading schedule: {str(e)}",
+                "message": "Error reloading schedule",
                 "mode": "analyze",
             },
             500,
@@ -658,7 +658,7 @@ def sandbox_get_squareoff_status() -> tuple[bool, dict[str, Any], int]:
         logger.exception(f"Error getting square-off status: {e}")
         return (
             False,
-            {"status": "error", "message": f"Error getting status: {str(e)}", "mode": "analyze"},
+            {"status": "error", "message": "Error getting status", "mode": "analyze"},
             500,
         )
 
@@ -728,7 +728,7 @@ def sandbox_get_pnl_symbols(
             False,
             {
                 "status": "error",
-                "message": f"Error getting PnL by symbols: {str(e)}",
+                "message": "Error getting P&L by symbols",
                 "mode": "analyze",
             },
             500,

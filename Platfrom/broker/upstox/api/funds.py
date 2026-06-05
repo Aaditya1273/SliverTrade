@@ -7,7 +7,7 @@ import httpx
 
 from broker.upstox.api.order_api import get_holdings, get_positions
 from broker.upstox.mapping.order_data import map_order_data
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -48,8 +48,6 @@ def get_margin_data(auth_token):
         if not api_key:
             logger.error("BROKER_API_KEY environment variable not set.")
             return {}
-
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth_token}",
             "Content-Type": "application/json",
@@ -59,7 +57,7 @@ def get_margin_data(auth_token):
         url = "https://api.upstox.com/v2/user/get-funds-and-margin"
         logger.debug(f"Requesting funds and margin data from {url}")
 
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
         response.raise_for_status()
 
         margin_data = response.json()

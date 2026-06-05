@@ -13,7 +13,7 @@ from broker.zebu.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -34,7 +34,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     payload = "jData=" + data
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     headers = {
         "Content-Type": "text/plain",
@@ -42,7 +41,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     }
     url = f"https://go.mynt.in{endpoint}"
 
-    response = client.request(method, url, content=payload, headers=headers)
+    response = request_with_circuit_breaker(method, url, content=payload, headers=headers)
     data = response.text
 
     return json.loads(data)
@@ -159,10 +158,9 @@ def place_order_api(data, auth):
     logger.info(f"{payload}")
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://go.mynt.in/NorenWClientAPI/PlaceOrder"
 
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     # Add status attribute for compatibility with existing code
     res.status = res.status_code
     response_data = json.loads(res.text)
@@ -334,11 +332,10 @@ def cancel_order(orderid, auth):
     }
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://go.mynt.in/NorenWClientAPI/CancelOrder"
 
     # Send the request using httpx
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     data = json.loads(res.text)
     logger.info(f"CancelOrder Response: {data}")
 
@@ -378,10 +375,9 @@ def modify_order(data, auth):
     payload = "jData=" + json.dumps(transformed_data)
 
     # Get the shared httpx client
-    client = get_httpx_client()
     url = "https://go.mynt.in/NorenWClientAPI/ModifyOrder"
 
-    res = client.post(url, content=payload, headers=headers)
+    res = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
     response = json.loads(res.text)
 
     logger.info(f"Modify Order Response: {response}")

@@ -2,9 +2,10 @@ import copy
 import importlib
 from typing import Any, Dict, Optional, Tuple
 
-from database.auth_db import get_auth_token_broker
+from database.auth_db import get_auth_token_broker, verify_api_key
 from database.settings_db import get_analyze_mode
 from events import AnalyzerErrorEvent, OrderModifiedEvent, OrderModifyFailedEvent
+from utils.broker_failover import get_failover_manager, make_token_resolver
 from utils.event_bus import bus
 from utils.logging import get_logger
 
@@ -209,7 +210,7 @@ def modify_order(
     if api_key and not (auth_token and broker):
         # Check if user is in semi-auto mode (modifyorder is blocked in semi-auto)
         # BUT allow execution in analyze/sandbox mode (virtual trading should always work)
-        from database.auth_db import get_order_mode, verify_api_key
+        from database.auth_db import get_order_mode
         from database.settings_db import get_analyze_mode
 
         # Check analyze mode first - if in analyze mode, allow execution
@@ -243,6 +244,23 @@ def modify_order(
             error_response = {"status": "error", "message": "Invalid silvertrade apikey"}
             # Skip logging for invalid API keys to prevent database flooding
             return False, error_response, 403
+
+        # Register user with failover manager (circuit breaker per broker)
+        user_id = verify_api_key(api_key)
+        if user_id:
+            fm = get_failover_manager()
+            fm.register_user(user_id, [broker_name])
+
+            return fm.execute_with_failover(
+                user_id=user_id,
+                operation="modify_order",
+                fn=modify_order_with_auth,
+                order_data=order_data,
+                auth_token=AUTH_TOKEN,
+                broker=broker_name,
+                original_data=original_data,
+                token_resolver=make_token_resolver(api_key),
+            )
 
         return modify_order_with_auth(order_data, AUTH_TOKEN, broker_name, original_data)
 

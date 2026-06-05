@@ -9,7 +9,7 @@ import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 from .nubrawebsocket import NubraWebSocket
@@ -23,7 +23,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     device_id = "SILVERTRADE"  # Fixed device ID
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -44,11 +43,11 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     for attempt in range(max_retries):
         try:
             if method == "GET":
-                response = client.get(url, headers=headers)
+                response = request_with_circuit_breaker("GET", url, headers=headers)
             elif method == "POST":
-                response = client.post(url, headers=headers, content=payload)
+                response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
             else:
-                response = client.request(method, url, headers=headers, content=payload)
+                response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
             # Handle rate limiting with exponential backoff
             if response.status_code == 429:

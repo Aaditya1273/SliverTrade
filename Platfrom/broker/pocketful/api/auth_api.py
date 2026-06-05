@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 import httpx
 
 from utils.config import get_broker_api_key, get_broker_api_secret
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 # Pocketful API endpoints
 BASE_URL = "https://trade.pocketful.in"
@@ -66,10 +66,9 @@ def authenticate_broker(auth_code=None, state=None):
         data = {"grant_type": "authorization_code", "code": auth_code, "redirect_uri": redirect_uri}
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Exchange authorization code for access token
-        response = client.post(TOKEN_ENDPOINT, headers=headers, content=urlencode(data))
+        response = request_with_circuit_breaker("POST", TOKEN_ENDPOINT, headers=headers, content=urlencode(data))
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code
@@ -98,7 +97,7 @@ def authenticate_broker(auth_code=None, state=None):
 
         # Make request to trading_info endpoint
         try:
-            info_response = client.get(USER_INFO_ENDPOINT, headers=headers)
+            info_response = request_with_circuit_breaker("GET", USER_INFO_ENDPOINT, headers=headers)
             # Add status attribute for compatibility
             info_response.status = info_response.status_code
             info_response.raise_for_status()  # Raise exception for non-200 status codes

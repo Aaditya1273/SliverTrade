@@ -80,6 +80,7 @@ _cached_metrics = {
     "database": {},
     "websocket": {},
     "threads": {},
+    "bulkheads": {},
 }
 _cache_lock = threading.Lock()
 
@@ -102,7 +103,7 @@ def get_cached_health_status():
 def check_db_connectivity():
     """
     Quick database connectivity check.
-    For /health/check endpoint.
+    Thin wrapper around :func:`database.db_config.check_all_databases`.
 
     Returns:
         dict: {
@@ -110,48 +111,27 @@ def check_db_connectivity():
             "databases": {
                 "silvertrade": "pass"|"fail",
                 "logs": "pass"|"fail",
-                ...
+                "latency": "pass"|"fail",
+                "health": "pass"|"fail",
+                "sandbox": "pass"|"fail",
             }
         }
     """
+    from database.db_config import check_all_databases
+
+    full = check_all_databases()
+
+    # Map the new richer status back to the legacy simple format
+    status_map = {"pass": "pass", "degraded": "pass", "fail": "fail"}
     results = {}
-    overall_status = "pass"
+    for name, info in full["databases"].items():
+        results[name] = info["status"]
 
-    databases = {
-        "silvertrade": "database.auth_db",
-        "logs": "database.traffic_db",
-        "latency": "database.latency_db",
-    }
+    # Count failures for overall status
+    failures = [v for v in results.values() if v == "fail"]
+    overall = "fail" if failures else "pass"
 
-    for db_name, module_path in databases.items():
-        try:
-            parts = module_path.rsplit(".", 1)
-            if len(parts) == 2:
-                module_name, _ = parts
-                module = __import__(module_name, fromlist=["db_session"])
-
-                # Try a simple query
-                if hasattr(module, "db_session"):
-                    session = getattr(module, "db_session")
-                    # Execute simple query to test connectivity
-                    session.execute("SELECT 1").fetchone()
-                    results[db_name] = "pass"
-                elif hasattr(module, "logs_session"):
-                    session = getattr(module, "logs_session")
-                    session.execute("SELECT 1").fetchone()
-                    results[db_name] = "pass"
-                elif hasattr(module, "latency_session"):
-                    session = getattr(module, "latency_session")
-                    session.execute("SELECT 1").fetchone()
-                    results[db_name] = "pass"
-                else:
-                    results[db_name] = "pass"  # Assume pass if no session found
-        except Exception as e:
-            logger.error(f"Database connectivity check failed for {db_name}: {e}")
-            results[db_name] = "fail"
-            overall_status = "fail"
-
-    return {"status": overall_status, "databases": results}
+    return {"status": overall, "databases": results}
 
 
 def get_fd_metrics():
@@ -495,6 +475,53 @@ def get_thread_metrics():
         return {"count": 0, "stuck_count": 0, "threads": [], "status": "unknown"}
 
 
+def get_bulkhead_metrics() -> dict:
+    """Get bulkhead thread pool metrics (lightweight, no I/O)."""
+    try:
+        from utils.bulkhead import get_bulkhead_metrics as _bh_metrics, BulkheadCategory
+
+        raw = _bh_metrics()
+        pools = {}
+        total_active = 0
+        total_rejected = 0
+        for cat in BulkheadCategory:
+            active = raw.get(f"{cat.value}_active", 0)
+            completed = raw.get(f"{cat.value}_completed", 0)
+            rejected = raw.get(f"{cat.value}_rejected", 0)
+            total_active += active
+            total_rejected += rejected
+            pools[cat.value] = {
+                "active": active,
+                "completed": completed,
+                "rejected": rejected,
+            }
+
+        # Determine status: fail if any pool has rejected tasks
+        status = "pass"
+        if total_rejected > 0:
+            status = "fail"
+            HealthAlert.create_alert(
+                alert_type="bulkhead_rejection",
+                severity="fail",
+                metric_name="bulkhead_total_rejected",
+                metric_value=total_rejected,
+                threshold_value=1,
+                message=f"Bulkhead rejected {total_rejected} task(s). Thread pool exhaustion detected.",
+            )
+        else:
+            HealthAlert.auto_resolve_alerts("bulkhead_total_rejected", 0, 1)
+
+        return {
+            "status": status,
+            "total_active": total_active,
+            "total_rejected": total_rejected,
+            "pools": pools,
+        }
+    except Exception as e:
+        logger.error(f"Error getting bulkhead metrics: {e}")
+        return {"status": "unknown", "total_active": 0, "total_rejected": 0, "pools": {}}
+
+
 def get_process_metrics(limit: int = 5):
     """Get top memory-consuming processes (best-effort, may skip inaccessible processes)"""
     processes = []
@@ -542,6 +569,7 @@ def collect_metrics():
         db_metrics = get_database_metrics()
         ws_metrics = get_websocket_metrics()
         thread_metrics = get_thread_metrics()
+        bulkhead_metrics = get_bulkhead_metrics()
         process_metrics = get_process_metrics()
 
         # Log to database
@@ -551,12 +579,13 @@ def collect_metrics():
             db_metrics=db_metrics,
             ws_metrics=ws_metrics,
             thread_metrics=thread_metrics,
+            bulkhead_metrics=bulkhead_metrics,
             process_metrics=process_metrics,
         )
 
         # Update cache for fast access
         overall_status = "pass"
-        for metrics in [fd_metrics, memory_metrics, db_metrics, ws_metrics, thread_metrics]:
+        for metrics in [fd_metrics, memory_metrics, db_metrics, ws_metrics, thread_metrics, bulkhead_metrics]:
             if metrics.get("status") == "fail":
                 overall_status = "fail"
                 break
@@ -573,6 +602,7 @@ def collect_metrics():
                     "database": db_metrics,
                     "websocket": ws_metrics,
                     "threads": thread_metrics,
+                    "bulkheads": bulkhead_metrics,
                     "processes": process_metrics,
                 }
             )

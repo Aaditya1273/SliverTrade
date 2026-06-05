@@ -5,7 +5,7 @@ import os
 import httpx
 
 from broker.dhan.api.baseurl import BASE_URL, get_url
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,6 @@ def generate_consent(dhan_client_id):
             logger.error("Dhan Client ID is required for generating consent")
             return None, "Dhan Client ID is required"
 
-        client = get_httpx_client()
-
         headers = {"app_id": BROKER_API_KEY, "app_secret": BROKER_API_SECRET}
 
         # Build URL with client_id parameter - REQUIRED by Dhan API
@@ -46,7 +44,7 @@ def generate_consent(dhan_client_id):
         # Make the POST request with the client_id as a query parameter
         # The client_id parameter is REQUIRED for generate-consent
         full_url = f"{url}?client_id={dhan_client_id}"
-        response = client.post(full_url, headers=headers)
+        response = request_with_circuit_breaker("POST", full_url, headers=headers)
 
         logger.info(f"Generate consent response status: {response.status_code}")
         logger.info(f"Generate consent response: {response.text}")
@@ -89,8 +87,6 @@ def consume_consent(token_id):
         if ":::" in BROKER_API_KEY:
             extracted_client_id, BROKER_API_KEY = BROKER_API_KEY.split(":::")
 
-        client = get_httpx_client()
-
         headers = {
             "app_id": BROKER_API_KEY,
             "app_secret": BROKER_API_SECRET,
@@ -101,7 +97,7 @@ def consume_consent(token_id):
         params = {"tokenId": token_id}
 
         logger.debug(f"Consuming consent with tokenId: {token_id}")
-        response = client.post(url, headers=headers, params=params)
+        response = request_with_circuit_breaker("POST", url, headers=headers, params=params)
 
         if response.status_code == 200:
             data = response.json()

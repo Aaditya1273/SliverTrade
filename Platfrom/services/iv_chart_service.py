@@ -360,7 +360,7 @@ def get_iv_chart_data(
 
     except Exception as e:
         logger.exception(f"Error calculating IV chart data: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to calculate IV chart data"}, 500
 
 
 def _calculate_iv_series(df_option, df_underlying, strike, expiry_dt, flag, interest_rate):
@@ -522,4 +522,4 @@ def get_default_symbols(underlying, exchange, expiry_date, api_key):
 
     except Exception as e:
         logger.exception(f"Error getting default symbols: {e}")
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to get default symbols"}, 500

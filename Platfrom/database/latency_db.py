@@ -264,11 +264,9 @@ class OrderLatency(LatencyBase):
 
 def init_latency_db():
     """Initialize the latency database"""
-    # Extract directory from database URL and create if it doesn't exist
-    db_path = LATENCY_DATABASE_URL.replace("sqlite:///", "")
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+    from database.db_config import ensure_db_dir
+
+    ensure_db_dir(LATENCY_DATABASE_URL)
 
     from database.db_init_helper import init_db_with_logging
 

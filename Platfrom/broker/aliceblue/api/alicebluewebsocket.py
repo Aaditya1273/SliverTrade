@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import websocket
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -77,9 +77,7 @@ class AliceBlueWebSocket:
         try:
             url = self.BASE_URL + "open-api/od/v1/profile/invalidateWsSess"
             payload = {"source": "API", "userId": self.user_id}
-
-            client = get_httpx_client()
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 url, json=payload, headers=self._get_auth_header(), timeout=10
             )
 
@@ -107,9 +105,7 @@ class AliceBlueWebSocket:
         try:
             url = self.BASE_URL + "open-api/od/v1/profile/createWsSess"
             payload = {"source": "API", "userId": self.user_id}
-
-            client = get_httpx_client()
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 url, json=payload, headers=self._get_auth_header(), timeout=10
             )
 

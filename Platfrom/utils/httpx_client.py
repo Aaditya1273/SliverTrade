@@ -3,14 +3,57 @@ Shared httpx client module with connection pooling support for all broker APIs
 with automatic protocol negotiation (HTTP/2 when available, HTTP/1.1 fallback)
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 
+from utils.circuit_breaker import (
+    CircuitBreakerOpenError,
+    get_circuit_breaker,
+    retry_with_backoff,
+)
 from utils.logging import get_logger
 
 # Set up logging
 logger = get_logger(__name__)
+
+# ── Broker URL → breaker-name mapping ────────────────────────────────
+# Used by ``request_with_circuit_breaker()`` to auto-detect which circuit
+# breaker to use based on the request URL.  When no pattern matches the
+# call falls back to a shared ``"broker_http"`` breaker.
+_BROKER_PATTERNS: dict[str, str] = {
+    "api.kite.trade": "zerodha",
+    "apiconnect.angelone": "angel",
+    "api-t1.fyers": "fyers",
+    "api.upstox": "upstox",
+    "api.shoonya": "shoonya",
+    "api.paytmmoney": "paytm",
+    "openapi.5paisa": "fivepaisa",
+    "gw-napi.kotaksecurities": "kotak",
+    "api.dhan": "dhan",
+    "api.flattrade": "flattrade",
+    "api.aliceblueonline": "aliceblue",
+    "delta.exchange": "deltaexchange",
+    "api.binance": "binance",
+    "api-v2.zerodha": "zerodha_v2",
+    "trade.jainam": "jainam",
+    "mstock": "mstock",
+    "sbizone": "definedge",
+    "icicidirect": "icici",
+    "iifl": "iifl",
+    "motilal": "motilal",
+}
+
+
+def _detect_broker(url: str) -> str:
+    """Extract a breaker-friendly broker name from *url*, or ``"broker_http"``."""
+    from urllib.parse import urlparse
+
+    hostname = urlparse(url).hostname or ""
+    for pattern, name in _BROKER_PATTERNS.items():
+        if pattern in hostname:
+            return name
+    return "broker_http"
 
 # Global httpx client for connection pooling
 _httpx_client = None
@@ -56,20 +99,36 @@ def request(method: str, url: str, **kwargs) -> httpx.Response:
 
     client = get_httpx_client()
 
+    # Detect broker name from URL for metrics
+    broker_name = _detect_broker(url)
+
     # Track actual broker API call time for latency monitoring
     broker_api_start = time.time()
     response = client.request(method, url, **kwargs)
     broker_api_end = time.time()
 
+    broker_latency = broker_api_end - broker_api_start
+
+    # Record Prometheus metrics
+    try:
+        from blueprints.metrics import broker_latency_observe, broker_request_inc
+
+        broker_request_inc(broker_name, method, response.status_code)
+        broker_latency_observe(broker_name, method, broker_latency)
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
     # Store broker API time in Flask's g object for latency tracking
     if hasattr(g, "latency_tracker"):
-        broker_api_time_ms = (broker_api_end - broker_api_start) * 1000
+        broker_api_time_ms = broker_latency * 1000
         g.broker_api_time = broker_api_time_ms
         logger.debug(f"Broker API call took {broker_api_time_ms:.2f}ms")
 
     # Log the actual HTTP version used (info level for visibility)
     if response.http_version:
-        logger.info(f"Request used {response.http_version} - URL: {url[:50]}...")
+        logger.debug(f"Request used {response.http_version} - URL: {url[:50]}...")
 
     return response
 
@@ -206,6 +265,98 @@ def _create_http_client() -> httpx.Client:
     except Exception as e:
         logger.exception(f"Failed to create HTTP client: {e}")
         raise
+
+
+# ── Circuit Breaker + Retry Integration ─────────────────────────────────
+
+
+def request_with_circuit_breaker(
+    method: str,
+    url: str,
+    *,
+    breaker_name: str | None = None,
+    retry_enabled: bool = True,
+    max_retries: int = 2,
+    breaker_failure_threshold: int = 5,
+    breaker_recovery_timeout: float = 30.0,
+    **kwargs: Any,
+) -> httpx.Response:
+    """Make an HTTP request protected by a circuit breaker + optional retry.
+
+    This is the recommended way to make broker HTTP calls.  It wraps the
+    shared ``request()`` function with:
+
+    1. :class:`CircuitBreaker` — fail-fast when a broker is unhealthy,
+       preventing cascading timeouts from blocking request handler threads.
+    2. :func:`retry_with_backoff` — transparently retry transient failures
+       (connection drops, timeouts, 5xx) before giving up.
+
+    Parameters
+    ----------
+    method : str
+        HTTP method (``GET``, ``POST``, etc.).
+    url : str
+        Request URL.
+    breaker_name : str or None
+        Circuit breaker name.  Auto-detected from URL when ``None``.
+    retry_enabled : bool
+        Whether to apply retry-with-exponential-backoff (default ``True``).
+    max_retries : int
+        Maximum retry attempts before giving up (default ``2``).
+    breaker_failure_threshold : int
+        Consecutive failures to trip the circuit OPEN (default ``5``).
+    breaker_recovery_timeout : float
+        Seconds before OPEN→HALF_OPEN transition (default ``30``).
+    **kwargs
+        Forwarded to ``request()``.
+
+    Returns
+    -------
+    httpx.Response
+
+    Raises
+    ------
+    CircuitBreakerOpenError
+        When the circuit is OPEN and the request is rejected.
+    httpx.HTTPError
+        When the request fails and retries are exhausted (or disabled).
+    """
+    if breaker_name is None:
+        breaker_name = _detect_broker(url)
+
+    breaker = get_circuit_breaker(
+        breaker_name,
+        failure_threshold=breaker_failure_threshold,
+        recovery_timeout=breaker_recovery_timeout,
+    )
+
+    # Check if the circuit is OPEN before even attempting
+    if breaker.is_open():
+        raise CircuitBreakerOpenError(breaker.name, breaker.state, breaker.stats().get("retry_after"))
+
+    def _do_request() -> httpx.Response:
+        # The breaker's call() will record success/failure
+        return breaker.call(request, method, url, **kwargs)
+
+    if retry_enabled:
+        result, attempts = retry_with_backoff(
+            _do_request,
+            max_retries=max_retries,
+            base_delay=0.5,
+            max_delay=10.0,
+            retryable_exceptions=(
+                ConnectionError,
+                TimeoutError,
+                OSError,
+                httpx.TimeoutException,
+                httpx.ConnectError,
+                httpx.RemoteProtocolError,
+                httpx.TransportError,
+            ),
+        )
+        return result
+
+    return _do_request()
 
 
 def cleanup_httpx_client() -> None:

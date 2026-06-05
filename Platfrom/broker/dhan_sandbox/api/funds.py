@@ -5,7 +5,7 @@ import os
 
 from broker.dhan_sandbox.api.baseurl import get_url
 from broker.dhan_sandbox.api.order_api import get_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +27,6 @@ def test_auth_token(auth_token):
     client_id = _get_dhan_client_id()
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "access-token": auth_token,
@@ -40,7 +39,7 @@ def test_auth_token(auth_token):
 
     try:
         url = get_url("/v2/fundlimit")
-        res = client.get(url, headers=headers)
+        res = request_with_circuit_breaker("GET", url, headers=headers)
         res.status = res.status_code
         response_data = json.loads(res.text)
 
@@ -67,7 +66,6 @@ def get_margin_data(auth_token):
     client_id = _get_dhan_client_id()
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "access-token": auth_token,
@@ -79,7 +77,7 @@ def get_margin_data(auth_token):
         headers["client-id"] = client_id
 
     url = get_url("/v2/fundlimit")
-    res = client.get(url, headers=headers)
+    res = request_with_circuit_breaker("GET", url, headers=headers)
     # Add status attribute for compatibility with existing codebase
     res.status = res.status_code
     margin_data = json.loads(res.text)

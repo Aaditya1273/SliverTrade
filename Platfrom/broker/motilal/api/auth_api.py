@@ -4,7 +4,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 
 def authenticate_broker(userid, broker_pin, totp_code, date_of_birth):
@@ -24,7 +24,6 @@ def authenticate_broker(userid, broker_pin, totp_code, date_of_birth):
 
     try:
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # SHA-256(password + apikey) as per Motilal Oswal API documentation
         password_hash = hashlib.sha256(f"{broker_pin}{api_key}".encode()).hexdigest()
@@ -57,7 +56,7 @@ def authenticate_broker(userid, broker_pin, totp_code, date_of_birth):
             "browserversion": "120.0",
         }
 
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://openapi.motilaloswal.com/rest/login/v3/authdirectapi",
             headers=headers,
             json=payload,

@@ -8,7 +8,7 @@ from broker.dhan.mapping.margin_data import (
     transform_margin_position,
 )
 from database.auth_db import get_user_id, verify_api_key
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -72,7 +72,6 @@ def calculate_single_margin(position_data, auth, client_id):
     logger.info(f"Dhan margin calculation payload: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Get the URL for margin calculator endpoint
@@ -81,7 +80,7 @@ def calculate_single_margin(position_data, auth, client_id):
         logger.info(f"Calling Dhan margin API: {url}")
 
         # Make the POST request
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         # Add status attribute for compatibility
         response.status = response.status_code

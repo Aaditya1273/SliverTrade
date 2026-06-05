@@ -6,7 +6,7 @@ import os
 
 from broker.deltaexchange.api.baseurl import BASE_URL, get_auth_headers
 from broker.deltaexchange.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -43,8 +43,7 @@ def get_margin_mode(auth: str) -> str:
             api_key=api_key,
             api_secret=api_secret,
         )
-        client = get_httpx_client()
-        resp = client.get(BASE_URL + path, headers=headers, timeout=15.0)
+        resp = request_with_circuit_breaker("GET", BASE_URL + path, headers=headers, timeout=15.0)
         data = resp.json()
         if data.get("success"):
             prefs = data.get("result", {})
@@ -107,8 +106,6 @@ def calculate_margin_api(positions, auth):
             "status": "error",
             "message": "No valid positions to calculate margin — check symbols are in master contract DB",
         }
-
-    client = get_httpx_client()
     aggregated = {"total_margin_required": 0.0, "span_margin": 0.0, "exposure_margin": 0.0}
     failed = []
     ok_count = 0
@@ -139,7 +136,7 @@ def calculate_margin_api(positions, auth):
                 api_secret=api_secret,
             )
 
-            response = client.get(url, headers=headers, timeout=30.0)
+            response = request_with_circuit_breaker("GET", url, headers=headers, timeout=30.0)
             response_data = response.json()
 
             logger.info(

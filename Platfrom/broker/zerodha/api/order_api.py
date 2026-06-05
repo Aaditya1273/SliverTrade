@@ -13,7 +13,7 @@ from broker.zerodha.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,26 +35,23 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
     AUTH_TOKEN = auth
     base_url = "https://api.kite.trade"
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     headers = {"X-Kite-Version": "3", "Authorization": f"token {AUTH_TOKEN}"}
 
     url = f"{base_url}{endpoint}"
 
     try:
-        # Handle different HTTP methods
+        # Handle different HTTP methods via circuit-breaker-protected client
         if method.upper() == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method.upper() == "POST":
             if isinstance(payload, str):
                 # For form-urlencoded data
                 headers["Content-Type"] = "application/x-www-form-urlencoded"
-                response = client.post(url, headers=headers, content=payload)
+                response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
             else:
                 # For JSON data
                 headers["Content-Type"] = "application/json"
-                response = client.post(url, headers=headers, json=payload)
+                response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -189,18 +186,18 @@ def place_order_api(data, auth):
     payload_encoded = urllib.parse.urlencode(payload)
     logger.info(f"Encoded payload to Zerodha: {payload_encoded}")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     headers = {
         "X-Kite-Version": "3",
         "Authorization": f"token {AUTH_TOKEN}",
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    # Make the request using the shared client
-    response = client.post(
-        "https://api.kite.trade/orders/regular", headers=headers, content=payload_encoded
+    # Make the request using the circuit-breaker-protected client
+    response = request_with_circuit_breaker(
+        "POST",
+        "https://api.kite.trade/orders/regular",
+        headers=headers,
+        content=payload_encoded,
     )
 
     # Log raw response
@@ -369,15 +366,13 @@ def cancel_order(orderid, auth):
     AUTH_TOKEN = auth
 
     try:
-        # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
-
-        # Set up the request headers
         headers = {"X-Kite-Version": "3", "Authorization": f"token {AUTH_TOKEN}"}
 
-        # Make the DELETE request using the shared client
-        response = client.delete(
-            f"https://api.kite.trade/orders/regular/{orderid}", headers=headers
+        # Make the DELETE request using the circuit-breaker-protected client
+        response = request_with_circuit_breaker(
+            "DELETE",
+            f"https://api.kite.trade/orders/regular/{orderid}",
+            headers=headers,
         )
 
         response.raise_for_status()
@@ -424,17 +419,15 @@ def modify_order(data, auth):
     # URL-encode the payload
     payload_encoded = urllib.parse.urlencode(payload)
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     headers = {
         "X-Kite-Version": "3",
         "Authorization": f"token {AUTH_TOKEN}",
         "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    # Make the request using the shared client
-    response = client.put(
+    # Make the request using the circuit-breaker-protected client
+    response = request_with_circuit_breaker(
+        "PUT",
         f"https://api.kite.trade/orders/regular/{data['orderid']}",
         headers=headers,
         content=payload_encoded,

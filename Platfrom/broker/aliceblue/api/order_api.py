@@ -18,7 +18,7 @@ from broker.aliceblue.mapping.transform_data import (
     transform_modify_order_data,
 )
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,6 @@ BASE_URL = "https://a3.aliceblueonline.com"
 def get_api_response(endpoint, auth, method="GET", payload=None):
     """Make API requests to AliceBlue V2 API using shared connection pooling."""
     try:
-        client = get_httpx_client()
         url = f"{BASE_URL}{endpoint}"
 
         headers = {
@@ -44,21 +43,21 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
         logger.debug(f"Making {method} request to AliceBlue API: {url}")
 
         if method.upper() == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method.upper() == "POST":
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 url,
                 json=json.loads(payload) if isinstance(payload, str) and payload else payload,
                 headers=headers,
             )
         elif method.upper() == "PUT":
-            response = client.put(
+            response = request_with_circuit_breaker("PUT", 
                 url,
                 json=json.loads(payload) if isinstance(payload, str) and payload else payload,
                 headers=headers,
             )
         elif method.upper() == "DELETE":
-            response = client.delete(url, headers=headers)
+            response = request_with_circuit_breaker("DELETE", url, headers=headers)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -256,7 +255,6 @@ def get_open_position(tradingsymbol, exchange, product, auth):
 def place_order_api(data, auth):
     """Place an order using the AliceBlue V2 API."""
     try:
-        client = get_httpx_client()
 
         # Build V2 API payload via transform_data
         payload_item = transform_data(data)
@@ -270,7 +268,7 @@ def place_order_api(data, auth):
         logger.debug(f"Place order payload: {json.dumps(payload, indent=2)}")
 
         url = f"{BASE_URL}/open-api/od/v1/orders/placeorder"
-        response = client.post(url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers)
         response.raise_for_status()
 
         response_data = response.json()
@@ -449,7 +447,6 @@ def close_all_positions(current_api_key, auth):
 def cancel_order(orderid, auth):
     """Cancel an order using the AliceBlue V2 API."""
     try:
-        client = get_httpx_client()
 
         headers = {
             "Authorization": f"Bearer {auth}",
@@ -462,7 +459,7 @@ def cancel_order(orderid, auth):
         logger.debug(f"Cancel order payload: {json.dumps(payload, indent=2)}")
 
         url = f"{BASE_URL}/open-api/od/v1/orders/cancel"
-        response = client.post(url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers)
         response.raise_for_status()
 
         response_data = response.json()
@@ -494,7 +491,6 @@ def cancel_order(orderid, auth):
 def modify_order(data, auth):
     """Modify an order using the AliceBlue V2 API."""
     try:
-        client = get_httpx_client()
 
         # Build V2 API modify payload via transform_modify_order_data
         payload = transform_modify_order_data(data)
@@ -507,7 +503,7 @@ def modify_order(data, auth):
         logger.debug(f"Modify order payload: {json.dumps(payload, indent=2)}")
 
         url = f"{BASE_URL}/open-api/od/v1/orders/modify"
-        response = client.post(url, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers)
         response.raise_for_status()
 
         response_data = response.json()

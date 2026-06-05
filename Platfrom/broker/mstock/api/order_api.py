@@ -14,7 +14,7 @@ from broker.mstock.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,8 +36,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     auth_token = auth
     api_key = os.getenv("BROKER_API_SECRET")
 
-    client = get_httpx_client()
-
     headers = {
         "X-Mirae-Version": "1",
         "Authorization": f"Bearer {auth_token}",
@@ -48,11 +46,11 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     url = f"https://api.mstock.trade/openapi/typeb{endpoint}"
 
     if method == "GET":
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
     elif method == "POST":
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
     else:
-        response = client.request(method, url, headers=headers, content=payload)
+        response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
     # Add status attribute for compatibility with existing codebase
     response.status = response.status_code
@@ -205,9 +203,7 @@ def place_order_api(data, auth):
     payload = json.dumps(transformed_data)
     logger.info(f"Place order payload: {payload}")
 
-    client = get_httpx_client()
-
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         "https://api.mstock.trade/openapi/typeb/orders/regular", headers=headers, content=payload
     )
 
@@ -442,8 +438,6 @@ def cancel_order(orderid, auth):
     auth_token = auth
     api_key = os.getenv("BROKER_API_SECRET")
 
-    client = get_httpx_client()
-
     headers = {
         "X-Mirae-Version": "1",
         "Authorization": f"Bearer {auth_token}",
@@ -459,7 +453,7 @@ def cancel_order(orderid, auth):
 
     # DELETE request with orderid in both URL path and body
     # Using json parameter instead of content/data for httpx compatibility
-    response = client.request(
+    response = request_with_circuit_breaker(
         method="DELETE",
         url=f"https://api.mstock.trade/openapi/typeb/orders/regular/{orderid}",
         headers=headers,
@@ -516,8 +510,6 @@ def modify_order(data, auth):
     auth_token = auth
     api_key = os.getenv("BROKER_API_SECRET")
 
-    client = get_httpx_client()
-
     # Get token for the symbol
     try:
         token = get_token(data["symbol"], data["exchange"])
@@ -547,7 +539,7 @@ def modify_order(data, auth):
 
     # PUT request with orderid in URL path
     # Using json parameter for httpx compatibility
-    response = client.request(
+    response = request_with_circuit_breaker(
         method="PUT",
         url=f"https://api.mstock.trade/openapi/typeb/orders/regular/{orderid}",
         headers=headers,
@@ -629,7 +621,6 @@ def cancel_all_orders_api(data, auth):
         return [], []
 
     # Now call the cancelall endpoint
-    client = get_httpx_client()
 
     headers = {
         "X-Mirae-Version": "1",
@@ -641,7 +632,7 @@ def cancel_all_orders_api(data, auth):
     logger.info("Calling mStock Type B cancelall endpoint")
 
     # POST request to cancel all orders at once
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         "https://api.mstock.trade/openapi/typeb/orders/cancelall", headers=headers
     )
 

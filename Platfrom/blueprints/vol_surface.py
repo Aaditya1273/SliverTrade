@@ -69,4 +69,4 @@ def surface_data():
 
     except Exception as e:
         logger.exception(f"Error in vol surface API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load volatility surface"}), 500

@@ -6,7 +6,7 @@ import httpx
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_brexchange, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -64,7 +64,6 @@ class BrokerData:
 
     def _make_quotes_request(self, query, filter_name="all"):
         """Make HTTP request to Neo API v2 quotes endpoint using httpx connection pooling"""
-        client = get_httpx_client()
 
         # URL encode spaces but keep pipe/comma characters
         encoded_query = urllib.parse.quote(query, safe="|,")
@@ -79,7 +78,7 @@ class BrokerData:
             logger.info(f"QUOTES API - Making request to: {url}")
             logger.debug(f"QUOTES API - Using access_token: {self.access_token[:10]}...")
 
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
             logger.info(f"QUOTES API - Response status: {response.status_code} for {url}")
 
             if response.status_code == 200:

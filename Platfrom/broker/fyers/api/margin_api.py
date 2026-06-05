@@ -2,7 +2,7 @@ import json
 import os
 
 from broker.fyers.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -57,11 +57,10 @@ def calculate_margin_api(positions, auth):
     logger.debug(f"Fyers margin calculation payload: {json.dumps(payload, indent=2)}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Make the request using the v3 multiorder margin endpoint
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://api-t1.fyers.in/api/v3/multiorder/margin", headers=headers, json=payload
         )
 

@@ -3,7 +3,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -29,9 +29,7 @@ def authenticate_broker(code):
             "redirect_uri": REDIRECT_URL,
             "grant_type": "authorization_code",
         }
-
-        client = get_httpx_client()
-        response = client.post(url, data=data)
+        response = request_with_circuit_breaker("POST", url, data=data)
 
         if response.status_code == 200:
             response_data = response.json()

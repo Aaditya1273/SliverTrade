@@ -13,7 +13,7 @@ import pandas as pd
 from broker.dhan_sandbox.api.baseurl import get_url
 from broker.dhan_sandbox.mapping.transform_data import map_exchange_type
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -39,7 +39,6 @@ def get_api_response(endpoint, auth, method="POST", payload=""):
         raise Exception("Could not extract client ID from auth token")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "access-token": AUTH_TOKEN,
@@ -65,11 +64,11 @@ def get_api_response(endpoint, auth, method="POST", payload=""):
     max_retries = 3
     for attempt in range(max_retries + 1):
         if method == "GET":
-            res = client.get(url, headers=headers)
+            res = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            res = client.post(url, headers=headers, content=payload)
+            res = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         else:
-            res = client.request(method, url, headers=headers, content=payload)
+            res = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
         # Add status attribute for compatibility with existing codebase
         res.status = res.status_code

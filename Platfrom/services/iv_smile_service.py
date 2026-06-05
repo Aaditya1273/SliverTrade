@@ -87,8 +87,8 @@ def get_iv_smile_data(
                             iv_val = greeks_resp.get("implied_volatility", 0)
                             if iv_val and iv_val > 0:
                                 ce_iv = round(iv_val, 2)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("CE IV calculation failed for %s: %s", ce.get("symbol", "?"), e)
 
             # Compute PE IV
             if pe and pe.get("symbol"):
@@ -105,8 +105,8 @@ def get_iv_smile_data(
                             iv_val = greeks_resp.get("implied_volatility", 0)
                             if iv_val and iv_val > 0:
                                 pe_iv = round(iv_val, 2)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("PE IV calculation failed for %s: %s", pe.get("symbol", "?"), e)
 
             # Track ATM IV
             if strike == atm_strike:

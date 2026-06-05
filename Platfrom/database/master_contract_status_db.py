@@ -15,10 +15,8 @@ DOWNLOAD_TIMEOUT_MINUTES = 5
 # Get the database path from environment variable or use default
 DB_PATH = os.getenv("DATABASE_URL", "sqlite:///db/silvertrade.db")
 
-# Ensure the directory exists
-os.makedirs(os.path.dirname(DB_PATH.replace("sqlite:///", "")), exist_ok=True)
-
-from database.db_config import get_db_engine
+from database.db_config import ensure_db_dir, get_db_engine
+ensure_db_dir(DB_PATH)
 
 engine = get_db_engine("DATABASE_URL", "sqlite:///db/silvertrade.db")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

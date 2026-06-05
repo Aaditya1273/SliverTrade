@@ -4,7 +4,7 @@ import json
 import logging
 
 from broker.indmoney.api.baseurl import get_url
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,6 @@ def get_margin_data(auth_token):
 
     try:
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
         logger.info(f"Making request to: {auth_token}")
         # Headers that exactly mimic Bruno's request to avoid Cloudflare detection
         headers = {"Authorization": auth_token}
@@ -44,7 +43,7 @@ def get_margin_data(auth_token):
         logger.info(f"Making request to: {url}")
 
         # Make the API request with standard timeout
-        response = client.get(url, headers=headers, timeout=30.0)
+        response = request_with_circuit_breaker("GET", url, headers=headers, timeout=30.0)
 
         # Check if the request was successful
         if response.status_code != 200:

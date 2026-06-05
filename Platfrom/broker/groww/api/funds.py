@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -23,10 +23,9 @@ def get_margin_data(auth_token):
         headers = {"Accept": "application/json", "Authorization": f"Bearer {auth_token}"}
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Make the API request using the shared client
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
 
         # Check if the request was successful
         if response.status_code != 200:

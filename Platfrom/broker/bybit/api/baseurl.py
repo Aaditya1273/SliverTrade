@@ -38,7 +38,7 @@ import time
 from typing import Any
 from urllib.parse import urlencode
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -192,21 +192,19 @@ def get_api_response(
         auth_headers = get_auth_headers(resolved_key, timestamp, recv_window, signature)
         headers.update(auth_headers)
 
-    client = get_httpx_client()
-
     try:
         logger.debug(f"[Bybit] {method_upper} {endpoint}")
 
         if method_upper == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method_upper == "POST":
             if body is not None:
                 headers["Content-Type"] = "application/json"
-                response = client.post(url, headers=headers, json=body)
+                response = request_with_circuit_breaker("POST", url, headers=headers, json=body)
             else:
-                response = client.post(url, headers=headers)
+                response = request_with_circuit_breaker("POST", url, headers=headers)
         else:
-            response = client.request(method_upper, url, headers=headers)
+            response = request_with_circuit_breaker(method_upper, url, headers=headers)
 
     except Exception as e:
         logger.error(f"[Bybit] Request error: {e}")

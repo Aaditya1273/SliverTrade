@@ -93,6 +93,7 @@ class HealthMetric(HealthBase):
         ws_metrics=None,
         thread_metrics=None,
         process_metrics=None,
+        bulkhead_metrics=None,
     ):
         """Log health metrics (background thread only - zero API latency impact)"""
         try:
@@ -111,6 +112,8 @@ class HealthMetric(HealthBase):
                 statuses.append(ws_metrics.get("status", "pass"))
             if thread_metrics:
                 statuses.append(thread_metrics.get("status", "pass"))
+            if bulkhead_metrics:
+                statuses.append(bulkhead_metrics.get("status", "pass"))
 
             # Overall status is worst of all individual statuses
             if "fail" in statuses:
@@ -429,11 +432,9 @@ class HealthAlert(HealthBase):
 
 def init_health_db():
     """Initialize the health monitoring database"""
-    # Extract directory from database URL and create if it doesn't exist
-    db_path = HEALTH_DATABASE_URL.replace("sqlite:///", "")
-    db_dir = os.path.dirname(db_path)
-    if db_dir:
-        os.makedirs(db_dir, exist_ok=True)
+    from database.db_config import ensure_db_dir
+
+    ensure_db_dir(HEALTH_DATABASE_URL)
 
     from database.db_init_helper import init_db_with_logging
 

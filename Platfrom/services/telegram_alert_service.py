@@ -385,8 +385,8 @@ class TelegramAlertService:
                     if has_request_context() and session.get("user"):
                         username = session.get("user")
                         logger.info(f"Using username from session: {username}")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("Failed to get username from session for telegram alert: %s", e)
 
                 if not username:
                     return

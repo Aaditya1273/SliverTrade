@@ -1,7 +1,7 @@
 import os
 
 from broker.rmoney.baseurl import HOSTLOOKUP_URL, INTERACTIVE_URL, MARKET_DATA_URL
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -10,13 +10,12 @@ logger = get_logger(__name__)
 def get_host_lookup():
     """Call HostLookup API to get UniqueKey and ConnectionString."""
     try:
-        client = get_httpx_client()
         payload = {
             "AccessPassword": "2021HostLookUpAccess",
             "version": "interactive_1.0.1",
         }
         headers = {"Content-Type": "application/json"}
-        response = client.post(HOSTLOOKUP_URL, json=payload, headers=headers)
+        response = request_with_circuit_breaker("POST", HOSTLOOKUP_URL, json=payload, headers=headers)
 
         if response.status_code == 200:
             result = response.json()
@@ -69,8 +68,7 @@ def get_feed_token():
         feed_headers = {"Content-Type": "application/json"}
 
         feed_url = f"{MARKET_DATA_URL}/auth/login"
-        client = get_httpx_client()
-        feed_response = client.post(feed_url, json=feed_payload, headers=feed_headers)
+        feed_response = request_with_circuit_breaker("POST", feed_url, json=feed_payload, headers=feed_headers)
 
         feed_token = None
         user_id = None

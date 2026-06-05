@@ -13,7 +13,7 @@ from broker.definedge.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -26,7 +26,6 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
         api_session_key, susertoken, api_token = auth.split(":::")
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         url = f"https://integrate.definedgesecurities.com/dart/v1{endpoint}"
 
@@ -35,13 +34,13 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
         logger.debug(f"Making {method} request to DefinedGe API: {url}")
 
         if method.upper() == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method.upper() == "POST":
-            response = client.post(url, json=payload if payload else {}, headers=headers)
+            response = request_with_circuit_breaker("POST", url, json=payload if payload else {}, headers=headers)
         elif method.upper() == "PUT":
-            response = client.put(url, json=payload if payload else {}, headers=headers)
+            response = request_with_circuit_breaker("PUT", url, json=payload if payload else {}, headers=headers)
         elif method.upper() == "DELETE":
-            response = client.delete(url, headers=headers)
+            response = request_with_circuit_breaker("DELETE", url, headers=headers)
         else:
             raise ValueError(f"Unsupported HTTP method: {method}")
 
@@ -215,7 +214,6 @@ def place_order_api(data, auth):
         api_session_key, susertoken, api_token = auth.split(":::")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Get token and transform data
         token = get_token(data["symbol"], data["exchange"])
@@ -228,7 +226,7 @@ def place_order_api(data, auth):
 
         # Make the API request
         url = "https://integrate.definedgesecurities.com/dart/v1/placeorder"
-        response = client.post(url, json=newdata, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=newdata, headers=headers)
 
         # Log the raw response
         logger.info(f"Definedge API Response Status: {response.status_code}")
@@ -559,7 +557,6 @@ def cancel_order(orderid, auth):
         api_session_key, susertoken, api_token = auth.split(":::")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Prepare headers - no Content-Type needed for GET request
         headers = {"Authorization": api_session_key}
@@ -570,7 +567,7 @@ def cancel_order(orderid, auth):
         logger.info(f"Making GET request to: {url}")
 
         # Make the GET request
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
 
         # Log the raw response
         logger.info(f"Definedge Cancel API Response Status: {response.status_code}")
@@ -631,7 +628,6 @@ def modify_order(data, auth):
     api_session_key, susertoken, api_token = auth.split(":::")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Get token but don't overwrite the symbol in data
     token = get_token(data["symbol"], data["exchange"])
@@ -648,7 +644,7 @@ def modify_order(data, auth):
     logger.info(f"Final JSON payload being sent: {payload}")
 
     # Make the request using the shared client
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         "https://integrate.definedgesecurities.com/dart/v1/modify", headers=headers, content=payload
     )
 

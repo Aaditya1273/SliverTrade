@@ -17,7 +17,7 @@ import pandas as pd
 
 from broker.deltaexchange.api.baseurl import BASE_URL
 from database.token_db import get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -68,8 +68,7 @@ def _get_ticker(symbol: str) -> dict:
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            client = get_httpx_client()
-            resp = client.get(url, headers={"Accept": "application/json"}, timeout=15.0)
+            resp = request_with_circuit_breaker("GET", url, headers={"Accept": "application/json"}, timeout=15.0)
             break  # success
         except _TRANSIENT_ERRORS as exc:
             last_err = exc
@@ -124,8 +123,7 @@ def _get_l2orderbook(product_id: int) -> dict:
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            client = get_httpx_client()
-            resp = client.get(url, headers={"Accept": "application/json"}, timeout=15.0)
+            resp = request_with_circuit_breaker("GET", url, headers={"Accept": "application/json"}, timeout=15.0)
             break  # success
         except _TRANSIENT_ERRORS as exc:
             last_err = exc
@@ -470,7 +468,6 @@ class BrokerData:
 
             all_candles = []
             url    = f"{BASE_URL}/v2/history/candles"
-            client = get_httpx_client()
 
             for chunk_start, chunk_end in chunks:
                 start_ts = self._to_epoch(chunk_start, end_of_day=False)
@@ -488,7 +485,7 @@ class BrokerData:
                     f"({start_ts} → {end_ts})"
                 )
 
-                resp = client.get(
+                resp = request_with_circuit_breaker("GET", 
                     url,
                     params=params,
                     headers={"Accept": "application/json"},

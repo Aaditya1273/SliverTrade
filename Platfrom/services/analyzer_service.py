@@ -55,7 +55,7 @@ def get_analyzer_status_with_auth(
 
     except Exception as e:
         logger.exception(f"Error getting analyzer status: {e}")
-        error_response = {"status": "error", "message": str(e)}
+        error_response = {"status": "error", "message": "Failed to get analyzer status"}
         log_executor.submit(async_log_order, "analyzer_status", original_data, error_response)
         return False, error_response, 500
 
@@ -134,7 +134,7 @@ def toggle_analyzer_mode_with_auth(
 
     except Exception as e:
         logger.exception(f"Error toggling analyzer mode: {e}")
-        error_response = {"status": "error", "message": str(e)}
+        error_response = {"status": "error", "message": "Failed to toggle analyzer mode"}
         log_executor.submit(async_log_order, "analyzer_toggle", original_data, error_response)
         return False, error_response, 500
 

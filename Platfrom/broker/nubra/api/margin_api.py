@@ -2,7 +2,7 @@ import json
 import os
 
 from broker.nubra.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,11 +55,10 @@ def calculate_margin_api(positions, auth):
     logger.info(f"Nubra margin calculation payload: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     try:
         # Make the request using the shared client
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{NUBRA_BASE_URL}/orders/v2/margin_required",
             headers=headers,
             content=payload,

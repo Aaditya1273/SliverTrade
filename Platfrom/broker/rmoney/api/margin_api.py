@@ -6,7 +6,7 @@ import json
 
 from broker.rmoney.baseurl import INTERACTIVE_URL
 from broker.rmoney.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -56,10 +56,8 @@ def calculate_margin_api(positions, auth):
 
     logger.info(f"RMoney Margin Request: {json.dumps(margin_request, indent=2)}")
 
-    client = get_httpx_client()
-
     try:
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{INTERACTIVE_URL}/orders/margindetails",
             headers=headers,
             content=json.dumps(margin_request),

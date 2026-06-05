@@ -151,7 +151,7 @@ def get_quotes_with_auth(
             # Log other errors normally
             logger.exception(f"Error in broker_module.get_quotes: {e}")
 
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to fetch quotes"}, 500
 
 
 def get_quotes(
@@ -321,7 +321,7 @@ def get_multiquotes_with_auth(
             # Log other errors normally
             logger.exception(f"Error in broker_module.get_multiquotes: {e}")
 
-        return False, {"status": "error", "message": str(e)}, 500
+        return False, {"status": "error", "message": "Failed to fetch quotes"}, 500
 
 
 def get_multiquotes(

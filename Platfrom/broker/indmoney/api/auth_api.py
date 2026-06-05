@@ -4,7 +4,7 @@ import os
 import httpx
 
 from broker.indmoney.api.baseurl import BASE_URL, get_url
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 
 def authenticate_broker(code):

@@ -82,7 +82,7 @@ def strategy_chart_data():
 
     except Exception as e:
         logger.exception(f"Error in strategy chart API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load strategy chart"}), 500
 
 
 @strategy_chart_bp.route("/strategybuilder/api/multi-strike-oi", methods=["POST"])
@@ -141,7 +141,7 @@ def multi_strike_oi_data():
 
     except Exception as e:
         logger.exception(f"Error in multi-strike OI API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load multi-strike OI data"}), 500
 
 
 @strategy_chart_bp.route("/strategybuilder/api/intervals", methods=["GET"])
@@ -163,4 +163,4 @@ def strategy_chart_intervals():
 
     except Exception as e:
         logger.exception(f"Error fetching intervals: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch intervals"}), 500

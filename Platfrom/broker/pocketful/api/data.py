@@ -15,7 +15,7 @@ from broker.pocketful.api.pocketfulwebsocket import (
 )
 from broker.pocketful.database.master_contract_db import SymToken, db_session
 from database.token_db import get_br_symbol, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -52,20 +52,19 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
             logger.info(f"Payload: {payload}")
 
         # Get the shared httpx client
-        client = get_httpx_client()
         url = f"{base_url}{endpoint}"
 
         # Make request based on method
         if method == "GET":
-            res = client.get(url, headers=headers)
+            res = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            res = client.post(url, headers=headers, content=payload)
+            res = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         elif method == "PUT":
-            res = client.put(url, headers=headers, content=payload)
+            res = request_with_circuit_breaker("PUT", url, headers=headers, content=payload)
         elif method == "DELETE":
-            res = client.delete(url, headers=headers)
+            res = request_with_circuit_breaker("DELETE", url, headers=headers)
         else:
-            res = client.request(method, url, headers=headers, content=payload)
+            res = request_with_circuit_breaker(method, url, headers=headers, content=payload)
 
         response = res.json()
 
@@ -327,13 +326,12 @@ class BrokerData:
                 logger.info("Fetching client_id from trading_info endpoint")
 
                 # Get the shared httpx client
-                client = get_httpx_client()
                 headers = {
                     "Authorization": f"Bearer {self.auth_token}",
                     "Content-Type": "application/json",
                 }
 
-                response = client.get(
+                response = request_with_circuit_breaker("GET", 
                     "https://trade.pocketful.in/api/v1/user/trading_info", headers=headers
                 )
                 info_response = response.json()

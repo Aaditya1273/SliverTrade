@@ -10,7 +10,7 @@ from broker.zerodha.mapping.gtt_data import (
     transform_place_gtt,
 )
 from database.token_db_enhanced import get_symbol_info
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 from utils.mpp_slab import calculate_protected_price, get_instrument_type_from_symbol
 
@@ -149,8 +149,9 @@ def place_gtt_order(data, auth):
     body = _encode_gtt_payload(transformed)
     logger.info(f"Zerodha place_gtt payload: type={transformed['type']}, body={body}")
 
-    client = get_httpx_client()
-    response = client.post(f"{_BASE}/gtt/triggers", headers=_headers(auth, form=True), content=body)
+    response = request_with_circuit_breaker(
+        "POST", f"{_BASE}/gtt/triggers", headers=_headers(auth, form=True), content=body
+    )
     logger.info(f"Zerodha place_gtt raw: status={response.status_code}, body={response.text}")
 
     response_data = response.json()
@@ -187,9 +188,8 @@ def modify_gtt_order(data, auth):
     body = _encode_gtt_payload(transformed)
     logger.info(f"Zerodha modify_gtt payload ({trigger_id}): {body}")
 
-    client = get_httpx_client()
-    response = client.put(
-        f"{_BASE}/gtt/triggers/{trigger_id}", headers=_headers(auth, form=True), content=body
+    response = request_with_circuit_breaker(
+        "PUT", f"{_BASE}/gtt/triggers/{trigger_id}", headers=_headers(auth, form=True), content=body
     )
     logger.info(f"Zerodha modify_gtt raw: status={response.status_code}, body={response.text}")
 
@@ -213,8 +213,9 @@ def cancel_gtt_order(trigger_id, auth):
     if not trigger_id:
         return {"status": "error", "message": "trigger_id is required"}, 400
 
-    client = get_httpx_client()
-    response = client.delete(f"{_BASE}/gtt/triggers/{trigger_id}", headers=_headers(auth))
+    response = request_with_circuit_breaker(
+        "DELETE", f"{_BASE}/gtt/triggers/{trigger_id}", headers=_headers(auth)
+    )
     logger.info(f"Zerodha cancel_gtt raw: status={response.status_code}, body={response.text}")
 
     try:
@@ -238,8 +239,9 @@ def get_gtt_book(auth):
     The returned dict has ``status`` and ``data`` where ``data`` is a list of
     SilverTrade-normalised GTT objects (see ``map_gtt_book``).
     """
-    client = get_httpx_client()
-    response = client.get(f"{_BASE}/gtt/triggers", headers=_headers(auth))
+    response = request_with_circuit_breaker(
+        "GET", f"{_BASE}/gtt/triggers", headers=_headers(auth)
+    )
     logger.info(f"Zerodha gtt_book raw: status={response.status_code}")
 
     try:

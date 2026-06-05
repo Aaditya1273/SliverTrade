@@ -10,7 +10,7 @@
 import os
 
 from broker.deltaexchange.api.baseurl import BASE_URL, get_auth_headers
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -49,8 +49,7 @@ def _get_positions_pnl(api_key, api_secret):
             api_key=api_key,
             api_secret=api_secret,
         )
-        client = get_httpx_client()
-        response = client.get(url, headers=headers, timeout=30.0)
+        response = request_with_circuit_breaker("GET", url, headers=headers, timeout=30.0)
         if response.status_code != 200:
             logger.warning(
                 f"[DeltaExchange] positions/margined HTTP {response.status_code}: "
@@ -121,9 +120,7 @@ def get_margin_data(auth_token):
             api_key=api_key,
             api_secret=api_secret,
         )
-
-        client = get_httpx_client()
-        response = client.get(url, headers=headers, timeout=30.0)
+        response = request_with_circuit_breaker("GET", url, headers=headers, timeout=30.0)
 
         if response.status_code != 200:
             logger.error(

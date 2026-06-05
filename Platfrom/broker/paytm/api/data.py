@@ -9,7 +9,7 @@ import pandas as pd
 
 from broker.paytm.database.master_contract_db import SymToken, db_session
 from database.token_db import get_br_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,14 +32,12 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         logger.debug(f"Headers: {json.dumps(headers, indent=2)}")
         if payload:
             logger.debug(f"Payload: {payload}")
-
-        client = get_httpx_client()
         # Use a longer timeout for Paytm API requests
         timeout = httpx.Timeout(60.0, connect=30.0)
         if method == "GET":
-            response = client.get(f"{base_url}{endpoint}", headers=headers, timeout=timeout)
+            response = request_with_circuit_breaker("GET", f"{base_url}{endpoint}", headers=headers, timeout=timeout)
         else:
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 f"{base_url}{endpoint}", headers=headers, content=payload, timeout=timeout
             )
 

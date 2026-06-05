@@ -3,9 +3,7 @@
 import json
 import os
 
-import httpx
-
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -14,9 +12,6 @@ logger = get_logger(__name__)
 def get_margin_data(auth_token):
     """Fetch margin data from the broker's API using the provided auth token."""
     api_key = os.getenv("BROKER_API_KEY")
-
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": f"Bearer {auth_token}",
@@ -30,7 +25,8 @@ def get_margin_data(auth_token):
         "X-PrivateKey": api_key,
     }
 
-    response = client.get(
+    response = request_with_circuit_breaker(
+        "GET",
         "https://apiconnect.angelone.in/rest/secure/angelbroking/user/v1/getRMS",
         headers=headers,
     )

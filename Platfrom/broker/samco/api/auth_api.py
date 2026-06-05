@@ -1,7 +1,7 @@
 import os
 
 from database.auth_db import samco_get_secret_key as get_secret_key
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -46,12 +46,11 @@ def generate_otp(uid):
         tuple: (response_data, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {"uid": uid}
 
         logger.info(f"Generating OTP for user: {uid}")
-        response = client.post(f"{BASE_URL}/otp/generateOtp", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/otp/generateOtp", headers=headers, json=payload)
         data = _parse_response("generateOtp", response)
 
         if data.get("status") == "Success":
@@ -80,12 +79,11 @@ def generate_secret_key(uid, otp):
         tuple: (response_data, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {"uid": uid, "otp": otp}
 
         logger.info(f"Generating secret API key for user: {uid}")
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{BASE_URL}/otp/secretKeyGenerator", headers=headers, json=payload
         )
         data = _parse_response("secretKeyGenerator", response)
@@ -116,12 +114,11 @@ def generate_access_token(uid, secret_api_key):
         tuple: (access_token, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {"uid": uid, "secretApiKey": secret_api_key}
 
         logger.info(f"Generating access token for user: {uid}")
-        response = client.post(f"{BASE_URL}/accessToken/token", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/accessToken/token", headers=headers, json=payload)
         data = _parse_response("accessToken", response)
 
         if data.get("status") == "Success" and data.get("accessToken"):
@@ -150,7 +147,6 @@ def login(uid, password, access_token):
         tuple: (session_token, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {
             "userId": uid,
@@ -159,7 +155,7 @@ def login(uid, password, access_token):
         }
 
         logger.info(f"Attempting Samco login for user: {uid}")
-        response = client.post(f"{BASE_URL}/login", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/login", headers=headers, json=payload)
         data = _parse_response("login", response)
 
         if data.get("status") == "Success" and data.get("sessionToken"):
@@ -190,7 +186,6 @@ def register_ip(client_id, password, primary_ip, secondary_ip=None):
         tuple: (response_data, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {
             "clientId": client_id,
@@ -201,7 +196,7 @@ def register_ip(client_id, password, primary_ip, secondary_ip=None):
             payload["secondaryIp"] = secondary_ip
 
         logger.info(f"Registering IP for user: {client_id}")
-        response = client.post(f"{BASE_URL}/ip/ipRegistration", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/ip/ipRegistration", headers=headers, json=payload)
         data = _parse_response("ipRegistration", response)
 
         if data.get("status") == "Success":
@@ -231,7 +226,6 @@ def update_ip(client_id, password, primary_ip, secondary_ip=None):
         tuple: (response_data, error_message)
     """
     try:
-        client = get_httpx_client()
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         payload = {
             "clientId": client_id,
@@ -242,7 +236,7 @@ def update_ip(client_id, password, primary_ip, secondary_ip=None):
             payload["secondaryIp"] = secondary_ip
 
         logger.info(f"Updating IP for user: {client_id}")
-        response = client.post(f"{BASE_URL}/ip/ipUpdate", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}/ip/ipUpdate", headers=headers, json=payload)
         data = _parse_response("ipUpdate", response)
 
         if data.get("status") == "Success":

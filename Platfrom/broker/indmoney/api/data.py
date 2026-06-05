@@ -8,7 +8,7 @@ import pandas as pd
 
 from broker.indmoney.api.baseurl import get_url
 from database.token_db import get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -21,7 +21,6 @@ def get_api_response(endpoint, auth, method="GET", params=None):
         raise Exception("Authentication token is required")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Log token info for debugging (mask the actual token)
     token_preview = (
@@ -50,11 +49,11 @@ def get_api_response(endpoint, auth, method="GET", params=None):
 
     try:
         if method == "GET":
-            res = client.get(url, headers=headers, params=params)
+            res = request_with_circuit_breaker("GET", url, headers=headers, params=params)
         elif method == "POST":
-            res = client.post(url, headers=headers, json=params)
+            res = request_with_circuit_breaker("POST", url, headers=headers, json=params)
         else:
-            res = client.request(method, url, headers=headers, params=params)
+            res = request_with_circuit_breaker(method, url, headers=headers, params=params)
 
         logger.debug(f"Request completed. Status code: {res.status_code}")
         logger.info(f"Actual request URL: {res.url}")

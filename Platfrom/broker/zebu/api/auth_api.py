@@ -2,7 +2,7 @@ import hashlib
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +20,6 @@ def authenticate_broker(code):
 
     try:
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Zebu OAuth token exchange endpoint
         url = "https://go.mynt.in/NorenWClientAPI/GenAcsTok"
@@ -44,7 +43,7 @@ def authenticate_broker(code):
         logger.debug(f"Zebu OAuth token exchange request to {url}")
 
         # Send the POST request
-        response = client.post(url, content=payload_str, headers=headers)
+        response = request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
 
         # Handle the response
         if response.status_code == 200:

@@ -12,7 +12,7 @@ from broker.samco.mapping.transform_data import (
     transform_modify_order_data,
 )
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -25,7 +25,6 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
     """
     Generic API response handler for Samco endpoints.
     """
-    client = get_httpx_client()
 
     headers = {
         "Content-Type": "application/json",
@@ -36,11 +35,11 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
     url = f"{BASE_URL}{endpoint}"
 
     if method == "GET":
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
     elif method == "POST":
-        response = client.post(url, headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
     else:
-        response = client.request(method, url, headers=headers, json=payload)
+        response = request_with_circuit_breaker(method, url, headers=headers, json=payload)
 
     response.status = response.status_code
 
@@ -70,9 +69,8 @@ def get_trade_book(auth):
 
 def get_positions(auth):
     """Get positions from Samco."""
-    client = get_httpx_client()
     headers = {"Accept": "application/json", "x-session-token": auth}
-    response = client.get(
+    response = request_with_circuit_breaker("GET", 
         f"{BASE_URL}/position/getPositions", headers=headers, params={"positionType": "DAY"}
     )
     response_data = response.json() if response.text else {}
@@ -184,8 +182,6 @@ def place_order_api(data, auth):
         error_res = type("Response", (), {"status": 400, "status_code": 400})()
         return error_res, {"status": "error", "orderid": None, "message": str(e)}, None
 
-    client = get_httpx_client()
-
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -218,7 +214,7 @@ def place_order_api(data, auth):
 
     logger.info(f"Samco place order payload: {payload}")
 
-    response = client.post(f"{BASE_URL}/order/placeOrder", headers=headers, json=payload)
+    response = request_with_circuit_breaker("POST", f"{BASE_URL}/order/placeOrder", headers=headers, json=payload)
 
     response.status = response.status_code
 
@@ -368,13 +364,12 @@ def cancel_order(orderid, auth):
     """
     Cancel an order by order ID.
     """
-    client = get_httpx_client()
 
     headers = {"Accept": "application/json", "x-session-token": auth}
 
     logger.info(f"Samco cancel order request for orderid: {orderid}")
 
-    response = client.delete(
+    response = request_with_circuit_breaker("DELETE", 
         f"{BASE_URL}/order/cancelOrder", headers=headers, params={"orderNumber": orderid}
     )
 
@@ -396,7 +391,6 @@ def modify_order(data, auth):
     """
     Modify an existing order.
     """
-    client = get_httpx_client()
 
     orderid = data["orderid"]
     transformed_data = transform_modify_order_data(data)
@@ -409,7 +403,7 @@ def modify_order(data, auth):
 
     logger.info(f"Samco modify order payload: {transformed_data}")
 
-    response = client.put(
+    response = request_with_circuit_breaker("PUT", 
         f"{BASE_URL}/order/modifyOrder/{orderid}", headers=headers, json=transformed_data
     )
 

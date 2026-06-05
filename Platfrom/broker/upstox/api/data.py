@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -20,7 +20,6 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     AUTH_TOKEN = auth
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {"Authorization": f"Bearer {AUTH_TOKEN}", "Accept": "application/json"}
 
@@ -29,13 +28,13 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     logger.debug(f"Making {method} request to Upstox v3 API: {url}")
 
     if method == "GET":
-        response = client.get(url, headers=headers)
+        response = request_with_circuit_breaker("GET", url, headers=headers)
     elif method == "POST":
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
     elif method == "PUT":
-        response = client.put(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("PUT", url, headers=headers, content=payload)
     elif method == "DELETE":
-        response = client.delete(url, headers=headers)
+        response = request_with_circuit_breaker("DELETE", url, headers=headers)
 
     # Add status attribute for compatibility with existing code that expects http.client response
     response.status = response.status_code
@@ -217,13 +216,12 @@ class BrokerData:
             try:
                 # Use v2 quotes endpoint for bid/ask, OI and prev_close data
                 v2_url = f"/v2/market-quote/quotes?instrument_key={encoded_symbol}"
-                client = get_httpx_client()
                 headers = {
                     "Authorization": f"Bearer {self.auth_token}",
                     "Accept": "application/json",
                 }
                 full_url = f"https://api.upstox.com{v2_url}"
-                v2_response = client.get(full_url, headers=headers)
+                v2_response = request_with_circuit_breaker("GET", full_url, headers=headers)
                 v2_data = v2_response.json()
                 logger.debug(f"V2 quotes response: {v2_data}")
 
@@ -390,10 +388,9 @@ class BrokerData:
         # Also fetch v2 quotes for bid/ask/OI data
         v2_quotes = {}
         try:
-            client = get_httpx_client()
             headers = {"Authorization": f"Bearer {self.auth_token}", "Accept": "application/json"}
             v2_url = f"https://api.upstox.com/v2/market-quote/quotes?instrument_key={encoded_keys}"
-            v2_response = client.get(v2_url, headers=headers)
+            v2_response = request_with_circuit_breaker("GET", v2_url, headers=headers)
             v2_data = v2_response.json()
 
             if v2_data.get("status") == "success":
@@ -969,10 +966,9 @@ class BrokerData:
             # Use v2 quotes endpoint for depth data (v3 OHLC doesn't provide depth)
             url = f"/v2/market-quote/quotes?instrument_key={encoded_symbol}"
             # For depth, we still need to use v2 endpoint directly
-            client = get_httpx_client()
             headers = {"Authorization": f"Bearer {self.auth_token}", "Accept": "application/json"}
             full_url = f"https://api.upstox.com{url}"
-            response = client.get(full_url, headers=headers)
+            response = request_with_circuit_breaker("GET", full_url, headers=headers)
             response = response.json()
 
             if response.get("status") != "success":

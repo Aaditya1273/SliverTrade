@@ -8,7 +8,7 @@ import pandas as pd
 
 from broker.zerodha.database.master_contract_db import SymToken, db_session
 from database.token_db import get_br_symbol, get_oa_symbol
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -70,9 +70,6 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
     AUTH_TOKEN = auth
     base_url = "https://api.kite.trade"
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     headers = {
         "X-Kite-Version": "3",
         "Authorization": f"token {AUTH_TOKEN}",
@@ -84,19 +81,15 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
 
     try:
         # Log the complete request details for debugging
-        # logger.info("=== API Request Details ===")
-        # logger.info(f"URL: {url}")
-        # logger.info(f"Method: {method}")
-        # logger.info(f"Headers: {json.dumps(headers, indent=2)}")
         if payload:
             logger.debug(f"Payload: {json.dumps(payload, indent=2)}")
 
-        # Make the request using the shared client
+        # Make the request using the circuit-breaker-protected client
         if method.upper() == "GET":
-            response = client.get(url, headers=headers)
+            response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method.upper() == "POST":
             headers["Content-Type"] = "application/json"
-            response = client.post(url, headers=headers, json=payload)
+            response = request_with_circuit_breaker("POST", url, headers=headers, json=payload)
         else:
             raise ZerodhaAPIError(f"Unsupported HTTP method: {method}")
 

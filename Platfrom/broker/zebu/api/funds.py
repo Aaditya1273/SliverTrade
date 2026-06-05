@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -29,7 +29,6 @@ def get_margin_data(auth_token):
     payload = "jData=" + json.dumps(data)
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     # Set headers with Bearer token authentication
     headers = {
@@ -41,7 +40,7 @@ def get_margin_data(auth_token):
     url = "https://go.mynt.in/NorenWClientAPI/Limits"
 
     # Send the POST request to Zebu's API using httpx
-    response = client.post(url, content=payload, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload, headers=headers)
 
     # Parse the response
     margin_data = json.loads(response.text)

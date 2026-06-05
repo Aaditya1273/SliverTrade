@@ -3,7 +3,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 # Initialize logger
@@ -63,7 +63,6 @@ def authenticate_broker(mobile_number, totp, mpin):
         mobile_number = f"+91{mobile_number}"
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Step 1: Login with TOTP
         payload = json.dumps({"mobileNumber": mobile_number, "ucc": ucc, "totp": totp})
@@ -76,7 +75,7 @@ def authenticate_broker(mobile_number, totp, mpin):
 
         logger.debug(f"TOTP Login Request - Mobile: {mobile_number[:5]}***, UCC: {ucc}")
 
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
             headers=headers,
             content=payload,
@@ -112,7 +111,7 @@ def authenticate_broker(mobile_number, totp, mpin):
 
         logger.debug("MPIN Validation Request initiated")
 
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
             headers=headers,
             content=payload,

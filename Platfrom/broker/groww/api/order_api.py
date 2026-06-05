@@ -46,7 +46,7 @@ from broker.groww.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -72,7 +72,6 @@ def direct_get_order_book(auth):
     """
     try:
         # Prepare the API client and headers
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Accept": "application/json",
@@ -104,7 +103,7 @@ def direct_get_order_book(auth):
                     )
 
                     # Make the API request
-                    response = client.get(GROWW_ORDER_LIST_URL, headers=headers, params=params)
+                    response = request_with_circuit_breaker("GET", GROWW_ORDER_LIST_URL, headers=headers, params=params)
 
                     # Check for HTTP errors
                     response.raise_for_status()
@@ -832,7 +831,6 @@ def get_positions(auth):
         logger.info("Using direct API implementation for get_positions")
 
         # Prepare the API client and headers
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Accept": "application/json",
@@ -856,7 +854,7 @@ def get_positions(auth):
         )
 
         # Make the API call for CASH segment
-        response_obj = client.get(positions_url, params=params, headers=headers, timeout=30)
+        response_obj = request_with_circuit_breaker("GET", positions_url, params=params, headers=headers, timeout=30)
 
         # Log the response status
         logger.info("-------- GET POSITIONS RESPONSE --------")
@@ -1061,7 +1059,7 @@ def get_positions(auth):
                 params["segment"] = "FNO"
                 logger.info(f"Fetching FNO positions with params: {params}")
 
-                fno_response = client.get(positions_url, params=params, headers=headers, timeout=30)
+                fno_response = request_with_circuit_breaker("GET", positions_url, params=params, headers=headers, timeout=30)
 
                 if fno_response.status_code == 200:
                     fno_data = fno_response.json()
@@ -1290,7 +1288,6 @@ def get_holdings(auth):
         logger.info("Using direct API implementation for get_holdings")
 
         # Prepare the API client and headers
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Accept": "application/json",
@@ -1305,7 +1302,7 @@ def get_holdings(auth):
         logger.info(f"API URL: {holdings_url}")
 
         # Make the API call
-        response_obj = client.get(holdings_url, headers=headers, timeout=30)
+        response_obj = request_with_circuit_breaker("GET", holdings_url, headers=headers, timeout=30)
 
         # Log the response status
         logger.info("-------- GET HOLDINGS RESPONSE --------")
@@ -1525,7 +1522,7 @@ def direct_place_order_api(data, auth):
     """
     try:
         # Import the shared httpx client
-        from utils.httpx_client import get_httpx_client
+        from utils.httpx_client import request_with_circuit_breaker
 
         # API endpoint for placing orders
         api_url = "https://api.groww.in/v1/order/create"
@@ -1667,12 +1664,11 @@ def direct_place_order_api(data, auth):
         }
 
         # Make the API request using httpx client with connection pooling
-        client = get_httpx_client()
         logger.info(f"Sending API request to {api_url} with payload: {json.dumps(payload)}")
         logger.debug(f"Request headers: {headers}")
 
         try:
-            resp = client.post(api_url, json=payload, headers=headers)
+            resp = request_with_circuit_breaker("POST", api_url, json=payload, headers=headers)
             logger.info(f"API response status code: {resp.status_code}")
 
             # Log raw response for debugging
@@ -2118,7 +2114,7 @@ def get_holdings(auth):
         import httpx
 
         with httpx.Client() as client:
-            response = client.get(
+            response = request_with_circuit_breaker("GET", 
                 "https://api.groww.in/v1/holdings/user",
                 headers=headers,
                 timeout=10.0,  # 10-second timeout
@@ -2431,7 +2427,6 @@ def cancel_order(orderid, auth, segment=None, symbol=None, exchange=None):
         logger.info(f"Cancelling order {orderid} in segment {segment}")
 
         # Prepare API client and headers
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Accept": "application/json",
@@ -2473,7 +2468,7 @@ def cancel_order(orderid, auth, segment=None, symbol=None, exchange=None):
         logger.info(f"Request headers: {json.dumps(safe_headers, indent=2)}")
 
         # Make the API call
-        response_obj = client.post(
+        response_obj = request_with_circuit_breaker("POST", 
             GROWW_CANCEL_ORDER_URL, headers=headers, json=payload, timeout=30
         )
 
@@ -2632,7 +2627,7 @@ def direct_modify_order(data, auth):
     """
     try:
         # Import the shared httpx client
-        from utils.httpx_client import get_httpx_client
+        from utils.httpx_client import request_with_circuit_breaker
 
         # API endpoint for modifying orders
         api_url = "https://api.groww.in/v1/order/modify"
@@ -2751,14 +2746,13 @@ def direct_modify_order(data, auth):
         }
 
         # Make the API request using httpx client with connection pooling
-        client = get_httpx_client()
         logger.info(
             f"Sending modify order API request to {api_url} with payload: {json.dumps(payload)}"
         )
         logger.debug(f"Request headers: {headers}")
 
         try:
-            resp = client.post(api_url, json=payload, headers=headers)
+            resp = request_with_circuit_breaker("POST", api_url, json=payload, headers=headers)
             logger.info(f"API response status code: {resp.status_code}")
 
             # Log raw response for debugging
@@ -3267,7 +3261,6 @@ def get_order_trades(orderid, auth, segment=None):
         logger.info(f"Fetching trades for order {orderid} in segment {segment}")
 
         # Prepare API client and headers
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {auth}",
             "Accept": "application/json",
@@ -3291,7 +3284,7 @@ def get_order_trades(orderid, auth, segment=None):
         )
 
         # Make the API call
-        response_obj = client.get(url, headers=headers, timeout=30)
+        response_obj = request_with_circuit_breaker("GET", url, headers=headers, timeout=30)
 
         # Log the response details
         logger.info("-------- GET ORDER TRADES RESPONSE --------")

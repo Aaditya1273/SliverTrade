@@ -253,6 +253,272 @@ def detailed_health_check():
 # ============================================================================
 
 
+@health_bp.route("/api/databases", methods=["GET"])
+@check_session_validity
+@limiter.limit("30/minute")
+def get_database_health():
+    """
+    Ping all 5 databases and return per-database connectivity + pool stats.
+
+    Tests every configured database connection by executing ``SELECT 1``
+    and reports latency for each.  Also returns connection pool utilisation
+    metrics (pool size, checked-in/out connections, in-use percentage).
+
+    Response::
+
+        {
+          "status": "pass" | "degraded" | "fail",
+          "databases": {
+            "silvertrade": {"status": "pass", "latency_ms": 0.3, "driver": "sqlite"},
+            "logs":        {"status": "pass", "latency_ms": 0.2, "driver": "sqlite"},
+            "latency":     {"status": "pass", "latency_ms": 0.2, "driver": "sqlite"},
+            "health":      {"status": "pass", "latency_ms": 0.3, "driver": "sqlite"},
+            "sandbox":     {"status": "pass", "latency_ms": 0.2, "driver": "sqlite"},
+          },
+          "pool_stats": { ... },
+        }
+
+    - ``latency_ms`` is the round-trip time in milliseconds.
+    - ``driver`` is the SQLAlchemy dialect name (e.g. ``sqlite``, ``postgresql``).
+    - ``pool_stats`` includes connection pool utilisation metrics (QueuePool only).
+    - For SQLite (NullPool), pool stats show ``"note": "No pool metrics for NullPool"``.
+    """
+    try:
+        from database.db_config import check_all_databases
+
+        result = check_all_databases()
+
+        status_code = 200
+        if result["status"] == "fail":
+            status_code = 503
+        elif result["status"] == "degraded":
+            status_code = 200  # Still partial — report as OK with degradation info
+
+        return jsonify(result), status_code
+    except Exception as e:
+        logger.exception(f"Error in database health check: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@health_bp.route("/api/bulkheads", methods=["GET"])
+@check_session_validity
+@limiter.limit("30/minute")
+def get_bulkheads():
+    """
+    Return the state of all bulkhead thread pools and dead-letter queue.
+
+    Bulkheads isolate different operation categories (orders, market data,
+    database queries, admin) into separate thread pools so that a slow
+    or failing subsystem cannot exhaust all application threads.
+
+    Response::
+
+        {
+          "pools": {
+            "orders": {
+              "active": 2,
+              "completed": 150,
+              "rejected": 0,
+              "max_workers": 5,
+              "queue_size": 100,
+              "queue_used": 3
+            },
+            "market_data": { ... },
+            ...
+          },
+          "dead_letter_queue": [
+            {
+              "category": "orders",
+              "task_name": "place_order",
+              "error": "Connection refused",
+              "submitted_at": 1234567890.0
+            }
+          ],
+          "summaries": {
+            "total_rejected": 0,
+            "dead_letter_count": 0
+          }
+        }
+    """
+    try:
+        from utils.bulkhead import (
+            BulkheadCategory,
+            DEFAULT_POOL_SIZES,
+            QUEUE_SIZE,
+            get_bulkhead_metrics,
+            peek_dead_letter_queue,
+        )
+
+        metrics = get_bulkhead_metrics()
+        dead_letters = peek_dead_letter_queue()
+
+        pools = {}
+        total_rejected = 0
+        for cat in BulkheadCategory:
+            active = metrics.get(f"{cat.value}_active", 0)
+            completed = metrics.get(f"{cat.value}_completed", 0)
+            rejected = metrics.get(f"{cat.value}_rejected", 0)
+            total_rejected += rejected
+
+            pools[cat.value] = {
+                "active": active,
+                "completed": completed,
+                "rejected": rejected,
+                "max_workers": DEFAULT_POOL_SIZES.get(cat, 3),
+                "queue_size": QUEUE_SIZE,
+                "queue_used": active,  # Active tasks sit in the queue while waiting for a worker
+            }
+
+        return jsonify({
+            "pools": pools,
+            "dead_letter_queue": [
+                {
+                    "category": entry.category.value,
+                    "task_name": entry.task_name,
+                    "error": entry.error,
+                    "submitted_at": entry.submitted_at,
+                }
+                for entry in dead_letters
+            ],
+            "summaries": {
+                "total_rejected": total_rejected,
+                "dead_letter_count": len(dead_letters),
+            },
+        })
+    except Exception as e:
+        logger.exception(f"Error fetching bulkhead stats: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@health_bp.route("/api/brokers", methods=["GET"])
+@check_session_validity
+@limiter.limit("30/minute")
+def get_broker_health():
+    """
+    Return per-user broker health states from the failover manager.
+
+    Shows all registered users, their failover order, currently active
+    broker, and per-broker health metrics (consecutive failures, last
+    success/failure timestamps, healthy status).
+
+    Response::
+
+        {
+          "enabled": true,
+          "users": {
+            "user123": {
+              "active_broker": "zerodha",
+              "failover_order": ["zerodha", "angel"],
+              "brokers": {
+                "zerodha": {
+                  "consecutive_failures": 0,
+                  "is_healthy": true,
+                  "last_success_at": 1234567890.0,
+                  "last_failure_at": 0.0
+                },
+                "angel": { ... }
+              }
+            }
+          },
+          "summary": {
+            "total_users": 1,
+            "total_brokers": 2,
+            "healthy_brokers": 2,
+            "unhealthy_brokers": 0
+          }
+        }
+    """
+    try:
+        from utils.broker_failover import get_failover_manager
+
+        fm = get_failover_manager()
+        users = fm.get_all_broker_health()
+
+        # Compute summary
+        total_brokers = 0
+        healthy_brokers = 0
+        for user_id, user_data in users.items():
+            for broker_name, health in user_data.get("brokers", {}).items():
+                total_brokers += 1
+                if health.get("is_healthy", True):
+                    healthy_brokers += 1
+
+        return jsonify({
+            "enabled": fm._enabled,
+            "users": users,
+            "summary": {
+                "total_users": len(users),
+                "total_brokers": total_brokers,
+                "healthy_brokers": healthy_brokers,
+                "unhealthy_brokers": total_brokers - healthy_brokers,
+            },
+        })
+    except Exception as e:
+        logger.exception(f"Error fetching broker health: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@health_bp.route("/api/circuit-breakers", methods=["GET"])
+@check_session_validity
+@limiter.limit("30/minute")
+def get_circuit_breakers():
+    """
+    Return the state of all registered circuit breakers.
+
+    Circuit breakers protect broker API calls from cascading failures.
+    When a broker is unhealthy, its circuit trips OPEN and subsequent
+    requests fail fast instead of blocking request handler threads.
+
+    Response::
+
+        {
+          "breakers": {
+            "zerodha": {
+              "name": "zerodha",
+              "state": "CLOSED",
+              "failure_count": 0,
+              "success_count": 0,
+              "failure_threshold": 5,
+              "recovery_timeout": 30.0,
+              "half_open_max_attempts": 3,
+              "last_failure_time": 0.0,
+              "total_failures": 0,
+              "total_successes": 0
+            },
+            "angel": { ... },
+            ...
+          },
+          "summary": {
+            "total": 12,
+            "closed": 10,
+            "open": 1,
+            "half_open": 1
+          }
+        }
+    """
+    try:
+        from utils.circuit_breaker import get_all_breaker_stats
+
+        stats = get_all_breaker_stats()
+
+        closed = sum(1 for s in stats.values() if s["state"] == "CLOSED")
+        open_ = sum(1 for s in stats.values() if s["state"] == "OPEN")
+        half_open = sum(1 for s in stats.values() if s["state"] == "HALF_OPEN")
+
+        return jsonify({
+            "breakers": stats,
+            "summary": {
+                "total": len(stats),
+                "closed": closed,
+                "open": open_,
+                "half_open": half_open,
+            },
+        })
+    except Exception as e:
+        logger.exception(f"Error fetching circuit breaker stats: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @health_bp.route("/api/current", methods=["GET"])
 @check_session_validity
 @limiter.limit("60/minute")

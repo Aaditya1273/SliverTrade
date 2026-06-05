@@ -7,7 +7,7 @@ from typing import Any, Dict
 import httpx
 
 from broker.fivepaisa.api.order_api import get_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -42,7 +42,6 @@ def get_margin_data(auth_token: str) -> dict[str, Any]:
         )
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     json_data = {"head": {"key": api_key}, "body": {"ClientCode": client_id}}
 
@@ -53,7 +52,7 @@ def get_margin_data(auth_token: str) -> dict[str, Any]:
     }
 
     try:
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V4/Margin",
             json=json_data,
             headers=headers,

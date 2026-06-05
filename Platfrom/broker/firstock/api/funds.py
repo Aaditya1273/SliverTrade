@@ -1,7 +1,7 @@
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +27,6 @@ def get_margin_data(auth_token):
         userid = userid[:-4]  # Trim the last 4 characters
 
         # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
 
         # Firstock API URL for getting limits
         url = "https://api.firstock.in/V1/limit"
@@ -41,7 +40,7 @@ def get_margin_data(auth_token):
         logger.info(f"Fetching margin data for user: {userid}")
 
         # Send POST request using shared httpx client
-        response = client.post(url, json=payload, headers=headers, timeout=30)
+        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers, timeout=30)
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code

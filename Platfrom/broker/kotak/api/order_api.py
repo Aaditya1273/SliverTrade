@@ -16,7 +16,7 @@ from broker.kotak.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,7 +32,6 @@ def get_api_response(endpoint, auth_token, method="GET", payload=""):
     logger.info(f"ORDER API - Using baseUrl: {base_url}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "accept": "application/json",
@@ -45,7 +44,7 @@ def get_api_response(endpoint, auth_token, method="GET", payload=""):
     url = f"{base_url}{endpoint}"
 
     # Make request using httpx
-    response = client.request(method, url, headers=headers, content=payload if payload else None)
+    response = request_with_circuit_breaker(method, url, headers=headers, content=payload if payload else None)
 
     logger.info(f"ORDER API Response: {response.text}")
 
@@ -145,7 +144,6 @@ def place_order_api(data, auth_token):
     logger.info(f"PLACE ORDER API - Using baseUrl: {base_url}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     token_id = get_token(data["symbol"], data["exchange"])
     newdata = transform_data(data, token_id, auth_token)
@@ -165,7 +163,7 @@ def place_order_api(data, auth_token):
     url = f"{base_url}/quick/order/rule/ms/place"
 
     try:
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code
@@ -337,7 +335,6 @@ def cancel_order(orderid, auth_token):
     session_token, session_sid, base_url, access_token = auth_token.split(":::")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     payload = f"jData={urllib.parse.quote(json.dumps({'on': orderid, 'am': 'NO'}))}"
 
@@ -353,7 +350,7 @@ def cancel_order(orderid, auth_token):
     url = f"{base_url}/quick/order/cancel"
 
     try:
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
         response_data = json.loads(response.text)
 
         if response_data.get("stat") == "Ok":
@@ -377,7 +374,6 @@ def modify_order(data, auth_token):
     logger.info(f"MODIFY ORDER API - Using baseUrl: {base_url}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     token_id = get_token(data["symbol"], data["exchange"])
     newdata = transform_modify_order_data(data, token_id, auth_token)
@@ -400,7 +396,7 @@ def modify_order(data, auth_token):
     logger.info(f"MODIFY ORDER - Making POST request to: {url}")
 
     try:
-        response = client.post(url, headers=headers, content=payload)
+        response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
         logger.info(f"MODIFY ORDER - Response status: {response.status_code}")
         logger.info(f"MODIFY ORDER - Response: {response.text}")

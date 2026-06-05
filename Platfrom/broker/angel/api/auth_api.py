@@ -1,9 +1,7 @@
 import json
 import os
 
-import httpx
-
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 
 def authenticate_broker(clientcode, broker_pin, totp_code):
@@ -13,9 +11,6 @@ def authenticate_broker(clientcode, broker_pin, totp_code):
     api_key = os.getenv("BROKER_API_KEY")
 
     try:
-        # Get the shared httpx client
-        client = get_httpx_client()
-
         payload = json.dumps({"clientcode": clientcode, "password": broker_pin, "totp": totp_code})
         headers = {
             "Content-Type": "application/json",
@@ -28,7 +23,8 @@ def authenticate_broker(clientcode, broker_pin, totp_code):
             "X-PrivateKey": api_key,
         }
 
-        response = client.post(
+        response = request_with_circuit_breaker(
+            "POST",
             "https://apiconnect.angelone.in/rest/auth/angelbroking/user/v1/loginByPassword",
             headers=headers,
             content=payload,

@@ -63,7 +63,7 @@ def iv_data():
 
     except Exception as e:
         logger.exception(f"Error in IV chart API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load IV chart data"}), 500
 
 
 @ivchart_bp.route("/ivchart/api/default-symbols", methods=["POST"])
@@ -103,7 +103,7 @@ def default_symbols():
 
     except Exception as e:
         logger.exception(f"Error in default symbols API: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to load default symbols"}), 500
 
 
 @ivchart_bp.route("/ivchart/api/intervals", methods=["GET"])
@@ -138,4 +138,4 @@ def intervals():
 
     except Exception as e:
         logger.exception(f"Error fetching intervals: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Failed to fetch intervals"}), 500

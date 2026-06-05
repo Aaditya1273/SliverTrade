@@ -2,7 +2,7 @@ import hashlib
 import json
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 
 
 def authenticate_broker(request_token):
@@ -21,15 +21,13 @@ def authenticate_broker(request_token):
         # The payload for the POST request
         data = {"api_key": BROKER_API_KEY, "request_token": request_token, "checksum": checksum}
 
-        # Get the shared httpx client with connection pooling
-        client = get_httpx_client()
-
         # Setting the headers as specified by Zerodha's documentation
         headers = {"X-Kite-Version": "3"}
 
         try:
-            # Performing the POST request using the shared client
-            response = client.post(
+            # Performing the POST request using the circuit-breaker-protected client
+            response = request_with_circuit_breaker(
+                "POST",
                 url,
                 headers=headers,
                 data=data,

@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -16,7 +16,6 @@ def get_margin_data(auth_token):
     api_key = os.getenv("BROKER_API_SECRET")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Motilal Oswal required headers
     headers = {
@@ -40,7 +39,7 @@ def get_margin_data(auth_token):
     }
 
     # Motilal Oswal Margin Detail API endpoint (more comprehensive than summary)
-    response = client.post(
+    response = request_with_circuit_breaker("POST", 
         "https://openapi.motilaloswal.com/rest/report/v1/getreportmargindetail",
         headers=headers,
         json={},

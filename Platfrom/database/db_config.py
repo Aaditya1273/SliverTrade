@@ -23,12 +23,15 @@ Usage:
     #   POOL_SIZE=50 MAX_OVERFLOW=100 POOL_TIMEOUT=30
 """
 
+import logging
 import os
 import threading
 from typing import Dict, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +97,40 @@ def _env_pool_pre_ping(default: bool) -> bool:
     if val is None:
         return default
     return val.lower() in ("true", "1", "yes")
+
+
+# ---------------------------------------------------------------------------
+# Public helpers (used by database modules to conditionally create SQLite dirs)
+# ---------------------------------------------------------------------------
+
+
+def is_sqlite_url(db_url: str) -> bool:
+    """Return ``True`` if the database URL points to a SQLite database."""
+    return "sqlite" in db_url
+
+
+def is_postgres_url(db_url: str) -> bool:
+    """Return ``True`` if the database URL points to a PostgreSQL database."""
+    return "postgresql" in db_url or "postgres" in db_url
+
+
+def ensure_db_dir(db_url: str) -> None:
+    """Create the directory for a SQLite database file if needed.
+
+    Safe no-op when the URL points to PostgreSQL, MySQL, or an in-memory
+    SQLite database.  Call this from ``init_db()`` functions before
+    ``Base.metadata.create_all()`` to ensure the SQLite file's parent
+    directory exists.
+    """
+    if ":memory:" in db_url:
+        return
+    if not is_sqlite_url(db_url):
+        return
+    db_path = db_url.replace("sqlite:///", "")
+    if db_path:
+        db_dir = os.path.dirname(db_path)
+        if db_dir:
+            os.makedirs(db_dir, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +274,74 @@ def get_pool_stats() -> dict:
         return stats
 
 
+def check_all_databases() -> dict:
+    """Ping all 5 known databases and return per-database connectivity + pool stats.
+
+    Iterates over every registered DB URL key, resolves the engine (via cache),
+    executes ``SELECT 1`` as a liveness probe, and collects pool utilisation
+    metrics from ``get_pool_stats()``.
+
+    Returns
+    -------
+    dict
+        ``{
+           "status": "pass" | "degraded" | "fail",
+           "databases": { ... },
+           "pool_stats": { ... },
+        }``
+
+        * ``status`` is ``"pass"`` when all databases respond, ``"degraded"``
+          when at least one responds, and ``"fail"`` when none respond.
+        * ``databases`` maps each URL key to its ping result.
+        * ``pool_stats`` is the output of ``get_pool_stats()``.
+    """
+    import time
+
+    _db_keys = [
+        ("DATABASE_URL", "silvertrade"),
+        ("LOGS_DATABASE_URL", "logs"),
+        ("LATENCY_DATABASE_URL", "latency"),
+        ("HEALTH_DATABASE_URL", "health"),
+        ("SANDBOX_DATABASE_URL", "sandbox"),
+    ]
+
+    databases = {}
+    overall = "pass"
+
+    for env_key, label in _db_keys:
+        start = time.monotonic()
+        error = None
+        try:
+            engine = get_db_engine(env_key)
+            with engine.connect() as conn:
+                conn.exec_driver_sql("SELECT 1")
+            elapsed = round((time.monotonic() - start) * 1000, 1)
+            databases[label] = {
+                "status": "pass",
+                "latency_ms": elapsed,
+                "driver": engine.dialect.name,
+            }
+        except Exception as exc:
+            elapsed = round((time.monotonic() - start) * 1000, 1)
+            error = str(exc)
+            databases[label] = {
+                "status": "fail",
+                "latency_ms": elapsed,
+                "error": error,
+            }
+            overall = "degraded"
+
+    # If ALL databases failed, set overall to fail
+    if all(db["status"] == "fail" for db in databases.values()):
+        overall = "fail"
+
+    return {
+        "status": overall,
+        "databases": databases,
+        "pool_stats": get_pool_stats(),
+    }
+
+
 def clear_engine_cache() -> None:
     """Dispose of all cached engines and clear the cache.
 
@@ -260,12 +365,7 @@ def _create_sqlite_engine(db_url: str) -> Engine:
     """Create a SQLite engine with NullPool."""
     from sqlalchemy.pool import NullPool
 
-    if ":memory:" not in db_url:
-        db_path = db_url.replace("sqlite:///", "")
-        if db_path:
-            db_dir = os.path.dirname(db_path)
-            if db_dir:
-                os.makedirs(db_dir, exist_ok=True)
+    ensure_db_dir(db_url)
 
     return create_engine(
         db_url,
@@ -282,20 +382,55 @@ def _create_postgres_engine(
     pool_recycle: int,
     pool_timeout: int,
 ) -> Engine:
-    """Create a PostgreSQL engine with QueuePool."""
+    """Create a PostgreSQL engine with QueuePool and Supabase-compatible retry logic."""
+    import time
+
     if "+psycopg2" not in db_url and "+asyncpg" not in db_url:
         db_url = db_url.replace("postgresql://", "postgresql+psycopg2://")
         db_url = db_url.replace("postgres://", "postgres+psycopg2://")
 
-    return create_engine(
-        db_url,
-        pool_size=pool_size,
-        max_overflow=max_overflow,
-        pool_pre_ping=pool_pre_ping,
-        pool_recycle=pool_recycle,
-        pool_timeout=pool_timeout,
-        connect_args={"options": "-c statement_timeout=30000"},
+    # Retry connection for cloud/Supabase PostgreSQL (connection may be
+    # briefly unavailable during deployment, failover, or pool exhaustion).
+    max_retries = int(os.getenv("PG_CONNECT_RETRIES", "3"))
+    retry_delay = float(os.getenv("PG_CONNECT_RETRY_DELAY", "1.0"))
+    last_exception = None
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            engine = create_engine(
+                db_url,
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_pre_ping=pool_pre_ping,
+                pool_recycle=pool_recycle,
+                pool_timeout=pool_timeout,
+                connect_args={"options": "-c statement_timeout=30000"},
+            )
+            # Verify connectivity (lazy engines don't connect until first use)
+            with engine.connect() as conn:
+                conn.exec_driver_sql("SELECT 1")
+            logger.info(
+                "PostgreSQL engine created (attempt %d/%d): %s",
+                attempt, max_retries,
+                db_url.split("@")[-1] if "@" in db_url else db_url[:50],
+            )
+            return engine
+        except Exception as exc:
+            last_exception = exc
+            if attempt < max_retries:
+                logger.warning(
+                    "PostgreSQL connection attempt %d/%d failed: %s. "
+                    "Retrying in %.1fs...",
+                    attempt, max_retries, exc, retry_delay,
+                )
+                time.sleep(retry_delay)
+
+    # All retries exhausted — raise the last exception
+    logger.error(
+        "PostgreSQL connection failed after %d attempts: %s",
+        max_retries, last_exception,
     )
+    raise last_exception
 
 
 def _create_generic_engine(

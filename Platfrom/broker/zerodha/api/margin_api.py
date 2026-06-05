@@ -1,7 +1,7 @@
 import json
 
 from broker.zerodha.mapping.margin_data import parse_margin_response, transform_margin_positions
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -69,12 +69,9 @@ def calculate_margin_api(positions, auth):
 
     logger.debug(f"Zerodha margin calculation payload: {json.dumps(payload)}")
 
-    # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
-
     try:
-        # Make the request using the shared client
-        response = client.post(endpoint, headers=headers, json=payload)
+        # Make the request using the circuit-breaker-protected client
+        response = request_with_circuit_breaker("POST", endpoint, headers=headers, json=payload)
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code

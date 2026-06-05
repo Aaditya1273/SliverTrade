@@ -2,7 +2,7 @@ import hashlib
 import os
 import time
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -46,7 +46,6 @@ def get_access_token_via_checksum(api_key, api_secret):
         checksum = generate_checksum(api_secret, timestamp)
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Headers per Groww API documentation
         headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -58,7 +57,7 @@ def get_access_token_via_checksum(api_key, api_secret):
         endpoint = "https://api.groww.in/v1/token/api/access"
 
         try:
-            response = client.post(endpoint, headers=headers, json=payload, timeout=30)
+            response = request_with_circuit_breaker("POST", endpoint, headers=headers, json=payload, timeout=30)
 
             if response.status_code == 200:
                 response_data = response.json()

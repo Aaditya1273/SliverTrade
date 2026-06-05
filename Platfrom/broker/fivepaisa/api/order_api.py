@@ -17,7 +17,7 @@ from broker.fivepaisa.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -50,15 +50,14 @@ def get_api_response(
     """
     try:
         # Get the shared httpx client
-        client = get_httpx_client()
 
         headers = {"Authorization": f"bearer {auth}", "Content-Type": "application/json"}
 
         # Make request based on method
         if method.upper() == "GET":
-            response = client.get(f"{BASE_URL}{endpoint}", headers=headers)
+            response = request_with_circuit_breaker("GET", f"{BASE_URL}{endpoint}", headers=headers)
         else:  # POST
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 f"{BASE_URL}{endpoint}",
                 content=payload,  # Use content since payload is already JSON string
                 headers=headers,
@@ -133,14 +132,13 @@ def get_positions(auth: str) -> dict[str, Any]:
     while current_retry < max_retries:
         try:
             # Get the shared httpx client
-            client = get_httpx_client()
             payload = json.dumps(json_data)
 
             # Use a longer timeout specifically for positions endpoint
             headers = {"Authorization": f"bearer {auth}", "Content-Type": "application/json"}
 
             # Make the request with extended timeout
-            response = client.post(
+            response = request_with_circuit_breaker("POST", 
                 f"{BASE_URL}/VendorsAPI/Service1.svc/V2/NetPositionNetWise",
                 content=payload,
                 headers=headers,
@@ -305,10 +303,9 @@ def place_order_api(data: dict[str, Any], auth: str) -> dict[str, Any]:
 
     try:
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Make API request
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/PlaceOrderRequest",
             content=payload,
             headers=headers,
@@ -539,13 +536,12 @@ def cancel_order(orderid: str, auth: str) -> dict[str, Any]:
         logger.info(f"Using ExchOrderID: {exchange_order_id} for cancellation")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Make API request
         headers = {"Authorization": f"bearer {AUTH_TOKEN}", "Content-Type": "application/json"}
 
         logger.info(f"Cancel order request: {json.dumps(cancel_data)}")
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/CancelOrderRequest",  # Official endpoint for cancel
             json=cancel_data,
             headers=headers,
@@ -621,12 +617,11 @@ def modify_order(data: dict[str, Any], auth: str) -> dict[str, Any]:
         logger.info(f"Modify Order Request: {json_data}")
 
         # Get the shared httpx client
-        client = get_httpx_client()
 
         # Make API request
         headers = {"Authorization": f"bearer {AUTH_TOKEN}", "Content-Type": "application/json"}
 
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/ModifyOrderRequest",
             json=json_data,
             headers=headers,

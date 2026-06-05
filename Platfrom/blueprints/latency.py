@@ -202,7 +202,7 @@ def get_logs():
         )
     except Exception as e:
         logger.exception(f"Error fetching latency logs: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch latency logs"}), 500
 
 
 @latency_bp.route("/api/stats", methods=["GET"])
@@ -222,7 +222,7 @@ def get_stats():
         return jsonify(stats)
     except Exception as e:
         logger.exception(f"Error fetching latency stats: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch latency statistics"}), 500
 
 
 @latency_bp.route("/api/broker/<broker>/stats", methods=["GET"])
@@ -241,7 +241,7 @@ def get_broker_stats(broker):
         return jsonify(broker_stats)
     except Exception as e:
         logger.exception(f"Error fetching broker stats: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to fetch broker statistics"}), 500
 
 
 @latency_bp.route("/export", methods=["GET"])
@@ -267,7 +267,7 @@ def export_logs():
 
     except Exception as e:
         logger.exception(f"Error exporting latency logs: {e}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Failed to export latency logs"}), 500
 
 
 @latency_bp.teardown_app_request

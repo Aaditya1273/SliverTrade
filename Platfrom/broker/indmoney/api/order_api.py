@@ -17,7 +17,7 @@ from broker.indmoney.mapping.transform_data import (
 )
 from database.auth_db import get_auth_token
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -28,7 +28,6 @@ def get_api_response(endpoint, auth, method="GET", payload="", params=None):
     api_key = os.getenv("BROKER_API_KEY")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     headers = {
         "Authorization": AUTH_TOKEN,
@@ -40,11 +39,11 @@ def get_api_response(endpoint, auth, method="GET", payload="", params=None):
 
     try:
         if method == "GET":
-            response = client.get(url, headers=headers, params=params)
+            response = request_with_circuit_breaker("GET", url, headers=headers, params=params)
         elif method == "POST":
-            response = client.post(url, headers=headers, content=payload, params=params)
+            response = request_with_circuit_breaker("POST", url, headers=headers, content=payload, params=params)
         else:
-            response = client.request(method, url, headers=headers, content=payload, params=params)
+            response = request_with_circuit_breaker(method, url, headers=headers, content=payload, params=params)
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code
@@ -385,10 +384,9 @@ def place_order_api(data, auth):
     logger.info(f"Indmoney API Payload: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     url = get_url("/order")
-    res = client.post(url, headers=headers, content=payload)
+    res = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
     # Add status attribute for compatibility with existing codebase
     res.status = res.status_code
 
@@ -615,7 +613,6 @@ def cancel_order(orderid, auth):
     }
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Prepare the payload for Indmoney cancel order API
     payload = {
@@ -625,7 +622,7 @@ def cancel_order(orderid, auth):
 
     # Make the POST request to cancel order using httpx
     url = get_url("/order/cancel")
-    res = client.post(url, headers=headers, content=json.dumps(payload))
+    res = request_with_circuit_breaker("POST", url, headers=headers, content=json.dumps(payload))
 
     # Add status attribute for compatibility with existing codebase
     res.status = res.status_code
@@ -669,13 +666,12 @@ def modify_order(data, auth):
     logger.debug(f"Modify order payload: {payload}")
 
     # Get the shared httpx client with connection pooling
-    client = get_httpx_client()
 
     # Construct the URL for modifying the order
     url = get_url("/order/modify")
 
     # Make the POST request using httpx
-    res = client.post(url, headers=headers, content=payload)
+    res = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
 
     # Add status attribute for compatibility with existing codebase
     res.status = res.status_code

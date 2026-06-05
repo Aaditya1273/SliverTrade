@@ -85,7 +85,7 @@ def execute_signal():
 
     except Exception as e:
         logger.exception(f"Error in execute_signal: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({"status": "error", "message": "Signal execution failed"}), 500
 
 
 @orders_bp.errorhandler(429)
@@ -704,7 +704,7 @@ def close_position():
 
     except Exception as e:
         logger.exception(f"Error in close_position endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while closing the position"}), 500
 
 
 @orders_bp.route("/close_all_positions", methods=["POST"])
@@ -749,7 +749,7 @@ def close_all_positions():
 
     except Exception as e:
         logger.exception(f"Error in close_all_positions endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while closing positions"}), 500
 
 
 @orders_bp.route("/cancel_all_orders", methods=["POST"])
@@ -805,7 +805,7 @@ def cancel_all_orders_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_all_orders_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while cancelling orders"}), 500
 
 
 @orders_bp.route("/cancel_order", methods=["POST"])
@@ -848,7 +848,7 @@ def cancel_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while cancelling the order"}), 500
 
 
 @orders_bp.route("/modify_gtt_order", methods=["POST"])
@@ -906,7 +906,7 @@ def modify_gtt_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in modify_gtt_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while modifying the GTT order"}), 500
 
 
 @orders_bp.route("/cancel_gtt_order", methods=["POST"])
@@ -943,7 +943,7 @@ def cancel_gtt_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_gtt_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while cancelling the GTT order"}), 500
 
 
 @orders_bp.route("/modify_order", methods=["POST"])
@@ -1000,7 +1000,7 @@ def modify_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in modify_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": f"An error occurred: {str(e)}"}), 500
+        return jsonify({"status": "error", "message": "An error occurred while modifying the order"}), 500
 
 
 @orders_bp.route("/action-center")

@@ -3,7 +3,7 @@ import json
 import os
 from typing import Any, Dict, Optional, Tuple
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -59,12 +59,11 @@ def authenticate_broker(request_token: str) -> tuple[str | None, dict[str, Any] 
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
 
         # Get shared HTTP client with connection pooling
-        client = get_httpx_client()
 
         logger.debug(f"Authenticating with FYERS API. Request: {json.dumps(payload, indent=2)}")
 
         # Make the authentication request
-        response = client.post(
+        response = request_with_circuit_breaker("POST", 
             url,
             headers=headers,
             json=payload,

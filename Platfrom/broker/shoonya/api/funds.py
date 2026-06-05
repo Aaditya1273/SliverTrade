@@ -5,7 +5,7 @@ import os
 
 import httpx
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -32,7 +32,6 @@ def get_margin_data(auth_token):
     payload_str = "jData=" + json.dumps(data)
 
     # Get the shared httpx client
-    client = get_httpx_client()
 
     # Set headers with Bearer token authentication
     headers = {
@@ -43,7 +42,7 @@ def get_margin_data(auth_token):
     url = "https://api.shoonya.com/NorenWClientAPI/Limits"
 
     # Send the POST request to Shoonya's API
-    response = client.post(url, content=payload_str, headers=headers)
+    response = request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
 
     # Parse the response
     margin_data = json.loads(response.text)

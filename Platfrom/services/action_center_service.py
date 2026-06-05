@@ -156,7 +156,7 @@ def parse_pending_order(pending_order) -> dict[str, Any]:
             "price": "-",
             "price_type": "-",
             "product_type": "-",
-            "error": str(e),
+            "error": "Failed to parse order data",
         }
 
 
@@ -261,6 +261,6 @@ def get_action_center_data(
         logger.exception(f"Error getting action center data: {e}")
         return (
             False,
-            {"status": "error", "message": f"Failed to retrieve action center data: {str(e)}"},
+            {"status": "error", "message": "Failed to retrieve action center data"},
             500,
         )

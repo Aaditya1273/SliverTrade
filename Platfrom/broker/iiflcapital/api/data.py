@@ -5,7 +5,7 @@ import pandas as pd
 
 from broker.iiflcapital.baseurl import BASE_URL
 from database.token_db import get_brexchange, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -435,14 +435,13 @@ class BrokerData:
         }
 
     def _post(self, endpoint: str, payload: Any) -> Any:
-        client = get_httpx_client()
         headers = {
             "Authorization": f"Bearer {self.auth_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
 
-        response = client.post(f"{BASE_URL}{endpoint}", headers=headers, json=payload)
+        response = request_with_circuit_breaker("POST", f"{BASE_URL}{endpoint}", headers=headers, json=payload)
         try:
             data = response.json()
         except Exception as exc:

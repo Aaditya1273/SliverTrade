@@ -1021,7 +1021,7 @@ class NodeExecutor:
 
         except Exception as e:
             self.log(f"Math expression failed: {e}", "error")
-            return {"status": "error", "message": str(e)}
+            return {"status": "error", "message": "Failed to evaluate expression"}
 
     def _safe_eval_math(self, expression: str) -> float:
         """Safely evaluate a mathematical expression
@@ -1144,7 +1144,7 @@ class NodeExecutor:
                     try:
                         var_value = json.loads(var_value)
                     except json.JSONDecodeError:
-                        pass
+                        logger.warning("Variable '%s' starts with JSON delimiters but is not valid JSON — keeping as string", var_name)
             self.context.set_variable(var_name, var_value)
             self.log(f"Set variable {var_name} = {var_value}")
         elif operation == "add":
@@ -1669,7 +1669,7 @@ class NodeExecutor:
                 "type": "ltp",
                 "symbol": symbol,
                 "exchange": exchange,
-                "error": str(e),
+                "error": "Failed to subscribe to LTP stream",
             }
 
     def execute_subscribe_quote(self, node_data: dict) -> dict:
@@ -1780,7 +1780,7 @@ class NodeExecutor:
                 "type": "quote",
                 "symbol": symbol,
                 "exchange": exchange,
-                "error": str(e),
+                "error": "Failed to subscribe to quote stream",
             }
 
     def execute_subscribe_depth(self, node_data: dict) -> dict:
@@ -1928,7 +1928,7 @@ class NodeExecutor:
                 "type": "depth",
                 "symbol": symbol,
                 "exchange": exchange,
-                "error": str(e),
+                "error": "Failed to subscribe to depth stream",
             }
 
     def execute_unsubscribe(self, node_data: dict) -> dict:
@@ -2321,14 +2321,14 @@ def execute_workflow(
             logs.append(
                 {
                     "time": datetime.now().isoformat(),
-                    "message": f"Error: {str(e)}",
+                    "message": f"Workflow execution failed: {e}",
                     "level": "error",
                 }
             )
             update_execution_status(execution.id, "failed", error=str(e))
             return {
                 "status": "error",
-                "message": str(e),
+                "message": "Workflow execution failed",
                 "execution_id": execution.id,
                 "logs": logs,
             }

@@ -1,6 +1,6 @@
 import os
 
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -35,8 +35,7 @@ def authenticate_broker(request_token):
             "request_token": request_token,
         }
         headers = {"Content-Type": "application/json"}
-        client = get_httpx_client()
-        response = client.post(url, json=data, headers=headers)
+        response = request_with_circuit_breaker("POST", url, json=data, headers=headers)
 
         if response.status_code == 200:
             response_data = response.json()

@@ -149,6 +149,24 @@ def get_security_headers():
     if permissions_policy:
         headers["Permissions-Policy"] = permissions_policy
 
+    # Strict-Transport-Security (HSTS)
+    # Tells browsers to only connect via HTTPS for the given max-age.
+    # ``includeSubDomains`` applies to all subdomains.
+    # ``preload`` allows submission to browser HSTS preload lists.
+    hsts_enabled = os.getenv("HSTS_ENABLED", "TRUE").upper() == "TRUE"
+    if hsts_enabled:
+        hsts_max_age = os.getenv("HSTS_MAX_AGE", "31536000")  # 1 year default
+        hsts_include_subdomains = os.getenv("HSTS_INCLUDE_SUBDOMAINS", "TRUE").upper() == "TRUE"
+        hsts_preload = os.getenv("HSTS_PRELOAD", "FALSE").upper() == "TRUE"
+
+        hsts_value = f"max-age={hsts_max_age}"
+        if hsts_include_subdomains:
+            hsts_value += "; includeSubDomains"
+        if hsts_preload:
+            hsts_value += "; preload"
+
+        headers["Strict-Transport-Security"] = hsts_value
+
     return headers
 
 

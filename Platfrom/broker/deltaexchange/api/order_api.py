@@ -13,7 +13,7 @@ from broker.deltaexchange.mapping.transform_data import (
     transform_modify_order_data,
 )
 from database.token_db import get_br_symbol, get_oa_symbol, get_symbol, get_token
-from utils.httpx_client import get_httpx_client
+from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -57,8 +57,6 @@ def get_api_response(endpoint, auth, method="GET", payload="", params=None):
     # Build full URL (include query string inline so the signed string matches exactly)
     url = get_url(endpoint)
     full_url = url + query_string if query_string else url
-
-    client = get_httpx_client()
     logger.debug(f"[DeltaExchange] {method.upper()} {full_url}")
 
     # Retry up to 3 times on HTTP 429 (rate limit) with exponential backoff + jitter.
@@ -72,15 +70,15 @@ def get_api_response(endpoint, auth, method="GET", payload="", params=None):
         try:
             m = method.upper()
             if m == "GET":
-                response = client.get(full_url, headers=headers)
+                response = request_with_circuit_breaker("GET", full_url, headers=headers)
             elif m == "POST":
-                response = client.post(url, headers=headers, content=body)
+                response = request_with_circuit_breaker("POST", url, headers=headers, content=body)
             elif m == "PUT":
-                response = client.put(url, headers=headers, content=body)
+                response = request_with_circuit_breaker("PUT", url, headers=headers, content=body)
             elif m == "DELETE":
-                response = client.request("DELETE", url, headers=headers, content=body)
+                response = request_with_circuit_breaker("DELETE", url, headers=headers, content=body)
             else:
-                response = client.request(m, url, headers=headers, content=body)
+                response = request_with_circuit_breaker(m, url, headers=headers, content=body)
         except Exception as e:
             logger.error(f"[DeltaExchange] Request error: {e}")
             return {"success": False, "error": {"code": "request_error", "message": str(e)}}

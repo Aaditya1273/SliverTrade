@@ -42,6 +42,7 @@ import asyncio
 import logging
 import threading
 import time
+import random
 from enum import Enum
 from functools import wraps
 from typing import (
@@ -296,6 +297,14 @@ class CircuitBreaker(Generic[T]):
                 self._state.value,
                 new_state.value,
             )
+            # Update Prometheus gauge (best-effort, no-op if metrics not initialised)
+            try:
+                from blueprints.metrics import circuit_breaker_set
+                circuit_breaker_set(self.name, new_state.value)
+            except ImportError:
+                pass
+            except Exception:
+                pass
         self._state = new_state
         self._last_state_change = time.monotonic()
 
@@ -342,3 +351,180 @@ def circuit_breaker(
         return wrapper
 
     return decorator
+
+
+# ── Retry with Exponential Backoff ─────────────────────────────────────
+
+
+def retry_with_backoff(
+    fn: Callable[..., T],
+    *args: Any,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    jitter: bool = True,
+    retryable_exceptions: tuple = (ConnectionError, TimeoutError, OSError),
+    **kwargs: Any,
+) -> tuple[T, int]:
+    """Call *fn* with exponential backoff on retryable exceptions.
+
+    Parameters
+    ----------
+    fn : callable
+        The function to execute.
+    max_retries : int
+        Maximum retry attempts (default 3).
+    base_delay : float
+        Initial delay in seconds (default 1.0).
+    max_delay : float
+        Maximum delay cap in seconds (default 30.0).
+    jitter : bool
+        Add random jitter to prevent thundering herd (default True).
+    retryable_exceptions : tuple
+        Exception types that trigger a retry (default ``(ConnectionError, TimeoutError, OSError)``).
+
+    Returns
+    -------
+    tuple
+        ``(result, total_attempts)`` where *result* is the return value of
+        *fn* and *total_attempts* is the number of attempts made (1 on
+        first-try success).
+
+    Raises
+    ------
+    Exception
+        The last exception if all retries are exhausted.
+    """
+    last_exc: Exception | None = None
+
+    for attempt in range(1, max_retries + 2):  # 1 initial + max_retries retries
+        try:
+            result = fn(*args, **kwargs)
+            return result, attempt
+        except retryable_exceptions as exc:
+            last_exc = exc
+            if attempt <= max_retries:
+                delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                if jitter:
+                    delay *= 0.5 + random.random() * 0.5  # ±50% jitter
+                logger.warning(
+                    "Retry %d/%d for %s failed: %s. Waiting %.2fs...",
+                    attempt, max_retries,
+                    getattr(fn, "__name__", "call"),
+                    exc, delay,
+                )
+                time.sleep(delay)
+
+    _raise_retry_exhausted(last_exc, max_retries, getattr(fn, "__name__", "call"))
+
+
+async def retry_with_backoff_async(
+    fn: Callable[..., Any],
+    *args: Any,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    jitter: bool = True,
+    retryable_exceptions: tuple = (ConnectionError, TimeoutError, OSError),
+    **kwargs: Any,
+) -> tuple[Any, int]:
+    """Async version of :func:`retry_with_backoff`."""
+    last_exc: Exception | None = None
+
+    for attempt in range(1, max_retries + 2):
+        try:
+            coro = fn(*args, **kwargs)
+            if asyncio.iscoroutine(coro) or asyncio.iscoroutinefunction(fn):
+                result = await coro
+            else:
+                result = coro
+            return result, attempt
+        except retryable_exceptions as exc:
+            last_exc = exc
+            if attempt <= max_retries:
+                delay = min(base_delay * (2 ** (attempt - 1)), max_delay)
+                if jitter:
+                    delay *= 0.5 + random.random() * 0.5
+                logger.warning(
+                    "Async retry %d/%d for %s failed: %s. Waiting %.2fs...",
+                    attempt, max_retries,
+                    getattr(fn, "__name__", "call"),
+                    exc, delay,
+                )
+                await asyncio.sleep(delay)
+
+    _raise_retry_exhausted(last_exc, max_retries, getattr(fn, "__name__", "call"))
+
+
+def _raise_retry_exhausted(exc: Exception | None, max_retries: int, name: str) -> None:
+    """Raise the last exception after exhausting all retries."""
+    from functools import partial
+
+    if exc is None:
+        raise RuntimeError(f"{name} failed after {max_retries + 1} attempts (no exception captured)")
+    logger.error(
+        "%s failed after %d attempts. Last error: %s",
+        name, max_retries + 1, exc,
+    )
+    raise exc
+
+
+# ── Circuit Breaker Registry ───────────────────────────────────────────
+# A global registry of named circuit breakers, used by the health endpoint
+# to report aggregate breaker states and by httpx_client to lazily create
+# per-broker breakers.
+
+_registry_lock = threading.Lock()
+_registry: dict[str, CircuitBreaker] = {}
+
+
+def get_circuit_breaker(
+    name: str,
+    failure_threshold: int = 5,
+    recovery_timeout: float = 30.0,
+    half_open_max_attempts: int = 3,
+) -> CircuitBreaker:
+    """Return an existing circuit breaker by *name*, or create a new one.
+
+    Thread-safe.  All parameters are only honoured on first creation;
+    subsequent calls with the same *name* return the existing breaker
+    regardless of the other arguments.
+    """
+    with _registry_lock:
+        if name not in _registry:
+            _registry[name] = CircuitBreaker(
+                name=name,
+                failure_threshold=failure_threshold,
+                recovery_timeout=recovery_timeout,
+                half_open_max_attempts=half_open_max_attempts,
+            )
+        return _registry[name]
+
+
+def get_all_breaker_stats() -> dict[str, dict[str, Any]]:
+    """Return a snapshot of every registered circuit breaker.
+
+    Used by the ``/health/api/circuit-breakers`` endpoint.
+    """
+    with _registry_lock:
+        return {name: breaker.stats() for name, breaker in _registry.items()}
+
+
+def reset_breaker(name: str) -> bool:
+    """Force-reset a circuit breaker by *name*.  Returns ``True`` if found."""
+    with _registry_lock:
+        breaker = _registry.get(name)
+        if breaker:
+            breaker.reset()
+            return True
+        return False
+
+
+def reset_all_breakers() -> int:
+    """Reset every registered circuit breaker.  Returns the number reset."""
+    with _registry_lock:
+        count = 0
+        for breaker in _registry.values():
+            breaker.reset()
+            count += 1
+        return count
