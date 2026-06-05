@@ -1,3 +1,5 @@
+<img width="1672" height="941" alt="ChatGPT Image Jun 5, 2026, 06_55_00 AM" src="https://github.com/user-attachments/assets/23a2c7de-d266-4f61-b04c-c9fc5760f66d" />
+
 # 🚀 SilverTrade AI
 ### AI-Powered Crypto Decision Engine
 
