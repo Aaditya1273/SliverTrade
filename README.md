@@ -97,7 +97,7 @@ SilverTrade integrates with existing exchanges instead of replacing them.
         [ Frontend UI ]
      (Next.js + v0 + Charts)
 
-     ```
+```
 
      ⚙️ Core Components
 🧩 Data Layer
