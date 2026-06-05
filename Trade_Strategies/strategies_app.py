@@ -130,7 +130,12 @@ def get_decision():
     # Try to use the strategy engine with real data first
     ohlcv = data.get("ohlcv")
     if ohlcv:
-        signal = engine.analyze(symbol, ohlcv)
+        try:
+            signal = engine.analyze(symbol, ohlcv)
+        except Exception as e:
+            app.logger.error(f"StrategyEngine.analyze() crashed in /decision: {e}")
+            return jsonify({"status": "error", "message": "Analysis engine error"}), 500
+
         if signal:
             with _signal_lock:
                 signal_history.insert(0, signal)
@@ -177,7 +182,12 @@ def generate_signal():
     else:
         using_mock = False
 
-    signal = engine.analyze(symbol, ohlcv, exchange)
+    try:
+        signal = engine.analyze(symbol, ohlcv, exchange)
+    except Exception as e:
+        app.logger.error(f"StrategyEngine.analyze() crashed in /signal: {e}")
+        return jsonify({"status": "error", "message": "Analysis engine error"}), 500
+
     if not signal:
         return jsonify({"status": "error", "message": "Insufficient data for analysis"}), 422
 

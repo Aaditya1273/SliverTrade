@@ -6,11 +6,15 @@ trading signals with confidence scores and reasoning.
 """
 
 import json
+import logging
 import os
+import traceback
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from indicators import atr, bollinger_bands, ema, macd, rsi, sma
+
+logger = logging.getLogger(__name__)
 
 
 class StrategyEngine:
@@ -18,6 +22,9 @@ class StrategyEngine:
 
     Uses a combination of technical indicators to evaluate market conditions
     and produce BUY/SELL/HOLD signals with confidence scores and explanations.
+
+    SAFETY: All indicator calculations are wrapped in try/except. If any
+    calculation fails, the engine returns a safe HOLD signal instead of crashing.
     """
 
     def __init__(self) -> None:
@@ -26,22 +33,42 @@ class StrategyEngine:
 
     def _safe_last(self, values: List[Optional[float]]) -> Optional[float]:
         """Get the last non-None value from a list."""
+        if not values:
+            return None
         for v in reversed(values):
             if v is not None:
                 return v
         return None
 
+    def _safe_div(self, numerator: float, denominator: float, default: float = 0.0) -> float:
+        """Safe division that returns default instead of ZeroDivisionError or NaN."""
+        if denominator == 0 or denominator is None:
+            return default
+        try:
+            result = numerator / denominator
+            if result != result:  # NaN check
+                return default
+            return result
+        except (ZeroDivisionError, TypeError, ValueError):
+            return default
+
     def _validate_data(self, ohlcv: List[Dict[str, Any]]) -> bool:
         """Validate that we have enough data for indicator calculations."""
-        if len(ohlcv) < 50:
+        if not ohlcv or len(ohlcv) < 50:
             return False
-        required = {"open", "high", "low", "close", "volume"}
-        return all(k in ohlcv[0] for k in required)
+        try:
+            required = {"open", "high", "low", "close", "volume"}
+            return all(k in ohlcv[0] for k in required)
+        except (IndexError, KeyError, TypeError):
+            return False
 
     def analyze(
         self, symbol: str, ohlcv: List[Dict[str, Any]], exchange: str = "CRYPTO"
     ) -> Optional[Dict[str, Any]]:
         """Analyze market data and return a trading signal.
+
+        SAFETY: Entire body wrapped in try/except. On any calculation error,
+        returns a safe HOLD signal instead of crashing the calling process.
 
         Args:
             symbol: Trading pair (e.g., BTC/USDT)
@@ -51,32 +78,97 @@ class StrategyEngine:
         Returns:
             Signal dict with decision, confidence, reasoning, or None if data insufficient
         """
+        try:
+            return self._analyze_impl(symbol, ohlcv, exchange)
+        except Exception as e:
+            logger.error(
+                "StrategyEngine.analyze() crashed for %s: %s",
+                symbol, traceback.format_exc(),
+            )
+            return {
+                "symbol": symbol,
+                "exchange": exchange,
+                "decision": "HOLD",
+                "confidence": 0.0,
+                "reasoning": f"Analysis engine encountered error: {str(e)}. Holding position.",
+                "price": 0.0,
+                "indicators": {},
+                "error": str(e),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+
+    def _analyze_impl(
+        self, symbol: str, ohlcv: List[Dict[str, Any]], exchange: str = "CRYPTO"
+    ) -> Optional[Dict[str, Any]]:
+        """Internal analysis implementation, split out so public analyze() wraps it in try/except."""
         if not self._validate_data(ohlcv):
             return None
 
         # Ensure data is sorted oldest → newest
-        if ohlcv[0].get("time", 0) > ohlcv[-1].get("time", 0):
-            ohlcv = list(reversed(ohlcv))
+        try:
+            if ohlcv[0].get("time", 0) > ohlcv[-1].get("time", 0):
+                ohlcv = list(reversed(ohlcv))
+        except (IndexError, TypeError):
+            return None
 
-        closes = [c["close"] for c in ohlcv]
-        highs = [c["high"] for c in ohlcv]
-        lows = [c["low"] for c in ohlcv]
-        opens = [c["open"] for c in ohlcv]
+        closes = [c.get("close", 0.0) for c in ohlcv]
+        highs = [c.get("high", 0.0) for c in ohlcv]
+        lows = [c.get("low", 0.0) for c in ohlcv]
         volumes = [c.get("volume", 0) for c in ohlcv]
 
-        # ── Calculate Indicators ──────────────────────────────────────
-        rsi_vals = rsi(closes, 14)
-        ema_fast = ema(closes, 9)
-        ema_slow = ema(closes, 21)
-        ema_50 = ema(closes, 50)
-        macd_line, signal_line, histogram = macd(closes)
-        bb_mid, bb_upper, bb_lower = bollinger_bands(closes)
-        atr_vals = atr(highs, lows, closes)
-        sma_20 = sma(closes, 20)
-        sma_50 = sma(closes, 50)
+        # ── Calculate Indicators (each wrapped individually) ──────────
+        rsi_vals: List[Optional[float]] = []
+        ema_fast: List[Optional[float]] = []
+        ema_slow: List[Optional[float]] = []
+        ema_50: List[Optional[float]] = []
+        macd_line: List[Optional[float]] = []
+        signal_line: List[Optional[float]] = []
+        bb_mid: List[Optional[float]] = []
+        bb_upper: List[Optional[float]] = []
+        bb_lower: List[Optional[float]] = []
+        atr_vals: List[Optional[float]] = []
+        sma_20: List[Optional[float]] = []
+        sma_50: List[Optional[float]] = []
+
+        try:
+            rsi_vals = rsi(closes, 14)
+        except Exception as e:
+            logger.warning("RSI calculation failed: %s", e)
+        try:
+            ema_fast = ema(closes, 9)
+        except Exception as e:
+            logger.warning("EMA(9) calculation failed: %s", e)
+        try:
+            ema_slow = ema(closes, 21)
+        except Exception as e:
+            logger.warning("EMA(21) calculation failed: %s", e)
+        try:
+            ema_50 = ema(closes, 50)
+        except Exception as e:
+            logger.warning("EMA(50) calculation failed: %s", e)
+        try:
+            macd_line, signal_line, _ = macd(closes)
+        except Exception as e:
+            logger.warning("MACD calculation failed: %s", e)
+        try:
+            bb_mid, bb_upper, bb_lower = bollinger_bands(closes)
+        except Exception as e:
+            logger.warning("Bollinger Bands failed: %s", e)
+        try:
+            atr_vals = atr(highs, lows, closes)
+        except Exception as e:
+            logger.warning("ATR calculation failed: %s", e)
+        try:
+            sma_20 = sma(closes, 20)
+        except Exception as e:
+            logger.warning("SMA(20) calculation failed: %s", e)
+        try:
+            sma_50 = sma(closes, 50)
+        except Exception as e:
+            logger.warning("SMA(50) calculation failed: %s", e)
 
         # ── Extract Latest Values ─────────────────────────────────────
-        latest_close = closes[-1]
+        latest_close = closes[-1] if closes else 0.0
         latest_rsi = self._safe_last(rsi_vals)
         latest_ema_fast = self._safe_last(ema_fast)
         latest_ema_slow = self._safe_last(ema_slow)
@@ -87,21 +179,17 @@ class StrategyEngine:
         prev_signal = self._safe_last(signal_line[-3:-1] if len(signal_line) > 2 else signal_line)
         latest_bb_upper = self._safe_last(bb_upper)
         latest_bb_lower = self._safe_last(bb_lower)
-        latest_bb_mid = self._safe_last(bb_mid)
         latest_atr = self._safe_last(atr_vals)
         latest_sma_20 = self._safe_last(sma_20)
         latest_sma_50 = self._safe_last(sma_50)
-        latest_volume = volumes[-1]
-        avg_volume = sum(volumes[-20:]) / 20 if len(volumes) >= 20 else sum(volumes) / len(volumes)
+        latest_volume = volumes[-1] if volumes else 0
+        avg_volume = self._safe_div(sum(volumes[-20:]), 20) if len(volumes) >= 20 else self._safe_div(sum(volumes), len(volumes)) if volumes else 0
         prev_close = closes[-2] if len(closes) > 1 else latest_close
 
         # ── Scoring System ────────────────────────────────────────────
         buy_score = 0
         sell_score = 0
         signals_found: List[str] = []
-        # Maximum possible score: each of the 7 indicator groups contributes up to N points
-        # 1. RSI: ±3, 2. EMA cross: ±2, 3. MACD: ±3 (1 + 2), 4. Bollinger: ±2,
-        # 5. Trend (SMA): ±2 (1+1), 6. Volume: ±1, 7. EMA 50: ±1  Total: 14
         max_score = 14
 
         # 1. RSI Analysis
@@ -137,7 +225,6 @@ class StrategyEngine:
                 sell_score += 1
                 signals_found.append("MACD below signal")
             if prev_macd is not None and prev_signal is not None:
-                # MACD crossover detection
                 if latest_macd > latest_signal and prev_macd <= prev_signal:
                     buy_score += 2
                     signals_found.append("MACD bullish crossover")
@@ -186,8 +273,8 @@ class StrategyEngine:
 
         # ── Generate Decision ─────────────────────────────────────────
         net_score = buy_score - sell_score
-        confidence_base = min(abs(net_score) / max_score * 100, 95)
-        volatility_factor = min((latest_atr / latest_close * 100) if latest_atr and latest_close else 0, 5)
+        confidence_base = min(self._safe_div(abs(net_score), max_score) * 100, 95)
+        volatility_factor = min(self._safe_div(latest_atr, latest_close, 0) * 100 if latest_atr and latest_close else 0, 5)
         confidence = min(confidence_base + volatility_factor, 99)
 
         if net_score >= 3:
@@ -222,7 +309,7 @@ class StrategyEngine:
                 "bb_upper": round(latest_bb_upper, 2) if latest_bb_upper else None,
                 "bb_lower": round(latest_bb_lower, 2) if latest_bb_lower else None,
                 "atr": round(latest_atr, 2) if latest_atr else None,
-                "volume_ratio": round(latest_volume / avg_volume, 2) if avg_volume > 0 else None,
+                "volume_ratio": round(self._safe_div(latest_volume, avg_volume), 2) if avg_volume > 0 else None,
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
