@@ -1,18 +1,25 @@
 """
 SilverTrade AI - Trade Strategies Application
 ==============================================
-AI-powered trading decision engine that analyzes market data using
-technical indicators and generates real trading signals.
+AI-powered trading decision engine that generates signals using a
+3-model ensemble (rule-based TA, Random Forest, LSTM).
 
-Endpoints:
-  POST /api/v1/decision  - Generate a trade decision from indicators
-  POST /api/v1/signal    - Fetch market data and generate a full signal
-  GET  /                 - Service health check
+Phase 3 Endpoints:
+  POST /api/v1/signal          - Generate a full AI signal
+  POST /api/v1/decision        - Analyze provided indicator data
+  GET  /api/v1/signals         - Paginated signal history
+  GET  /api/v1/signals/<id>    - Single signal detail
+  POST /api/v1/backtest        - Run backtest on historical data
+  GET  /api/v1/backtests       - Recent backtest results
+  GET  /api/v1/accuracy        - Signal accuracy statistics
+  GET  /api/v1/missed-opportunities - Missed profit opportunities
+  GET  /api/v1/health          - Service health
+  GET  /                       - Status
 """
 
 import json
+import logging
 import os
-import threading
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -27,27 +34,47 @@ app = Flask(__name__)
 CORS(app)
 
 engine = StrategyEngine()
-
-# In-memory signal history (production would use Redis/DB)
-signal_history: List[Dict[str, Any]] = []
-_signal_lock = threading.Lock()
-
+_initialised = False
+_outcome_tracker = None
 
 PLATFORM_HOST = os.getenv("SILVERTRADE_HOST", "http://platform:5000")
 PLATFORM_API_KEY = os.getenv("SILVERTRADE_API_KEY", "")
 
 
+def _ensure_initialised():
+    """Lazy initialise database and background jobs on first request."""
+    global _initialised, _outcome_tracker
+    if not _initialised:
+        try:
+            from database import init_db
+            init_db()
+            from outcome_tracker import OutcomeTracker
+            _outcome_tracker = OutcomeTracker()
+            _initialised = True
+            app.logger.info("Strategy Engine fully initialised")
+        except Exception as e:
+            app.logger.error("Initialisation error: %s", e)
+
+
+# ── Helpers ──────────────────────────────────────────────────────────
+
 def fetch_market_data(symbol: str, exchange: str = "CRYPTO") -> Optional[List[Dict[str, Any]]]:
-    """Fetch OHLCV data from the SilverTrade Platform API for analysis."""
+    """Fetch OHLCV data from the Platform API for analysis.
+
+    Fetches 7 days of 15m data to ensure we have enough candles
+    (>= 50 required) for indicator calculations and ML predictions.
+    """
     try:
         url = f"{PLATFORM_HOST}/api/v1/history"
+        now = datetime.now(timezone.utc)
+        start = now - timedelta(days=7)
         payload = {
             "apikey": PLATFORM_API_KEY,
             "symbol": symbol,
             "exchange": exchange,
             "interval": "15m",
-            "start_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-            "end_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+            "start_date": start.strftime("%Y-%m-%d"),
+            "end_date": now.strftime("%Y-%m-%d"),
         }
         response = requests.post(url, json=payload, timeout=30)
         data = response.json()
@@ -59,7 +86,6 @@ def fetch_market_data(symbol: str, exchange: str = "CRYPTO") -> Optional[List[Di
         if not ohlcv_data:
             return None
 
-        # Normalize to the format our engine expects
         candles = []
         for row in ohlcv_data:
             candles.append({
@@ -73,12 +99,52 @@ def fetch_market_data(symbol: str, exchange: str = "CRYPTO") -> Optional[List[Di
         return candles
 
     except Exception as e:
-        app.logger.error(f"Failed to fetch market data for {symbol}: {e}")
+        app.logger.error("Failed to fetch market data for %s: %s", symbol, e)
+        return None
+
+
+def fetch_historical_data(symbol: str, exchange: str, interval: str,
+                          start_date: str, end_date: str) -> Optional[List[Dict[str, Any]]]:
+    """Fetch historical OHLCV data with custom date range for backtesting."""
+    try:
+        url = f"{PLATFORM_HOST}/api/v1/history"
+        payload = {
+            "apikey": PLATFORM_API_KEY,
+            "symbol": symbol,
+            "exchange": exchange,
+            "interval": interval,
+            "start_date": start_date,
+            "end_date": end_date,
+        }
+        response = requests.post(url, json=payload, timeout=120)
+        data = response.json()
+
+        if data.get("status") == "error":
+            return None
+
+        ohlcv_data = data.get("data")
+        if not ohlcv_data:
+            return None
+
+        candles = []
+        for row in ohlcv_data:
+            candles.append({
+                "time": row.get("timestamp", 0),
+                "open": float(row.get("open", 0)),
+                "high": float(row.get("high", 0)),
+                "low": float(row.get("low", 0)),
+                "close": float(row.get("close", 0)),
+                "volume": float(row.get("volume", 0)),
+            })
+        return candles
+
+    except Exception as e:
+        app.logger.error("Failed to fetch historical data: %s", e)
         return None
 
 
 def generate_mock_ohlcv() -> List[Dict[str, Any]]:
-    """Generate synthetic OHLCV data for demo/testing when platform is unavailable."""
+    """Generate synthetic OHLCV data for demo when platform is unavailable."""
     import random
     base_price = 50000
     candles = []
@@ -100,124 +166,330 @@ def generate_mock_ohlcv() -> List[Dict[str, Any]]:
     return candles
 
 
-def get_mock_indicator_data(symbol: str) -> Dict[str, Any]:
-    """Generate mock indicator data for demo purposes."""
-    import random
-    return {
-        "rsi": random.uniform(25, 75),
-        "ema_9": random.uniform(48000, 52000),
-        "ema_21": random.uniform(47500, 51500),
-        "macd": random.uniform(-200, 200),
-        "signal": random.uniform(-150, 150),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+# ── Signal Generation ────────────────────────────────────────────────
+
+@app.route("/api/v1/signal", methods=["POST"])
+def generate_signal():
+    """Fetch market data and generate a full AI signal with 3-model ensemble.
+
+    Body:
+      - symbol: Trading pair (default: BTC/USDT)
+      - exchange: Exchange (default: CRYPTO)
+    """
+    _ensure_initialised()
+    data = request.get_json(silent=True) or {}
+    symbol = data.get("symbol", "BTC/USDT")
+    exchange = data.get("exchange", "CRYPTO")
+
+    ohlcv = fetch_market_data(symbol, exchange)
+    using_mock = False
+    if not ohlcv:
+        ohlcv = generate_mock_ohlcv()
+        using_mock = True
+
+    try:
+        signal = engine.analyze(symbol, ohlcv, exchange)
+    except Exception as e:
+        app.logger.error("Engine crashed in /signal: %s", e)
+        return jsonify({"status": "error", "message": "Analysis engine error"}), 500
+
+    if not signal:
+        return jsonify({"status": "error", "message": "Insufficient data"}), 422
+
+    signal["mock_data"] = using_mock
+    signal["id"] = str(uuid.uuid4())[:8]
+
+    # Persist to database
+    try:
+        from database import insert_signal, add_pending_outcome
+        insert_signal(signal)
+        # Schedule outcome evaluation (1 hour later)
+        add_pending_outcome(signal, check_after_minutes=60)
+    except Exception as e:
+        app.logger.warning("Failed to persist signal: %s", e)
+
+    return jsonify({"status": "success", "data": signal})
 
 
 @app.route("/api/v1/decision", methods=["POST"])
 def get_decision():
-    """Analyze indicator data and return a trading decision.
-
-    Accepts indicator values in the request body and runs the strategy
-    engine to produce a BUY/SELL/HOLD signal with confidence score.
-    """
+    """Analyze indicator data and return a trading decision."""
+    _ensure_initialised()
     data = request.get_json(silent=True)
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
     symbol = data.get("symbol", "BTC/USDT")
-    indicators = data.get("indicators", {})
-
-    # Try to use the strategy engine with real data first
     ohlcv = data.get("ohlcv")
+
     if ohlcv:
         try:
             signal = engine.analyze(symbol, ohlcv)
         except Exception as e:
-            app.logger.error(f"StrategyEngine.analyze() crashed in /decision: {e}")
-            return jsonify({"status": "error", "message": "Analysis engine error"}), 500
+            app.logger.error("Engine crashed in /decision: %s", e)
+            return jsonify({"status": "error", "message": "Analysis error"}), 500
 
         if signal:
-            with _signal_lock:
-                signal_history.insert(0, signal)
-            return jsonify({
-                "status": "success",
-                "data": signal,
-            })
+            signal["id"] = str(uuid.uuid4())[:8]
+            try:
+                from database import insert_signal, add_pending_outcome
+                insert_signal(signal)
+                add_pending_outcome(signal, check_after_minutes=60)
+            except Exception:
+                pass
+            return jsonify({"status": "success", "data": signal})
 
-    # Fallback: use provided indicators or generate mock
-    if indicators:
-        decision = _predict_from_indicators(indicators)
-        decision["symbol"] = symbol
-        decision["timestamp"] = datetime.now(timezone.utc).isoformat()
-        return jsonify({
-            "status": "success",
-            "data": decision,
-        })
-
-    return jsonify({"error": "No indicator data or OHLCV provided"}), 400
-
-
-@app.route("/api/v1/signal", methods=["POST"])
-def generate_signal():
-    """Fetch market data and generate a full AI signal.
-
-    Body parameters:
-      - symbol: Trading pair (default: BTC/USDT)
-      - exchange: Exchange name (default: CRYPTO)
-
-    Fetches OHLCV data from the Platform API and runs the strategy engine.
-    Falls back to mock data if platform is unavailable.
-    """
-    data = request.get_json(silent=True) or {}
-    symbol = data.get("symbol", "BTC/USDT")
-    exchange = data.get("exchange", "CRYPTO")
-
-    # Try fetching real market data
-    ohlcv = fetch_market_data(symbol, exchange)
-
-    if not ohlcv:
-        # Fallback to mock data for demo
-        ohlcv = generate_mock_ohlcv()
-        using_mock = True
-    else:
-        using_mock = False
-
-    try:
-        signal = engine.analyze(symbol, ohlcv, exchange)
-    except Exception as e:
-        app.logger.error(f"StrategyEngine.analyze() crashed in /signal: {e}")
-        return jsonify({"status": "error", "message": "Analysis engine error"}), 500
-
-    if not signal:
-        return jsonify({"status": "error", "message": "Insufficient data for analysis"}), 422
-
-    signal["mock_data"] = using_mock
-    signal["id"] = str(uuid.uuid4())[:8]
-    with _signal_lock:
-        signal_history.insert(0, signal)
-
-    return jsonify({
-        "status": "success",
-        "data": signal,
-    })
+    return jsonify({"error": "No OHLCV data provided"}), 400
 
 
 @app.route("/api/v1/signals", methods=["GET"])
 def get_signals():
-    """Get recent signal history."""
-    limit = min(int(request.args.get("limit", 20)), 100)
-    with _signal_lock:
-        signals_snapshot = list(signal_history[:limit])
-    return jsonify({
-        "status": "success",
-        "count": len(signals_snapshot),
-        "signals": signals_snapshot,
-    })
+    """Get paginated signal history from database.
 
+    Query params:
+      - limit: max results (default 20, max 100)
+      - offset: pagination offset (default 0)
+    """
+    _ensure_initialised()
+    limit = min(int(request.args.get("limit", 20)), 100)
+    offset = int(request.args.get("offset", 0))
+
+    try:
+        from database import get_signals
+        signals = get_signals(limit=limit, offset=offset)
+        return jsonify({
+            "status": "success",
+            "count": len(signals),
+            "signals": signals,
+        })
+    except Exception as e:
+        app.logger.error("Failed to fetch signals: %s", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/signals/<signal_id>", methods=["GET"])
+def get_signal(signal_id: str):
+    """Get a single signal by ID."""
+    _ensure_initialised()
+    try:
+        from database import get_signal_by_id
+        signal = get_signal_by_id(signal_id)
+        if not signal:
+            return jsonify({"status": "error", "message": "Signal not found"}), 404
+        return jsonify({"status": "success", "data": signal})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Backtesting ──────────────────────────────────────────────────────
+
+@app.route("/api/v1/backtest", methods=["POST"])
+def run_backtest():
+    """Run a backtest on historical data.
+
+    Body:
+      - symbol: Trading pair
+      - exchange: Exchange name
+      - interval: Candle interval (default: 15m)
+      - start_date: Start date (YYYY-MM-DD)
+      - end_date: End date (YYYY-MM-DD)
+      - capital: Initial capital (default: 100000)
+      - position_size_pct: % per trade (default: 10)
+      - stop_loss_pct: Stop loss % (default: 2)
+      - take_profit_pct: Take profit % (default: 5)
+    """
+    _ensure_initialised()
+    data = request.get_json(silent=True) or {}
+
+    symbol = data.get("symbol", "BTC/USDT")
+    exchange = data.get("exchange", "CRYPTO")
+    interval = data.get("interval", "15m")
+    start_date = data.get("start_date", "")
+    end_date = data.get("end_date", "")
+    capital = float(data.get("capital", 100000))
+    position_size_pct = float(data.get("position_size_pct", 10))
+    stop_loss_pct = float(data.get("stop_loss_pct", 2))
+    take_profit_pct = float(data.get("take_profit_pct", 5))
+
+    if not start_date or not end_date:
+        return jsonify({"status": "error", "message": "start_date and end_date required"}), 400
+
+    # Fetch historical data
+    ohlcv = fetch_historical_data(symbol, exchange, interval, start_date, end_date)
+    if not ohlcv:
+        return jsonify({"status": "error", "message": "No data returned from Platform API"}), 422
+
+    # Run backtest
+    try:
+        from backtester import Backtester
+        backtester = Backtester(engine)
+        result = backtester.run(
+            ohlcv=ohlcv,
+            symbol=symbol,
+            exchange=exchange,
+            initial_capital=capital,
+            position_size_pct=position_size_pct,
+            stop_loss_pct=stop_loss_pct,
+            take_profit_pct=take_profit_pct,
+        )
+
+        metrics = result.to_dict()
+
+        # Save to DB
+        try:
+            from database import save_backtest_result
+            bt_config = {
+                "start_date": start_date,
+                "end_date": end_date,
+                "initial_capital": capital,
+                "position_size_pct": position_size_pct,
+                "stop_loss_pct": stop_loss_pct,
+                "take_profit_pct": take_profit_pct,
+            }
+            save_backtest_result(symbol, exchange, interval, metrics, bt_config)
+        except Exception as e:
+            app.logger.warning("Failed to save backtest result: %s", e)
+
+        return jsonify({
+            "status": "success",
+            "data": metrics,
+        })
+
+    except Exception as e:
+        app.logger.error("Backtest failed: %s", e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/backtests", methods=["GET"])
+def get_backtests():
+    """Get recent backtest results."""
+    _ensure_initialised()
+    try:
+        from database import get_backtest_results
+        results = get_backtest_results(limit=20)
+        return jsonify({"status": "success", "data": results})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Accuracy & Missed Opportunities ──────────────────────────────────
+
+@app.route("/api/v1/accuracy", methods=["GET"])
+def get_accuracy():
+    """Get signal accuracy statistics.
+
+    Returns overall win rate, per-decision breakdown, per-symbol breakdown.
+    """
+    _ensure_initialised()
+    try:
+        from database import get_outcome_summary
+        summary = get_outcome_summary()
+        return jsonify({"status": "success", "data": summary})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/missed-opportunities", methods=["GET"])
+def get_missed_opportunities():
+    """Get missed profit opportunities.
+
+    Query params:
+      - days: lookback period (default: 7)
+      - limit: max results (default: 50)
+    """
+    _ensure_initialised()
+    days = int(request.args.get("days", 7))
+    limit = min(int(request.args.get("limit", 50)), 100)
+
+    try:
+        from database import get_missed_opportunities
+        result = get_missed_opportunities(days=days, limit=limit)
+        return jsonify({"status": "success", "data": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Model Training ───────────────────────────────────────────────────
+
+@app.route("/api/v1/train/rf", methods=["POST"])
+def train_rf():
+    """Train the Random Forest model on historical data.
+
+    Body:
+      - symbol: Trading pair (default: BTC/USDT)
+      - exchange: Exchange (default: CRYPTO)
+      - days: Days of history (default: 365)
+    """
+    _ensure_initialised()
+    data = request.get_json(silent=True) or {}
+    symbol = data.get("symbol", "BTC/USDT")
+    exchange = data.get("exchange", "CRYPTO")
+    days = int(data.get("days", 365))
+
+    from datetime import timedelta
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+
+    ohlcv = fetch_historical_data(
+        symbol, exchange, "15m",
+        start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"),
+    )
+    if not ohlcv:
+        return jsonify({"status": "error", "message": "No data returned"}), 422
+
+    try:
+        from ml.random_forest_model import train_random_forest
+        result = train_random_forest(ohlcv)
+        if "error" in result:
+            return jsonify({"status": "error", "message": result["error"]}), 500
+        return jsonify({"status": "success", "data": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/train/lstm", methods=["POST"])
+def train_lstm():
+    """Train the LSTM model on historical data.
+
+    Body:
+      - symbol: Trading pair (default: BTC/USDT)
+      - exchange: Exchange (default: CRYPTO)
+      - days: Days of history (default: 365)
+    """
+    _ensure_initialised()
+    data = request.get_json(silent=True) or {}
+    symbol = data.get("symbol", "BTC/USDT")
+    exchange = data.get("exchange", "CRYPTO")
+    days = int(data.get("days", 365))
+
+    from datetime import timedelta
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+
+    ohlcv = fetch_historical_data(
+        symbol, exchange, "15m",
+        start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d"),
+    )
+    if not ohlcv:
+        return jsonify({"status": "error", "message": "No data returned"}), 422
+
+    try:
+        from ml.lstm_train import train_lstm
+        result = train_lstm(ohlcv)
+        if "error" in result:
+            return jsonify({"status": "error", "message": result["error"]}), 500
+        return jsonify({"status": "success", "data": result})
+    except ImportError:
+        return jsonify({"status": "error", "message": "PyTorch not installed. Install with: pip install torch"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Health ───────────────────────────────────────────────────────────
 
 @app.route("/api/v1/health", methods=["GET"])
 def health_check():
-    """Service health check endpoint."""
+    """Service health check."""
     platform_status = "unknown"
     try:
         r = requests.get(f"{PLATFORM_HOST}/api/v1/health", timeout=5)
@@ -225,13 +497,19 @@ def health_check():
     except Exception:
         platform_status = "unreachable"
 
+    models_status = {
+        "random_forest": "trained" if (engine._rf_model and engine._rf_model.is_trained) else "not_trained",
+        "lstm": "trained" if (engine._lstm_model and engine._lstm_model.is_trained) else "not_trained",
+        "llm_reasoning": "available" if (engine._reasoning_engine and engine._reasoning_engine.available) else "unavailable",
+    }
+
     return jsonify({
         "status": "online",
         "service": "SilverTrade AI Strategy Engine",
         "version": engine.version,
         "model": engine.name,
         "platform": platform_status,
-        "signals_generated": len(signal_history),  # not critical, no lock needed
+        "models": models_status,
     })
 
 
@@ -245,67 +523,9 @@ def status():
     })
 
 
-def _predict_from_indicators(indicator_data: dict) -> dict:
-    """Generate a trading decision from indicator values using rule-based logic."""
-    rsi = indicator_data.get("rsi", 50)
-    ema_fast = indicator_data.get("ema_9", 0)
-    ema_slow = indicator_data.get("ema_21", 0)
-
-    confidence = 50
-    decision = "HOLD"
-    reasoning_parts = []
-
-    # RSI Analysis
-    if rsi < 30:
-        confidence += 35
-        reasoning_parts.append(f"RSI deeply oversold ({rsi:.1f})")
-    elif rsi < 40:
-        confidence += 15
-        reasoning_parts.append(f"RSI approaching oversold ({rsi:.1f})")
-    elif rsi > 70:
-        confidence += 35
-        reasoning_parts.append(f"RSI overbought ({rsi:.1f})")
-    elif rsi > 60:
-        confidence += 15
-        reasoning_parts.append(f"RSI elevated ({rsi:.1f})")
-
-    # EMA Trend Analysis
-    if ema_fast > ema_slow:
-        confidence += 15
-        reasoning_parts.append("bullish EMA alignment")
-    elif ema_fast < ema_slow:
-        confidence -= 15
-        reasoning_parts.append("bearish EMA alignment")
-
-    # Determine final decision
-    if (rsi < 30 and ema_fast > ema_slow) or (rsi < 40 and ema_fast > ema_slow):
-        decision = "BUY"
-        if not reasoning_parts:
-            reasoning_parts.append("oversold bounce potential")
-    elif (rsi > 70 and ema_fast < ema_slow) or (rsi > 60 and ema_fast < ema_slow):
-        decision = "SELL"
-        if not reasoning_parts:
-            reasoning_parts.append("overbought reversal risk")
-    elif ema_fast > ema_slow:
-        decision = "BUY"
-        reasoning_parts.append("moderate bullish trend")
-    elif ema_fast < ema_slow:
-        decision = "SELL"
-        reasoning_parts.append("moderate bearish trend")
-    else:
-        reasoning_parts.append("neutral market conditions")
-
-    confidence = max(min(confidence, 99), 10)
-
-    return {
-        "decision": decision,
-        "confidence": round(confidence, 2),
-        "reasoning": ". ".join(part.capitalize() for part in reasoning_parts) if reasoning_parts else "Neutral market conditions.",
-    }
-
-
 if __name__ == "__main__":
+    _ensure_initialised()
     port = int(os.getenv("STRATEGY_PORT", 5007))
     debug = os.getenv("FLASK_DEBUG", "False").lower() in ("true", "1", "t")
-    print(f"SilverTrade AI Strategy Engine starting on port {port}")
+    app.logger.info("SilverTrade AI Strategy Engine starting on port %d", port)
     app.run(host="0.0.0.0", port=port, debug=debug)

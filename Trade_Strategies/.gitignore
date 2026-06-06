@@ -75,5 +75,6 @@ target/
 
 .env
 .venv
+.venv_py312
 .idea
 .vscode

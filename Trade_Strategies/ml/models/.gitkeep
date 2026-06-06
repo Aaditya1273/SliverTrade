@@ -1,0 +1,2 @@
+Model checkpoints (Random Forest .pkl, LSTM .pt) go here.
+Trained via POST /api/v1/train/rf and POST /api/v1/train/lstm.
