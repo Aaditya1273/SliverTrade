@@ -1,0 +1,340 @@
+# =============================================================================
+# SilverTrade AI — Broker Operations Alerting Rules
+# =============================================================================
+# Alerts for broker API degradation based on custom metrics from Phase 5:
+#   - circuit_breaker_state (0=CLOSED, 1=HALF_OPEN, 2=OPEN)
+#   - broker_api_requests_total (Counter: broker, method, status)
+#   - broker_api_latency_seconds (Histogram: broker, method)
+#   - active_ws_connections (Gauge: broker)
+# =============================================================================
+#
+# These alerts fire when broker connectivity, latency, or error rates cross
+# thresholds. They complement the existing service-down.yml (infra-level).
+#
+# Dependencies: Prometheus scrapes platform:5000/metrics (see prometheus.yml)
+# =============================================================================
+
+groups:
+  # ──────────────────────────────────────────────────────────────────────────
+  # Group: Circuit Breaker Alerts
+  # Fires when broker API calls start failing and the circuit opens.
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: silvertrade-broker-circuit-breakers
+    interval: 15s
+    rules:
+      # ── Circuit Breaker Open ─────────────────────────────────────────────
+      - alert: BrokerCircuitBreakerOpen
+        expr: circuit_breaker_state == 2
+        for: 1m
+        labels:
+          severity: critical
+          service: platform
+          broker: '{{ $labels.breaker }}'
+        annotations:
+          summary: "Broker '{{ $labels.breaker }}' circuit breaker is OPEN"
+          description: >
+            Circuit breaker for {{ $labels.breaker }} has been OPEN for >1 minute.
+            All API calls to this broker are being rejected without attempting
+            the network request.
+          action: >
+            1. Check broker API status: docker compose logs platform | grep -i "{{ $labels.breaker }}"
+            2. Verify broker API credentials are valid
+            3. Reset circuit breaker via: curl -X POST http://platform:5000/health/api/circuit-breakers/{{ $labels.breaker }}/reset
+            4. If persistent, contact broker support
+
+      # ── Circuit Breaker Stuck in Probation ──────────────────────────────
+      - alert: BrokerCircuitBreakerHalfOpen
+        expr: circuit_breaker_state == 1
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.breaker }}'
+        annotations:
+          summary: "Broker '{{ $labels.breaker }}' circuit breaker stuck in HALF_OPEN"
+          description: >
+            Circuit breaker for {{ $labels.breaker }} has been in HALF_OPEN
+            (probation) for >5 minutes. Recovery attempts are failing.
+            This may indicate intermittent connectivity issues.
+          action: >
+            1. Monitor broker error rate in Grafana
+            2. Check for rate limiting from broker API
+            3. Review recent broker API response times
+
+      # ── Multiple Brokers Down ───────────────────────────────────────────
+      - alert: MultipleBrokersDown
+        expr: count(circuit_breaker_state == 2) > 2
+        for: 2m
+        labels:
+          severity: critical
+          service: platform
+        annotations:
+          summary: "Multiple broker circuit breakers are OPEN ({{ $value }})"
+          description: >
+            {{ $value }} broker circuit breakers are OPEN. This may indicate
+            a platform-wide issue (network, DNS, SSL, or API key rotation).
+          action: >
+            1. Check network connectivity: ping each broker API endpoint
+            2. Verify SSL certificates are valid
+            3. Check for DNS resolution issues
+            4. Review if API keys were rotated recently
+            5. Check platform logs for common error patterns
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Group: Broker Error Rate Alerts
+  # Fires when broker APIs return elevated 4xx/5xx status codes.
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: silvertrade-broker-error-rates
+    interval: 15s
+    rules:
+      # ── Elevated Error Rate ─────────────────────────────────────────────
+      - alert: BrokerElevatedErrorRate
+        expr: >
+          sum(rate(broker_api_requests_total{status=~"5.."}[5m])) by (broker)
+          /
+          sum(rate(broker_api_requests_total[5m])) by (broker)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Broker '{{ $labels.broker }}' error rate >5%"
+          description: >
+            Broker {{ $labels.broker }} has a {{ $value | humanizePercentage }}
+            5xx error rate over the last 5 minutes (threshold: 5%).
+          action: >
+            1. Open Grafana Broker Operations dashboard for {{ $labels.broker }}
+            2. Check if broker API is under maintenance
+            3. Review rate limiting: are we hitting API limits?
+            4. Check failed request patterns in logs
+
+      # ── Critical Error Rate ─────────────────────────────────────────────
+      - alert: BrokerCriticalErrorRate
+        expr: >
+          sum(rate(broker_api_requests_total{status=~"5.."}[5m])) by (broker)
+          /
+          sum(rate(broker_api_requests_total[5m])) by (broker)
+          > 0.15
+        for: 3m
+        labels:
+          severity: critical
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Broker '{{ $labels.broker }}' error rate >15%"
+          description: >
+            Broker {{ $labels.broker }} has a {{ $value | humanizePercentage }}
+            5xx error rate over the last 3 minutes (threshold: 15%).
+            This broker is effectively non-functional.
+          action: >
+            1. IMMEDIATE: Stop order flow to {{ $labels.broker }}
+            2. Check broker status page / API documentation
+            3. Route orders through alternate broker if available
+            4. Open incident ticket with broker support
+
+      # ── Sudden Error Spike ──────────────────────────────────────────────
+      - alert: BrokerErrorSpike
+        expr: >
+          (
+            sum(increase(broker_api_requests_total{status=~"5.."}[15m])) by (broker)
+            -
+            sum(increase(broker_api_requests_total{status=~"5.."}[1h] offset 15m)) by (broker)
+          )
+          /
+          sum(increase(broker_api_requests_total{status=~"5.."}[1h] offset 15m)) by (broker)
+          > 0.5
+        and
+          sum(increase(broker_api_requests_total{status=~"5.."}[15m])) by (broker)
+          > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Sudden spike in broker '{{ $labels.broker }}' errors"
+          description: >
+            Error count for {{ $labels.broker }} has increased by
+            {{ $value | humanizePercentage }} compared to the previous hour.
+            This may indicate a recent change or incident.
+          action: >
+            1. Check if a deployment happened recently
+            2. Review recent changes to broker configuration
+            3. Verify API key and token validity
+            4. Check broker API rate limit headers
+
+      # ── High 4xx Rate (Client Errors) ──────────────────────────────────
+      - alert: BrokerHighClientErrorRate
+        expr: >
+          sum(rate(broker_api_requests_total{status=~"4.."}[5m])) by (broker)
+          /
+          sum(rate(broker_api_requests_total[5m])) by (broker)
+          > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Broker '{{ $labels.broker }}' 4xx rate >10%"
+          description: >
+            Broker {{ $labels.broker }} has a {{ $value | humanizePercentage }}
+            4xx rate over the last 5 minutes (threshold: 10%).
+            High client error rates indicate auth issues or invalid requests.
+          action: >
+            1. Check broker authentication credentials
+            2. Verify API key has not expired or been revoked
+            3. Review request payload format for recent API changes
+            4. Check broker API version compatibility
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Group: Broker Latency Alerts
+  # Fires when broker API response times degrade.
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: silvertrade-broker-latency
+    interval: 15s
+    rules:
+      # ── High Latency ────────────────────────────────────────────────────
+      - alert: BrokerHighLatency
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(broker_api_latency_seconds_bucket[5m])) by (le, broker)
+          ) > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Broker '{{ $labels.broker }}' P95 latency >3s"
+          description: >
+            Broker {{ $labels.broker }} has P95 latency of {{ $value | humanizeDuration }}
+            over the last 5 minutes (threshold: 3s).
+          action: >
+            1. Check broker API status page for reported issues
+            2. Monitor if latency is trending up or stable
+            3. Review network path to broker API (traceroute)
+            4. Consider enabling circuit breaker if latency persists
+
+      # ── Critical Latency ────────────────────────────────────────────────
+      - alert: BrokerCriticalLatency
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(broker_api_latency_seconds_bucket[5m])) by (le, broker)
+          ) > 8
+        for: 3m
+        labels:
+          severity: critical
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Broker '{{ $labels.broker }}' P95 latency >8s"
+          description: >
+            Broker {{ $labels.broker }} has P95 latency of {{ $value | humanizeDuration }}
+            over the last 3 minutes (threshold: 8s). Orders to this broker
+            are severely delayed.
+          action: >
+            1. IMMEDIATE: Route orders away from {{ $labels.broker }}
+            2. Check if broker is experiencing an outage
+            3. Verify network connectivity and DNS resolution
+            4. Open incident ticket with broker support
+
+      # ── Latency Spike ───────────────────────────────────────────────────
+      - alert: BrokerLatencySpike
+        expr: >
+          (
+            histogram_quantile(0.95,
+              sum(rate(broker_api_latency_seconds_bucket[5m])) by (le, broker)
+            )
+            /
+            histogram_quantile(0.50,
+              sum(rate(broker_api_latency_seconds_bucket[5m] offset 30m)) by (le, broker)
+            )
+          ) > 3
+        and
+          histogram_quantile(0.95,
+            sum(rate(broker_api_latency_seconds_bucket[5m])) by (le, broker)
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "Sudden latency spike for broker '{{ $labels.broker }}'"
+          description: >
+            P95 latency for {{ $labels.broker }} is {{ $value | humanizeDuration }} —
+            >3x the median latency from 30 minutes ago.
+          action: >
+            1. Check for recent deployments or configuration changes
+            2. Review broker API response time trend
+            3. Verify no network routing changes occurred
+            4. Check if broker is under heavy load from all clients
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Group: Broker Availability Alerts
+  # Fires when brokers go silent or WebSocket connections drop.
+  # ──────────────────────────────────────────────────────────────────────────
+  - name: silvertrade-broker-availability
+    interval: 15s
+    rules:
+      # ── No Broker Traffic ───────────────────────────────────────────────
+      - alert: BrokerNoTraffic
+        expr: >
+          sum(increase(broker_api_requests_total[15m])) by (broker) == 0
+        for: 15m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "No API traffic to broker '{{ $labels.broker }}' for 15m"
+          description: >
+            There have been zero API calls to {{ $labels.broker }} in the last
+            15 minutes. This may indicate a routing issue or silent failure.
+          action: >
+            1. Check if orders are being routed to {{ $labels.broker }}
+            2. Verify broker is selected in user configurations
+            3. Check for upstream routing changes
+            4. Verify broker authentication is working
+
+      # ── WebSocket Connections Dropped ───────────────────────────────────
+      - alert: BrokerWSDisconnected
+        expr: active_ws_connections < 1
+        for: 2m
+        labels:
+          severity: warning
+          service: platform
+          broker: '{{ $labels.broker }}'
+        annotations:
+          summary: "No WebSocket connections to broker '{{ $labels.broker }}'"
+          description: >
+            Active WebSocket connections to {{ $labels.broker }} have dropped to zero
+            for >2 minutes. Market data from this broker may be stale.
+          action: >
+            1. Check WebSocket proxy logs: docker compose logs websocket
+            2. Verify broker WebSocket endpoint is reachable
+            3. Restart WebSocket proxy if necessary
+            4. Check if broker changed their WebSocket API
+
+      # ── All Brokers Disconnected ────────────────────────────────────────
+      - alert: AllBrokersDisconnected
+        expr: sum(active_ws_connections) == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: platform
+        annotations:
+          summary: "All WebSocket connections lost"
+          description: >
+            All WebSocket connections to every broker have dropped to zero.
+            No real-time market data is being received. This is a critical
+            incident requiring immediate attention.
+          action: >
+            1. IMMEDIATE: Check WebSocket proxy container
+            2. Verify network connectivity to broker endpoints
+            3. Check for SSL certificate issues
+            4. Review WebSocket proxy logs for error patterns
+            5. Restart WebSocket proxy: docker compose restart websocket_proxy

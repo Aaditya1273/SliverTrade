@@ -1,0 +1,606 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "SilverTrade AI — Broker Operations",
+  "uid": "silvertrade-broker-operations",
+  "version": 1,
+  "schemaVersion": 39,
+  "tags": ["silvertrade", "broker", "production"],
+  "timezone": "browser",
+  "editable": false,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Brokers Healthy",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "count(circuit_breaker_state == 0)",
+          "legendFormat": "CLOSED"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "orange", "value": 1},
+              {"color": "green", "value": 3}
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "description": "Number of circuit breakers in CLOSED (healthy) state"
+    },
+    {
+      "id": 2,
+      "title": "Brokers Degraded",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 3, "y": 0},
+      "targets": [
+        {
+          "expr": "count(circuit_breaker_state == 1)",
+          "legendFormat": "HALF_OPEN"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 3}
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "description": "Number of circuit breakers in HALF_OPEN (probation) state"
+    },
+    {
+      "id": 3,
+      "title": "Brokers Down",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 6, "y": 0},
+      "targets": [
+        {
+          "expr": "count(circuit_breaker_state == 2)",
+          "legendFormat": "OPEN"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 2}
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "description": "Number of circuit breakers in OPEN (failed) state"
+    },
+    {
+      "id": 4,
+      "title": "Active WS Connections",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 9, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(active_ws_connections)",
+          "legendFormat": "Total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 50},
+              {"color": "red", "value": 100}
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "description": "Total active WebSocket connections across all brokers"
+    },
+    {
+      "id": 5,
+      "title": "Total API Calls (24h)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(increase(broker_api_requests_total[24h]))",
+          "legendFormat": "Total"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "none"
+        }
+      },
+      "description": "Total broker API calls in the last 24 hours"
+    },
+    {
+      "id": 6,
+      "title": "Avg Latency (P50)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 15, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(broker_api_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 5}
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "description": "P50 (median) latency across all broker API calls"
+    },
+    {
+      "id": 7,
+      "title": "P95 Latency",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 3, "x": 18, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(broker_api_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 2},
+              {"color": "red", "value": 10}
+            ]
+          },
+          "unit": "s"
+        }
+      },
+      "description": "P95 latency across all broker API calls"
+    },
+    {
+      "id": 8,
+      "title": "Circuit Breaker State by Broker",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 4},
+      "targets": [
+        {
+          "expr": "circuit_breaker_state",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{breaker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 1},
+              {"color": "red", "value": 2}
+            ]
+          },
+          "mappings": [
+            {"type": "value", "value": "0", "text": "CLOSED"},
+            {"type": "value", "value": "1", "text": "HALF_OPEN"},
+            {"type": "value", "value": "2", "text": "OPEN"}
+          ],
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "value": "Value"},
+            "properties": [{"id": "custom.displayMode", "value": "color-background"}]
+          }
+        ]
+      },
+      "description": "Current circuit breaker state for each broker. Green=CLOSED, Orange=HALF_OPEN, Red=OPEN.",
+      "transformations": [
+        {"id": "organize", "options": {"excludeByName": {}, "indexByName": {}, "renameByName": {"breaker": "Broker", "Value": "State"}}}
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Circuit Breaker State History",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 18, "x": 6, "y": 4},
+      "targets": [
+        {
+          "expr": "circuit_breaker_state",
+          "legendFormat": "{{breaker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "custom": {
+            "mappings": [
+              {"type": "value", "value": "0", "text": "CLOSED"},
+              {"type": "value", "value": "1", "text": "HALF_OPEN"},
+              {"type": "value", "value": "2", "text": "OPEN"}
+            ]
+          }
+        }
+      },
+      "description": "Circuit breaker state over time. 0=CLOSED, 1=HALF_OPEN, 2=OPEN."
+    },
+    {
+      "id": 10,
+      "title": "Broker API Request Rate by Broker",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 10},
+      "targets": [
+        {
+          "expr": "sum(rate(broker_api_requests_total{broker=~\"$broker\"}[5m])) by (broker)",
+          "legendFormat": "{{broker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "description": "Broker API request rate per second, broken down by broker"
+    },
+    {
+      "id": 11,
+      "title": "Broker API Request Rate by Method",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 10},
+      "targets": [
+        {
+          "expr": "sum(rate(broker_api_requests_total{method=~\"$method\"}[5m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "description": "Broker API request rate by HTTP method (GET, POST, PUT, DELETE)"
+    },
+    {
+      "id": 12,
+      "title": "Success vs Error Rate",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 10},
+      "targets": [
+        {
+          "expr": "sum(rate(broker_api_requests_total{method=~\"$method\",status=~\"2..\"}[5m]))",
+          "legendFormat": "2xx (Success)"
+        },
+        {
+          "expr": "sum(rate(broker_api_requests_total{method=~\"$method\",status=~\"4..\"}[5m]))",
+          "legendFormat": "4xx (Client Error)"
+        },
+        {
+          "expr": "sum(rate(broker_api_requests_total{method=~\"$method\",status=~\"5..\"}[5m]))",
+          "legendFormat": "5xx (Server Error)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      },
+      "description": "Broker API request rate by HTTP status class"
+    },
+    {
+      "id": 13,
+      "title": "Broker Error Rate %",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "sum(rate(broker_api_requests_total{broker=~\"$broker\",status=~\"5..\"}[5m])) by (broker) / sum(rate(broker_api_requests_total{broker=~\"$broker\"}[5m])) by (broker) * 100",
+          "legendFormat": "{{broker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 5},
+              {"color": "red", "value": 10}
+            ]
+          }
+        }
+      },
+      "description": "Percentage of 5xx errors per broker"
+    },
+    {
+      "id": 14,
+      "title": "Broker Latency P95 by Broker",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 16},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(broker_api_latency_seconds_bucket{broker=~\"$broker\"}[5m])) by (le, broker))",
+          "legendFormat": "{{broker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "description": "P95 latency for broker API calls, broken down by broker"
+    },
+    {
+      "id": 15,
+      "title": "Broker Latency Percentiles",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 16},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(broker_api_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(broker_api_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(broker_api_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "description": "P50, P95, and P99 broker API latency across all brokers"
+    },
+    {
+      "id": 16,
+      "title": "Active WebSocket Connections by Broker",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 21},
+      "targets": [
+        {
+          "expr": "active_ws_connections{broker=~\"$broker\"}",
+          "legendFormat": "{{broker}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "description": "Active WebSocket connections by broker tier"
+    },
+    {
+      "id": 17,
+      "title": "DB Pool Connections In-Use",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 21},
+      "targets": [
+        {
+          "expr": "db_pool_connections{metric=\"checkedout\"}",
+          "legendFormat": "{{db_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "description": "Database connections currently checked out per database"
+    },
+    {
+      "id": 18,
+      "title": "DB Pool Size by Database",
+      "type": "graph",
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 21},
+      "targets": [
+        {
+          "expr": "db_pool_connections{metric=\"pool_size\"}",
+          "legendFormat": "{{db_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "description": "Total connection pool size per database"
+    },
+    {
+      "id": 19,
+      "title": "Broker Totals (24h)",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 26},
+      "targets": [
+        {
+          "expr": "sum(increase(broker_api_requests_total{broker=~\"$broker\"}[24h])) by (broker)",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none"
+        }
+      },
+      "description": "Total API calls per broker in the last 24 hours",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {"broker": "Broker", "Value": "Total Calls"}
+          }
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Broker Latency Summary (Last Hour)",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 26},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(broker_api_latency_seconds_bucket{broker=~\"$broker\"}[5m])) by (le, broker))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "description": "P95 latency per broker (5m window)",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {"broker": "Broker", "Value": "P95 Latency (s)"}
+          }
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "title": "Top Erroring Brokers",
+      "type": "table",
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 26},
+      "targets": [
+        {
+          "expr": "topk(5, sum(increase(broker_api_requests_total{broker=~\"$broker\",status=~\"5..\"}[1h])) by (broker))",
+          "format": "table",
+          "instant": true,
+          "legendFormat": ""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "orange", "value": 10},
+              {"color": "red", "value": 50}
+            ]
+          },
+          "unit": "none"
+        }
+      },
+      "description": "Top 5 brokers by 5xx errors in the last hour",
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {},
+            "renameByName": {"broker": "Broker", "Value": "5xx Errors (1h)"}
+          }
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {"value": "Prometheus"},
+        "hide": 0,
+        "label": "Data Source"
+      },
+      {
+        "name": "broker",
+        "type": "query",
+        "query": "label_values(broker_api_requests_total, broker)",
+        "current": {"value": "All"},
+        "hide": 0,
+        "label": "Broker",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "datasource": {"type": "prometheus", "uid": "prometheus"}
+      },
+      {
+        "name": "method",
+        "type": "query",
+        "query": "label_values(broker_api_requests_total, method)",
+        "current": {"value": "All"},
+        "hide": 0,
+        "label": "Method",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "datasource": {"type": "prometheus", "uid": "prometheus"}
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "type": "tags",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "tags": ["deployment", "release"]
+      },
+      {
+        "name": "Circuit Breaker Trips",
+        "type": "tags",
+        "datasource": {"type": "prometheus", "uid": "prometheus"},
+        "tags": ["circuit_open", "breaker_trip"]
+      }
+    ]
+  },
+  "links": [
+    {"title": "Platform Overview", "url": "/d/silvertrade-platform-overview/silvertrade-ai-platform-overview"},
+    {"title": "Prometheus", "url": "http://prometheus:9090"},
+    {"title": "AlertManager", "url": "http://alertmanager:9093"},
+    {"title": "Health Dashboard", "url": "http://platform:5000/health"}
+  ]
+}
