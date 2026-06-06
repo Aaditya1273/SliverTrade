@@ -5,30 +5,42 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Slider } from '@/components/ui/slider'
-import { TrendingUp, TrendingDown, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react'
+import { TrendingUp, TrendingDown, AlertCircle, Loader2, Wifi, WifiOff, ArrowRight } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useLivePrice } from '@/hooks/useLivePrice'
+import { useAuth } from '@/hooks/useAuth'
 
 export default function TradePage() {
+  const { apiKey, authenticated } = useAuth()
+  const { tick, connected } = useLivePrice({ symbol: 'BTC', exchange: 'CRYPTO', enabled: true })
+
   const [orderType, setOrderType] = useState<'buy' | 'sell'>('buy')
   const [tradeType, setTradeType] = useState<'market' | 'limit'>('market')
   const [amount, setAmount] = useState('1')
-  const [price, setPrice] = useState('67430')
+  const [price, setPrice] = useState('')
   const [leverage, setLeverage] = useState([1])
   const [stopLoss, setStopLoss] = useState('')
   const [takeProfit, setTakeProfit] = useState('')
   const [executing, setExecuting] = useState(false)
 
-  const currentPrice = 67430
-  const totalCost = parseFloat(amount) * currentPrice
-  const fee = totalCost * 0.001 // 0.1% fee
+  const currentPrice = tick?.ltp ?? null
+  const usePrice = tradeType === 'limit' ? parseFloat(price || '0') || currentPrice || 0 : currentPrice || 0
+  const totalCost = parseFloat(amount || '0') * usePrice
+  const fee = totalCost * 0.001
   const finalCost = totalCost + fee
 
+  const isWalletConnected = !!apiKey
+  const brokerConnected = authenticated && isWalletConnected
+
   const handleExecuteTrade = async () => {
+    if (!brokerConnected) {
+      return
+    }
     setExecuting(true)
-    // Simulate trade execution
+    // Real execution will be wired in Phase 4
     setTimeout(() => {
       setExecuting(false)
     }, 2000)
@@ -40,19 +52,52 @@ export default function TradePage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Trade Bitcoin</h1>
-          <p className="text-muted-foreground">Current price: ${currentPrice.toLocaleString()}</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {currentPrice !== null ? (
+              <>
+                <span className="text-foreground font-semibold">${currentPrice.toLocaleString()}</span>
+                <span className="flex items-center gap-1">
+                  {connected ? (
+                    <Wifi className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <WifiOff className="w-3 h-3 text-yellow-500" />
+                  )}
+                  {connected ? 'Live' : 'Reconnecting...'}
+                </span>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading price...</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Order Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Price Chart Placeholder */}
-            <Card className="p-8 border-border h-80 flex items-center justify-center bg-card/30">
-              <div className="text-center">
-                <div className="text-5xl font-bold text-accent mb-2">${currentPrice.toLocaleString()}</div>
-                <p className="text-muted-foreground">Real-time price data</p>
-              </div>
+            {/* Price Display Card */}
+            <Card className="p-8 border-border h-80 flex items-center justify-center bg-card/30 relative overflow-hidden">
+              {currentPrice !== null ? (
+                <div className="text-center z-10">
+                  <div className="text-5xl font-bold text-accent mb-2">${currentPrice.toLocaleString()}</div>
+                  <div className="flex items-center gap-2 justify-center">
+                    <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500' : 'bg-yellow-500'} animate-pulse`} />
+                    <p className="text-muted-foreground text-sm">
+                      {connected ? 'Streaming live from exchange' : 'Reconnecting to data feed...'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto mb-4" />
+                  <p className="text-muted-foreground">Connecting to market data feed...</p>
+                </div>
+              )}
+              {/* Decorative background */}
+              <div className="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
             </Card>
 
             {/* Order Entry Form */}
@@ -122,13 +167,13 @@ export default function TradePage() {
               {/* Price Input (for limit orders) */}
               {tradeType === 'limit' && (
                 <div className="space-y-2 mb-6">
-                  <Label htmlFor="price" className="text-sm font-medium">Limit Price</Label>
+                  <Label htmlFor="price" className="text-sm font-medium">Limit Price (USD)</Label>
                   <Input
                     id="price"
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00"
+                    placeholder={currentPrice ? `${currentPrice}` : 'Enter price'}
                     className="bg-card/50 border-border focus:border-accent/50 focus:ring-1 focus:ring-accent/50"
                   />
                 </div>
@@ -187,11 +232,13 @@ export default function TradePage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Amount</span>
-                  <span className="font-medium">{amount} BTC</span>
+                  <span className="font-medium">{amount || '0'} BTC</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-medium">${(parseFloat(price)).toLocaleString()}</span>
+                  <span className="font-medium">
+                    {currentPrice !== null ? `$${usePrice.toLocaleString()}` : '—'}
+                  </span>
                 </div>
                 <div className="border-t border-border pt-3 flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -207,30 +254,60 @@ export default function TradePage() {
                 </div>
               </div>
 
-              {/* Balance Check */}
-              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20 flex gap-3">
-                <CheckCircle2 className="w-5 h-5 text-accent flex-shrink-0" />
-                <p className="text-sm text-accent">Sufficient balance available</p>
-              </div>
-
-              {/* Execute Button */}
-              <Button
-                onClick={handleExecuteTrade}
-                disabled={executing}
-                className="w-full gap-2 py-6 text-base font-semibold"
-              >
-                {executing ? (
+              {/* Connector Status */}
+              <div className={`p-4 rounded-lg flex gap-3 ${
+                brokerConnected
+                  ? 'bg-emerald-500/10 border border-emerald-500/20'
+                  : 'bg-amber-500/10 border border-amber-500/20'
+              }`}>
+                {brokerConnected ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin" />
-                    Executing...
+                    <Wifi className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                    <p className="text-sm text-emerald-500">Broker connected. Ready to trade.</p>
                   </>
                 ) : (
                   <>
-                    {orderType === 'buy' ? 'Buy' : 'Sell'} Now
-                    <ArrowRight className="w-5 h-5" />
+                    <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                    <p className="text-sm text-amber-500">
+                      {authenticated
+                        ? 'Connect a broker to enable trading. Go to Setup.'
+                        : 'Sign in and connect a broker to start trading.'}
+                    </p>
                   </>
                 )}
-              </Button>
+              </div>
+
+              {/* Execute Button */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span tabIndex={0}>
+                      <Button
+                        onClick={handleExecuteTrade}
+                        disabled={executing || !brokerConnected || currentPrice === null}
+                        className="w-full gap-2 py-6 text-base font-semibold"
+                      >
+                        {executing ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Executing...
+                          </>
+                        ) : (
+                          <>
+                            {orderType === 'buy' ? 'Buy' : 'Sell'} BTC
+                            <ArrowRight className="w-5 h-5" />
+                          </>
+                        )}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {!brokerConnected && (
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <p>Connect a broker via Setup to enable order execution. Order placement (Phase 4) bridges signals to your broker.</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </Card>
 
             {/* Risk Warning */}

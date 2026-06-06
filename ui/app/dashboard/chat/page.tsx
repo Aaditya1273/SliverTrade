@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Send, Brain, Zap, BookOpen } from 'lucide-react'
+import { Send, Brain } from 'lucide-react'
 
 interface Message {
   id: number
@@ -18,7 +18,7 @@ export default function ChatPage() {
     {
       id: 1,
       role: 'assistant',
-      content: 'Hey there! I\'m your AI trading expert. I\'ve been trained on 10 years of market data and 50+ technical indicators. Ask me anything about crypto trading, market analysis, or portfolio strategy.',
+      content: 'Welcome to the AI trading assistant. I can help explain trading concepts and review signal reasoning from our technical analysis engine. Note: This is a demo interface — LLM integration is planned for Phase 6.',
       timestamp: new Date(),
     },
   ])
@@ -49,12 +49,12 @@ export default function ChatPage() {
     setInput('')
     setLoading(true)
 
-    // Simulate AI response
+    // Demo response — real LLM integration planned for Phase 6
     setTimeout(() => {
       const assistantMessage: Message = {
         id: messages.length + 2,
         role: 'assistant',
-        content: 'Based on current market conditions and your portfolio, here are my thoughts on your question. The technical indicators suggest...',
+        content: 'Thanks for your question! The AI chat assistant is currently in demo mode. Full LLM integration with real-time market data access, portfolio analysis, and natural language strategy discussions is planned for a future update. In the meantime, check the AI Signals panel for generated trading signals with confidence scores and reasoning.',
         timestamp: new Date(),
       }
       setMessages(prev => [...prev, assistantMessage])
@@ -62,12 +62,7 @@ export default function ChatPage() {
     }, 1500)
   }
 
-  const suggestedQuestions = [
-    { icon: TrendingUp, text: 'What\'s your outlook on Bitcoin?' },
-    { icon: BarChart3, text: 'How should I rebalance my portfolio?' },
-    { icon: Zap, text: 'What\'s the best entry strategy now?' },
-    { icon: Brain, text: 'Explain this trading pattern' },
-  ]
+
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -78,7 +73,7 @@ export default function ChatPage() {
             <Brain className="w-6 h-6 text-accent" />
             <h1 className="text-3xl font-bold">Expert Trading Assistant</h1>
           </div>
-          <p className="text-muted-foreground">Chat with our AI trader trained on 10 years of market data</p>
+          <p className="text-muted-foreground">Demo assistant — LLM integration coming in a future update</p>
         </div>
 
         {/* Chat Container */}
@@ -144,10 +139,10 @@ export default function ChatPage() {
         {messages.length === 1 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { icon: TrendingUp, text: 'What\'s your outlook on Bitcoin?' },
-              { icon: BarChart3, text: 'How should I rebalance?' },
-              { icon: Zap, text: 'Best entry strategy now?' },
-              { icon: BookOpen, text: 'Explain candlestick patterns' },
+              { icon: 'trending', text: 'What\'s your outlook on Bitcoin?' },
+              { icon: 'chart', text: 'How should I rebalance?' },
+              { icon: 'zap', text: 'Best entry strategy now?' },
+              { icon: 'book', text: 'Explain candlestick patterns' },
             ].map((q, i) => (
               <button
                 key={i}
@@ -155,10 +150,10 @@ export default function ChatPage() {
                 className="p-4 rounded-lg border border-border bg-card/50 hover:border-accent/30 hover:bg-card/70 transition-all text-left group"
               >
                 <div className="text-lg mb-2 group-hover:text-accent transition-colors">
-                  {q.icon === TrendingUp && '📈'}
-                  {q.icon === BarChart3 && '📊'}
-                  {q.icon === Zap && '⚡'}
-                  {q.icon === BookOpen && '📚'}
+                  {q.icon === 'trending' && '📈'}
+                  {q.icon === 'chart' && '📊'}
+                  {q.icon === 'zap' && '⚡'}
+                  {q.icon === 'book' && '📚'}
                 </div>
                 <p className="text-sm font-medium">{q.text}</p>
               </button>
@@ -168,12 +163,4 @@ export default function ChatPage() {
       </div>
     </main>
   )
-}
-
-function BarChart3() {
-  return null
-}
-
-function TrendingUp() {
-  return null
 }

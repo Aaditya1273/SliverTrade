@@ -6,16 +6,42 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
-import { Bell, Settings, LogOut, TrendingUp, TrendingDown, Zap, Eye, EyeOff, Menu, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Bell, Settings, LogOut, TrendingUp, TrendingDown, Zap, Eye, EyeOff, Menu, X, Loader2 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { PortfolioCard } from '@/components/dashboard/portfolio-card'
 import { PriceChart } from '@/components/dashboard/price-chart'
 import { AIFeed } from '@/components/dashboard/ai-feed'
 import { AlertsList } from '@/components/dashboard/alerts-list'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSystemHealth, SystemStatusDot } from '@/hooks/useSystemHealth'
+import { usePortfolio, type Holding } from '@/hooks/usePortfolio'
+import { useAuth } from '@/hooks/useAuth'
+import { PLATFORM } from '@/lib/api-config'
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [hideBalances, setHideBalances] = useState(false)
+  const systemHealth = useSystemHealth()
+  const { apiKey } = useAuth()
+  const router = useRouter()
+  const queryClient = useQueryClient()
+  const { holdings, isLoading: holdingsLoading, error: holdingsError } = usePortfolio(apiKey)
+
+  const handleLogout = async () => {
+    try {
+      await fetch(PLATFORM('/auth/logout'), {
+        method: 'POST',
+        credentials: 'include',
+      })
+    } catch {
+      // Proceed with redirect even if logout API call fails
+    }
+    // Clear all cached data (signals, portfolio, etc.)
+    queryClient.clear()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -53,7 +79,10 @@ export default function DashboardPage() {
             </nav>
 
             <div className="mt-8 pt-8 border-t border-border">
-              <button className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 w-full transition-colors">
+              <button 
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 w-full transition-colors"
+              >
                 <LogOut className="w-5 h-5" />
                 Sign Out
               </button>
@@ -67,7 +96,7 @@ export default function DashboardPage() {
 
           <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
             {/* Portfolio Summary */}
-            <PortfolioCard hideBalances={hideBalances} />
+            <PortfolioCard hideBalances={hideBalances} apiKey={apiKey} />
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -85,26 +114,49 @@ export default function DashboardPage() {
                 {/* Assets Table */}
                 <Card className="p-6 border-border">
                   <h2 className="text-lg font-semibold mb-6">Holdings</h2>
-                  <div className="space-y-4">
-                    {[
-                      { symbol: 'BTC', name: 'Bitcoin', price: 67_430, change: 4.2, amount: 0.25 },
-                      { symbol: 'ETH', name: 'Ethereum', price: 3_850, change: -1.3, amount: 2.5 },
-                      { symbol: 'SOL', name: 'Solana', price: 198, change: 12.5, amount: 25 },
-                    ].map((asset) => (
-                      <div key={asset.symbol} className="flex items-center justify-between p-3 rounded-lg hover:bg-card/30 transition-colors border border-transparent hover:border-border">
-                        <div>
-                          <p className="font-medium">{asset.symbol}</p>
-                          <p className="text-sm text-muted-foreground">{asset.name}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">${(asset.amount * asset.price).toLocaleString()}</p>
-                          <p className={`text-sm ${asset.change >= 0 ? 'text-accent' : 'text-destructive'}`}>
-                            {asset.change >= 0 ? '+' : ''}{asset.change}%
-                          </p>
-                        </div>
+                  {!apiKey ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
+                        <TrendingUp className="w-6 h-6 text-accent" />
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-sm text-muted-foreground mb-2">No holdings found</p>
+                      <p className="text-xs text-muted-foreground">Connect a broker or make your first trade to see your holdings here.</p>
+                    </div>
+                  ) : holdingsLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    </div>
+                  ) : holdingsError ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <p className="text-sm text-destructive mb-1">Failed to load holdings</p>
+                      <p className="text-xs text-muted-foreground">Check broker connection</p>
+                    </div>
+                  ) : holdings.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                      <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-4">
+                        <TrendingUp className="w-6 h-6 text-accent" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">No holdings found</p>
+                      <p className="text-xs text-muted-foreground">Make your first trade to see your holdings here.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {holdings.map((asset: Holding) => (
+                        <div key={asset.symbol} className="flex items-center justify-between p-3 rounded-lg hover:bg-card/30 transition-colors border border-transparent hover:border-border">
+                          <div>
+                            <p className="font-medium">{asset.symbol}</p>
+                            <p className="text-sm text-muted-foreground">{asset.exchange}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium">${asset.current_value?.toLocaleString()}</p>
+                            <p className={`text-sm ${asset.pnl >= 0 ? 'text-accent' : 'text-destructive'}`}>
+                              {asset.pnl >= 0 ? '+' : ''}{asset.pnl_pct?.toFixed(1)}%
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </Card>
               </div>
 
@@ -122,20 +174,16 @@ export default function DashboardPage() {
       <footer className="fixed bottom-0 left-0 right-0 h-8 bg-card/80 backdrop-blur-md border-t border-border flex items-center justify-between px-4 z-50">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Market Data: OK</span>
+            <SystemStatusDot status={systemHealth.platform} />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Platform: {systemHealth.platform}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">AI Engine: OK</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Execution: OK</span>
+            <SystemStatusDot status={systemHealth.strategy} />
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">AI Engine: {systemHealth.strategy}</span>
           </div>
         </div>
         <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-          Last Update: {new Date().toLocaleTimeString()}
+          {systemHealth.lastUpdated}
         </div>
       </footer>
     </main>

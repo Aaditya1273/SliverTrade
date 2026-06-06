@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { createChart, ColorType, IChartApi, ISeriesApi } from 'lightweight-charts'
+import { createChart, ColorType, AreaSeries, IChartApi, ISeriesApi } from 'lightweight-charts'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Loader2 } from 'lucide-react'
+import { DATA } from '@/lib/api-config'
 
 export function PriceChart() {
   const chartContainerRef = useRef<HTMLDivElement>(null)
@@ -17,7 +18,7 @@ export function PriceChart() {
       // In production, this would call our data_fetch service on port 5005
       // For this MVP, we'll fetch from the platform's unified market-data endpoint
       // if it existed, or just use our normalized mock data for now.
-      const response = await axios.get('http://127.0.0.1:5005/api/data?symbol=SBIN&interval=5m')
+      const response = await axios.get(DATA('/api/data?symbol=SBIN&exchange=NSE&interval=5m'))
       return response.data.data
     },
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -46,7 +47,7 @@ export function PriceChart() {
       },
     })
 
-    const areaSeries = chart.addAreaSeries({
+    const areaSeries = chart.addSeries(AreaSeries, {
       lineColor: '#1a9fff',
       topColor: 'rgba(26, 159, 255, 0.3)',
       bottomColor: 'rgba(26, 159, 255, 0.0)',

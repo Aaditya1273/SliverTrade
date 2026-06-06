@@ -7,19 +7,22 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Brain, TrendingUp, TrendingDown, Zap, Loader2, Plus } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-const API_BASE = 'http://127.0.0.1:5000/api/v1/signals'
+import { STRATEGY } from '@/lib/api-config'
+
+const STRATEGY_BASE = STRATEGY('/api/v1')
 
 interface Signal {
   id: string
   symbol: string
-  signal: 'BUY' | 'SELL' | 'HOLD'
+  signal?: 'BUY' | 'SELL' | 'HOLD'
   decision?: 'BUY' | 'SELL' | 'HOLD'
   confidence: number
   reasoning: string
   timestamp: string
   price: number
-  urgency: 'HIGH' | 'MEDIUM' | 'LOW'
+  mock_data?: boolean
 }
 
 export function AIFeed() {
@@ -28,16 +31,19 @@ export function AIFeed() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['signals'],
     queryFn: async () => {
-      const response = await axios.get(API_BASE)
+      const response = await axios.get(`${STRATEGY_BASE}/signals`)
       return response.data.signals as Signal[]
     },
     refetchInterval: 5000,
   })
 
-  const generateMutation = useMutation({
+  const generateSignalMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.post(`${API_BASE}/generate-mock`)
-      return response.data.signal
+      const response = await axios.post(`${STRATEGY_BASE}/signal`, {
+        symbol: 'BTC/USDT',
+        exchange: 'CRYPTO',
+      })
+      return response.data.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['signals'] })
@@ -45,19 +51,9 @@ export function AIFeed() {
   })
 
   const executeTradeMutation = useMutation({
-    mutationFn: async (signal: Signal) => {
-      const response = await axios.post('http://127.0.0.1:5000/api/v1/execute-signal', {
-        symbol: signal.symbol,
-        decision: signal.decision || signal.signal,
-        confidence: signal.confidence,
-        exchange: 'NSE', // Default for this demo
-        quantity: '1'
-      })
-      return response.data
-    },
-    onSuccess: (data) => {
-      // In a real app, we'd show a success toast here
-      console.log('Trade executed successfully:', data)
+    mutationFn: async (_signal: Signal) => {
+      // TODO: Wire to Platform API POST /api/v1/placeorder in Phase 4
+      throw new Error('Trade execution not yet available. Broker connection and order pipeline coming in Phase 4.')
     },
   })
 
@@ -71,8 +67,12 @@ export function AIFeed() {
 
   if (error) {
     return (
-      <Card className="p-6 border-border flex items-center justify-center h-[400px] text-destructive">
-        Error loading signals. Is the backend running?
+      <Card className="p-6 border-border flex items-center justify-center h-[400px]">
+        <div className="text-center">
+          <Zap className="w-8 h-8 text-destructive mx-auto mb-3 opacity-50" />
+          <p className="text-sm text-destructive">Strategy Engine unreachable</p>
+          <p className="text-xs text-muted-foreground mt-1">Ensure Trade Strategies service is running on port 5007</p>
+        </div>
       </Card>
     )
   }
@@ -87,18 +87,19 @@ export function AIFeed() {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => generateMutation.mutate()}
-          disabled={generateMutation.isPending}
+          onClick={() => generateSignalMutation.mutate()}
+          disabled={generateSignalMutation.isPending}
           className="hover:bg-accent/10 hover:text-accent"
+          title="Generate new signal for BTC/USDT"
         >
-          {generateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {generateSignalMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
         </Button>
       </div>
 
       <div className="space-y-4 flex-1 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
         <AnimatePresence initial={false}>
           {data?.map((signal) => {
-            const decision = signal.decision || signal.signal
+            const decision = signal.decision || signal.signal || 'HOLD'
             return (
               <motion.div
                 key={signal.id}
@@ -138,22 +139,34 @@ export function AIFeed() {
 
                 <div className="flex items-center justify-between mt-auto">
                   <div className="flex flex-col">
-                    <span className="text-xs font-semibold">${signal.price.toLocaleString()}</span>
+                    <span className="text-xs font-semibold">${signal.price?.toLocaleString() ?? '—'}</span>
                     <span className="text-[10px] text-muted-foreground">Market Price</span>
                   </div>
-                  <Button 
-                    size="sm" 
-                    className="h-8 px-4 text-[10px] font-bold uppercase tracking-wider bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg"
-                    onClick={() => executeTradeMutation.mutate(signal)}
-                    disabled={executeTradeMutation.isPending}
-                  >
-                    {executeTradeMutation.isPending ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      `Execute ${decision}`
-                    )}
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button 
+                            size="sm" 
+                            className="h-8 px-4 text-[10px] font-bold uppercase tracking-wider bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg"
+                            onClick={() => executeTradeMutation.mutate(signal)}
+                            disabled={true}
+                          >
+                            Execute {decision}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Broker connection and order pipeline coming soon</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
+                {signal.mock_data && (
+                  <div className="mt-2 text-[10px] text-yellow-500 uppercase tracking-wider">
+                    ⚡ Using simulated data — connect broker for live signals
+                  </div>
+                )}
               </motion.div>
             )
           })}
@@ -162,8 +175,8 @@ export function AIFeed() {
         {(!data || data.length === 0) && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Zap className="w-8 h-8 mb-3 opacity-20" />
-            <p className="text-sm">No signals detected.</p>
-            <p className="text-xs">Click the + icon to generate a signal.</p>
+            <p className="text-sm">No signals generated yet.</p>
+            <p className="text-xs">Click the + icon to generate a signal for BTC/USDT.</p>
           </div>
         )}
       </div>

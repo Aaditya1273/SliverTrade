@@ -33,7 +33,7 @@ export default function LandingPage() {
           </h1>
           
           <p className="text-lg sm:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            SilverTrade AI analyzes billions of data points to identify trading opportunities before they happen. Trade with conviction, not emotion.
+            SilverTrade AI combines technical indicators (RSI, MACD, EMA, Bollinger Bands) to generate clear trading signals. Trade with conviction, not emotion.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -47,19 +47,19 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          {/* Hero Stats */}
+          {/* Honest Status */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pt-12 border-t border-border">
             <div>
-              <div className="text-3xl font-bold text-accent mb-2">2.4x</div>
-              <p className="text-sm text-muted-foreground">Average Return vs Market</p>
+              <div className="text-3xl font-bold text-accent mb-2">Beta</div>
+              <p className="text-sm text-muted-foreground">Early Access Program</p>
             </div>
             <div>
-              <div className="text-3xl font-bold text-accent mb-2">94%</div>
-              <p className="text-sm text-muted-foreground">Win Rate on Signals</p>
+              <div className="text-3xl font-bold text-accent mb-2">7</div>
+              <p className="text-sm text-muted-foreground">Technical Indicators Analyzed</p>
             </div>
             <div>
-              <div className="text-3xl font-bold text-accent mb-2">$2.4B</div>
-              <p className="text-sm text-muted-foreground">Managed Daily Volume</p>
+              <div className="text-3xl font-bold text-accent mb-2">30+</div>
+              <p className="text-sm text-muted-foreground">Supported Broker Exchanges</p>
             </div>
           </div>
         </div>
@@ -76,8 +76,8 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                 <Brain className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">AI-Powered Decisions</h3>
-              <p className="text-sm text-muted-foreground">Neural networks trained on 10 years of market data detect patterns humans miss</p>
+              <h3 className="text-lg font-semibold mb-2">Technical Analysis Engine</h3>
+              <p className="text-sm text-muted-foreground">Multi-indicator engine combining RSI, MACD, EMA, and Bollinger Bands into clear BUY/SELL/HOLD signals</p>
             </div>
 
             {/* Feature 2 */}
@@ -86,7 +86,7 @@ export default function LandingPage() {
                 <Zap className="w-6 h-6 text-accent" />
               </div>
               <h3 className="text-lg font-semibold mb-2">Real-Time Signals</h3>
-              <p className="text-sm text-muted-foreground">Get alerts seconds before price moves. One-click execution to capitalize instantly</p>
+              <p className="text-sm text-muted-foreground">Live signal generation from exchange market data with confidence scoring and reasoning</p>
             </div>
 
             {/* Feature 3 */}
@@ -94,8 +94,8 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                 <TrendingUp className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Portfolio Optimization</h3>
-              <p className="text-sm text-muted-foreground">Dynamic rebalancing and position sizing for maximum risk-adjusted returns</p>
+              <h3 className="text-lg font-semibold mb-2">Broker Integration</h3>
+              <p className="text-sm text-muted-foreground">Connect 30+ brokers including Zerodha, Angel, Dhan, Binance, and more via secure API</p>
             </div>
 
             {/* Feature 4 */}
@@ -103,8 +103,8 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                 <Lock className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Bank-Grade Security</h3>
-              <p className="text-sm text-muted-foreground">Cold storage, multi-sig wallets, and institutional-grade encryption</p>
+              <h3 className="text-lg font-semibold mb-2">Secure Authentication</h3>
+              <p className="text-sm text-muted-foreground">Session-based auth with CSRF protection, rate limiting, and encrypted broker token storage</p>
             </div>
 
             {/* Feature 5 */}
@@ -112,8 +112,8 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                 <BarChart3 className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Advanced Analytics</h3>
-              <p className="text-sm text-muted-foreground">Deep dive into every decision with explainable AI and full trade history</p>
+              <h3 className="text-lg font-semibold mb-2">Options Analytics</h3>
+              <p className="text-sm text-muted-foreground">Greeks, IV smile, volatility surface, OI tracker, and GEX analysis for advanced traders</p>
             </div>
 
             {/* Feature 6 */}
@@ -121,8 +121,8 @@ export default function LandingPage() {
               <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
                 <Brain className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Expert Chat</h3>
-              <p className="text-sm text-muted-foreground">Chat with AI traders 24/7 for personalized insights and strategy discussion</p>
+              <h3 className="text-lg font-semibold mb-2">Signal History</h3>
+              <p className="text-sm text-muted-foreground">Track every generated signal with confidence scores, reasoning, and price data</p>
             </div>
           </div>
         </div>
@@ -142,8 +142,8 @@ export default function LandingPage() {
               },
               {
                 num: "02",
-                title: "Receive AI Signals",
-                desc: "Our neural network analyzes 50+ data sources and alerts you to winning opportunities in real-time."
+                title: "Receive Trading Signals",
+                desc: "Our technical analysis engine processes market data through 7 indicators and generates clear BUY/SELL/HOLD decisions."
               },
               {
                 num: "03",
@@ -168,7 +168,7 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Trade Smarter?</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            Join 50,000+ traders earning 2x+ returns with SilverTrade AI
+            Start making data-driven trading decisions with SilverTrade AI
           </p>
           <Button size="lg" className="gap-2" asChild>
             <Link href="/dashboard">

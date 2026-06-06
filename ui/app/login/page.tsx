@@ -1,22 +1,60 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowRight, Mail, Lock, Chrome } from 'lucide-react'
+import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react'
+import { API_CONFIG } from '@/lib/api-config'
+
+const PLATFORM_URL = API_CONFIG.PLATFORM_BASE
 
 export default function LoginPage() {
+  const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    // TODO: Implement actual auth
-    setTimeout(() => setLoading(false), 1000)
+    setError(null)
+
+    try {
+      const formData = new URLSearchParams()
+      formData.append('username', email)
+      formData.append('password', password)
+
+      const response = await fetch(`${PLATFORM_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.status === 'success') {
+        // Follow redirect if Platform provides one (e.g., broker auth step)
+        if (data.redirect) {
+          router.push(data.redirect)
+        } else {
+          router.push('/dashboard')
+        }
+        router.refresh()
+      } else {
+        setError(data.message || 'Invalid credentials. Please try again.')
+      }
+    } catch (err) {
+      setError('Unable to connect to server. Ensure the Platform service is running on port 5000.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -31,27 +69,13 @@ export default function LoginPage() {
           <p className="text-muted-foreground">Sign in to access your trading dashboard</p>
         </div>
 
-        {/* Social Login */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            className="w-full gap-2 border-border hover:bg-card/50"
-            disabled={loading}
-          >
-            <Chrome className="w-5 h-5" />
-            Continue with Google
-          </Button>
-        </div>
-
-        {/* Divider */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-background text-muted-foreground">Or continue with email</span>
-          </div>
-        </div>
+        )}
 
         {/* Email Form */}
         <form onSubmit={handleSubmit} className="space-y-4">

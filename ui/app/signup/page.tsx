@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowRight, Mail, Lock, Chrome, User } from 'lucide-react'
+import { ArrowRight, Mail, Lock, User, AlertCircle, ExternalLink } from 'lucide-react'
+import { API_CONFIG } from '@/lib/api-config'
+
+const PLATFORM_URL = API_CONFIG.PLATFORM_BASE
 
 export default function SignupPage() {
   const [formData, setFormData] = useState({
@@ -17,20 +20,32 @@ export default function SignupPage() {
   })
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match')
+      setError('Passwords do not match')
       return
     }
     if (!agreedToTerms) {
-      alert('Please agree to terms')
+      setError('Please agree to the terms of service')
       return
     }
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
     setLoading(true)
-    // TODO: Implement actual signup
-    setTimeout(() => setLoading(false), 1000)
+    setError(null)
+
+    // Self-service registration is not yet available on the Platform backend.
+    // Redirect to the Platform's /setup page which creates the first admin user
+    // for single-user deployments. Multi-user registration (Phase 8) will add
+    // proper signup via the Platform API.
+    window.location.href = `${PLATFORM_URL}/setup`
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,30 +62,29 @@ export default function SignupPage() {
             SilverTrade
           </Link>
           <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-          <p className="text-muted-foreground">Join 50,000+ traders earning 2x+ returns</p>
+          <p className="text-muted-foreground">Start making data-driven trading decisions</p>
         </div>
 
-        {/* Social Signup */}
-        <div className="mb-6">
-          <Button
-            variant="outline"
-            className="w-full gap-2 border-border hover:bg-card/50"
-            disabled={loading}
-          >
-            <Chrome className="w-5 h-5" />
-            Sign up with Google
-          </Button>
+        {/* Info Banner — explains that setup is handled by the Platform */}
+        <div className="mb-6 p-4 rounded-lg bg-accent/10 border border-accent/20 flex gap-3">
+          <ExternalLink className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-accent mb-1">Self-service registration</p>
+            <p className="text-xs text-muted-foreground">
+              Registration is handled through the Platform setup page. You&apos;ll be
+              redirected to create your admin account there. Multi-user support is
+              coming in a future update (Phase 8).
+            </p>
+          </div>
         </div>
 
-        {/* Divider */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-border"></div>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 rounded-lg bg-destructive/10 border border-destructive/20 flex gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-destructive">{error}</p>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-background text-muted-foreground">Or create with email</span>
-          </div>
-        </div>
+        )}
 
         {/* Signup Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -123,7 +137,7 @@ export default function SignupPage() {
                 required
               />
             </div>
-            <p className="text-xs text-muted-foreground">At least 8 characters, with numbers and symbols</p>
+            <p className="text-xs text-muted-foreground">At least 8 characters</p>
           </div>
 
           <div className="space-y-2">
@@ -152,13 +166,14 @@ export default function SignupPage() {
             />
             <Label htmlFor="terms" className="text-sm font-normal text-muted-foreground cursor-pointer">
               I agree to the{' '}
-              <Link href="/terms" className="text-accent hover:text-accent/80 transition-colors">
+              <Link href="/legal/terms" className="text-accent hover:text-accent/80 transition-colors">
                 Terms of Service
               </Link>
               {' '}and{' '}
-              <Link href="/privacy" className="text-accent hover:text-accent/80 transition-colors">
+              <Link href="/legal/privacy" className="text-accent hover:text-accent/80 transition-colors">
                 Privacy Policy
               </Link>
+              {/* Phase 10 will build the full Terms of Service and Privacy Policy pages. */}
             </Label>
           </div>
 
@@ -167,7 +182,7 @@ export default function SignupPage() {
             className="w-full gap-2"
             disabled={loading}
           >
-            {loading ? 'Creating account...' : 'Create Account'} {!loading && <ArrowRight className="w-5 h-5" />}
+            {loading ? 'Redirecting to setup...' : 'Create Account'} {!loading && <ArrowRight className="w-5 h-5" />}
           </Button>
         </form>
 
