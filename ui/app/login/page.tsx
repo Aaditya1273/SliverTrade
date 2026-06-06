@@ -1,22 +1,34 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ArrowRight, Mail, Lock, AlertCircle } from 'lucide-react'
+import { ArrowRight, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { API_CONFIG } from '@/lib/api-config'
 
 const PLATFORM_URL = API_CONFIG.PLATFORM_BASE
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [registered, setRegistered] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setRegistered(true)
+      // Remove the query param without a page reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete('registered')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,6 +80,17 @@ export default function LoginPage() {
           <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
           <p className="text-muted-foreground">Sign in to access your trading dashboard</p>
         </div>
+
+        {/* Success Message (after registration) */}
+        {registered && (
+          <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-emerald-500 mb-1">Account created successfully</p>
+              <p className="text-xs text-muted-foreground">Sign in with your credentials to access the trading dashboard.</p>
+            </div>
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (

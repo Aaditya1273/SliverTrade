@@ -1,65 +1,284 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Send, Brain } from 'lucide-react'
+import { Send, Brain, Loader2, History, ExternalLink } from 'lucide-react'
+import { PLATFORM } from '@/lib/api-config'
+import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
+import axios from 'axios'
+
+const PLATFORM_BASE = PLATFORM('/api/v1')
 
 interface Message {
   id: number
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  suggested_actions?: Array<{
+    label: string
+    action: string
+    params?: Record<string, any>
+  }>
 }
 
+interface SuggestedQuestion {
+  icon: string
+  text: string
+}
+
+const SUGGESTED_QUESTIONS: SuggestedQuestion[] = [
+  { icon: '📈', text: 'What\'s your outlook on Bitcoin?' },
+  { icon: '📊', text: 'How should I rebalance?' },
+  { icon: '⚡', text: 'Best entry strategy now?' },
+  { icon: '📚', text: 'Explain candlestick patterns' },
+]
+
 export default function ChatPage() {
+  const { apiKey } = useAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       role: 'assistant',
-      content: 'Welcome to the AI trading assistant. I can help explain trading concepts and review signal reasoning from our technical analysis engine. Note: This is a demo interface — LLM integration is planned for Phase 6.',
+      content: 'Welcome to the AI trading assistant. I can help you with trading questions, portfolio analysis, and market insights. Ask me anything!',
       timestamp: new Date(),
     },
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [conversationId, setConversationId] = useState('')
+  const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const nextIdRef = useRef(2)
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  }, [])
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [messages, scrollToBottom])
+
+  // Restore conversation from URL param
+  useEffect(() => {
+    const restoreId = searchParams.get('conversation_id')
+    if (restoreId && apiKey) {
+      setConversationId(restoreId)
+      loadConversation(restoreId)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, apiKey])
+
+  const loadConversation = async (convId: string) => {
+    try {
+      const response = await axios.get(`${PLATFORM_BASE}/chat/conversation`, {
+        params: { conversation_id: convId },
+      })
+      const conv = response.data.data
+      if (conv && conv.messages && conv.messages.length > 0) {
+        const restoredMessages: Message[] = [{
+          id: 1,
+          role: 'assistant',
+          content: conv.title || 'Restored conversation',
+          timestamp: new Date(conv.created_at || Date.now()),
+        }]
+
+        conv.messages.forEach((msg: any, idx: number) => {
+          const isLastAssistant = msg.role === 'assistant' && idx === conv.messages.length - 1
+          restoredMessages.push({
+            id: restoredMessages.length + 1,
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(msg.timestamp || Date.now()),
+            suggested_actions: isLastAssistant ? msg.suggested_actions : undefined,
+          })
+        })
+
+        setMessages(restoredMessages)
+        nextIdRef.current = restoredMessages.length + 1
+        toast.success('Conversation restored')
+      }
+    } catch (e) {
+      toast.error('Failed to restore conversation')
+    }
+  }
+
+  // Cleanup event source on unmount
+  useEffect(() => {
+    return () => {
+      if (eventSource) {
+        eventSource.close()
+      }
+    }
+  }, [eventSource])
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || loading) return
 
-    // Add user message
+    if (!apiKey) {
+      toast.error('Please connect a broker to use the AI chat')
+      return
+    }
+
+    const userText = input.trim()
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: nextIdRef.current++,
       role: 'user',
-      content: input,
+      content: userText,
       timestamp: new Date(),
     }
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setLoading(true)
 
-    // Demo response — real LLM integration planned for Phase 6
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: messages.length + 2,
-        role: 'assistant',
-        content: 'Thanks for your question! The AI chat assistant is currently in demo mode. Full LLM integration with real-time market data access, portfolio analysis, and natural language strategy discussions is planned for a future update. In the meantime, check the AI Signals panel for generated trading signals with confidence scores and reasoning.',
-        timestamp: new Date(),
+    // Generate conversation ID client-side if not set
+    const activeConvId = conversationId || crypto.randomUUID()
+    if (!conversationId) {
+      setConversationId(activeConvId)
+    }
+
+    // Create placeholder assistant message for streaming
+    const assistantId = nextIdRef.current++
+    const assistantPlaceholder: Message = {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      suggested_actions: [],
+    }
+    setMessages(prev => [...prev, assistantPlaceholder])
+
+    try {
+      // Close previous event source
+      if (eventSource) {
+        eventSource.close()
       }
-      setMessages(prev => [...prev, assistantMessage])
+
+      // Build event source URL with conversation history (last 10 messages)
+      const recentHistory = messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
+      const historyParam = encodeURIComponent(JSON.stringify(recentHistory))
+      const url = `${PLATFORM_BASE}/chat/stream?` +
+        `message=${encodeURIComponent(userText)}&` +
+        `conversation_id=${encodeURIComponent(activeConvId)}&` +
+        `apikey=${encodeURIComponent(apiKey)}&` +
+        `message_history=${historyParam}`
+
+      const es = new EventSource(url)
+      setEventSource(es)
+      let streamedContent = ''
+      let hasContent = false
+
+      es.onmessage = (e) => {
+        if (e.data === '[DONE]') {
+          es.close()
+          setEventSource(null)
+          setLoading(false)
+
+          // Final update with complete content
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId
+              ? { ...m, content: streamedContent, timestamp: new Date() }
+              : m
+          ))
+          return
+        }
+
+        try {
+          const parsed = JSON.parse(e.data)
+
+          // Handle metadata events (conversation_id, etc.)
+          if (parsed.type === 'meta') {
+            if (parsed.conversation_id) {
+              setConversationId(parsed.conversation_id)
+            }
+            return
+          }
+
+          // Handle token events
+          if (parsed.token) {
+            hasContent = true
+            streamedContent += parsed.token
+            // Update message in real-time as tokens arrive
+            setMessages(prev => prev.map(m =>
+              m.id === assistantId
+                ? { ...m, content: streamedContent }
+                : m
+            ))
+          }
+        } catch {
+          // Ignore parse errors on partial data
+        }
+      }
+
+      es.onerror = () => {
+        es.close()
+        setEventSource(null)
+        setLoading(false)
+
+        // If we got no content, fall back to POST
+        if (!hasContent) {
+          fetchNonStreaming(userText, activeConvId)
+        } else {
+          // Partial content received — finalize what we have
+          setMessages(prev => prev.map(m =>
+            m.id === assistantId
+              ? { ...m, content: streamedContent || 'Connection lost. Please try again.' }
+              : m
+          ))
+        }
+      }
+    } catch (error) {
       setLoading(false)
-    }, 1500)
+      toast.error('Failed to get AI response')
+    }
+  }
+
+  const fetchNonStreaming = async (message: string, convId?: string) => {
+    try {
+      const response = await axios.post(`${PLATFORM_BASE}/chat`, {
+        apikey: apiKey,
+        message,
+        conversation_id: conversationId || undefined,
+        message_history: [],
+        suggested_actions: true,
+      })
+
+      const data = response.data
+      const assistantId = nextIdRef.current++
+      const fallbackMsg: Message = {
+        id: assistantId,
+        role: 'assistant',
+        content: data.reply || 'Sorry, I encountered an error.',
+        timestamp: new Date(),
+        suggested_actions: data.suggested_actions || [],
+      }
+
+      // Remove the empty placeholder and add the real message
+      setMessages(prev => {
+        const filtered = prev.filter(m => m.content !== '')
+        return [...filtered, fallbackMsg]
+      })
+
+      if (data.conversation_id) {
+        setConversationId(data.conversation_id)
+      }
+    } catch (error) {
+      toast.error('Failed to get AI response')
+    }
+  }
+
+  const handleSuggestedAction = (action: any) => {
+    if (action.action === 'navigate' && action.params?.path) {
+      router.push(action.params.path)
+    } else if (action.action === 'execute_order') {
+      toast.info('Order execution from chat coming soon')
+    }
   }
 
 
@@ -73,7 +292,7 @@ export default function ChatPage() {
             <Brain className="w-6 h-6 text-accent" />
             <h1 className="text-3xl font-bold">Expert Trading Assistant</h1>
           </div>
-          <p className="text-muted-foreground">Demo assistant — LLM integration coming in a future update</p>
+          <p className="text-muted-foreground">AI-powered trading insights with real-time portfolio context</p>
         </div>
 
         {/* Chat Container */}
@@ -98,17 +317,28 @@ export default function ChatPage() {
                   }`}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
+                  {message.suggested_actions && message.suggested_actions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {message.suggested_actions.map((action, idx) => (
+                        <Button
+                          key={idx}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuggestedAction(action)}
+                          className="text-xs border-accent/30 hover:bg-accent/10"
+                        >
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-card border border-border px-4 py-3 rounded-lg rounded-bl-none">
-                  <div className="flex gap-2">
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-2 h-2 bg-accent rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                  </div>
+                  <Loader2 className="w-4 h-4 animate-spin text-accent" />
                 </div>
               </div>
             )}
@@ -129,8 +359,8 @@ export default function ChatPage() {
               disabled={loading || !input.trim()}
               className="px-4 gap-2"
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">Send</span>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              <span className="hidden sm:inline">{loading ? 'Sending...' : 'Send'}</span>
             </Button>
           </form>
         </Card>

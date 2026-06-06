@@ -1,9 +1,37 @@
+'use client'
+
+import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Bell, AlertCircle, CheckCircle2, TrendingUp } from 'lucide-react'
+import { Bell, AlertCircle, CheckCircle2, TrendingUp, Wifi, ArrowRight } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 export function AlertsList() {
+  const { apiKey, authenticated, loading: authLoading } = useAuth()
+  const needsBroker = authenticated && !apiKey && !authLoading
+
+  if (needsBroker) {
+    return (
+      <Card className="p-6 border-border h-full flex items-center justify-center bg-amber-500/5 border-amber-500/20">
+        <div className="text-center max-w-xs">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-amber-500/10 flex items-center justify-center">
+            <Bell className="w-6 h-6 text-amber-500" />
+          </div>
+          <p className="text-sm font-medium mb-1">Broker not connected</p>
+          <p className="text-xs text-muted-foreground mb-4">Connect a broker to receive real-time trading alerts and notifications.</p>
+          <Link
+            href="/setup"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors"
+          >
+            <Wifi className="w-3.5 h-3.5" />
+            Connect Broker
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      </Card>
+    )
+  }
   const alerts = [
     {
       id: 1,

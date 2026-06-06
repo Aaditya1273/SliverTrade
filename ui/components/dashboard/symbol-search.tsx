@@ -6,7 +6,7 @@ import { Search, Loader2, X } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { PLATFORM } from '@/lib/api-config'
 
-interface SymbolResult {
+export interface SymbolResult {
   symbol: string
   exchange: string
   name?: string
@@ -57,14 +57,14 @@ export function SymbolSearch({
 
     setLoading(true)
     try {
-      const response = await fetch(PLATFORM('/api/v1/search'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      // Platform uses GET /api/v1/search with query params
+      const params = new URLSearchParams({ q, exchange })
+      const response = await fetch(PLATFORM(`/api/v1/search?${params}`), {
         credentials: 'include',
-        body: JSON.stringify({ query: q, exchange, ...(apiKey ? { apikey: apiKey } : {}) }),
       })
       const data = await response.json()
-      const symbols = data?.data ?? data?.symbols ?? data?.results ?? []
+      // API returns: { results: [...] } or { data: [...] } or { symbols: [...] }
+      const symbols = data?.results ?? data?.data ?? data?.symbols ?? []
       setResults(Array.isArray(symbols) ? symbols.slice(0, 10) : [])
       setIsOpen(true)
     } catch {

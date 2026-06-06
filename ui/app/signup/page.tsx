@@ -1,17 +1,19 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowRight, Mail, Lock, User, AlertCircle, ExternalLink } from 'lucide-react'
+import { ArrowRight, Mail, Lock, User, AlertCircle } from 'lucide-react'
 import { API_CONFIG } from '@/lib/api-config'
 
 const PLATFORM_URL = API_CONFIG.PLATFORM_BASE
 
 export default function SignupPage() {
+  const router = useRouter()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,6 +27,7 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       return
@@ -37,15 +40,53 @@ export default function SignupPage() {
       setError('Password must be at least 8 characters')
       return
     }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter')
+      return
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError('Password must contain at least one number')
+      return
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+      setError('Password must contain at least one special character')
+      return
+    }
 
     setLoading(true)
     setError(null)
 
-    // Self-service registration is not yet available on the Platform backend.
-    // Redirect to the Platform's /setup page which creates the first admin user
-    // for single-user deployments. Multi-user registration (Phase 8) will add
-    // proper signup via the Platform API.
-    window.location.href = `${PLATFORM_URL}/setup`
+    try {
+      const response = await fetch(`${PLATFORM_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.name,
+          email: formData.email,
+          password: formData.password,
+          accept_terms: true,
+          accept_privacy: true,
+          accept_risk: true,
+        }),
+        credentials: 'include',
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.status === 'success') {
+        // Registration successful — redirect to login with success message
+        router.push('/login?registered=true')
+        router.refresh()
+      } else {
+        setError(data.message || 'Registration failed. Please try again.')
+      }
+    } catch (err) {
+      setError('Unable to connect to server. Ensure the Platform service is running on port 5000.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,15 +106,14 @@ export default function SignupPage() {
           <p className="text-muted-foreground">Start making data-driven trading decisions</p>
         </div>
 
-        {/* Info Banner — explains that setup is handled by the Platform */}
+        {/* Info Banner — email verification is not yet implemented */}
         <div className="mb-6 p-4 rounded-lg bg-accent/10 border border-accent/20 flex gap-3">
-          <ExternalLink className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
+          <Mail className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-medium text-accent mb-1">Self-service registration</p>
+            <p className="font-medium text-accent mb-1">Account registration</p>
             <p className="text-xs text-muted-foreground">
-              Registration is handled through the Platform setup page. You&apos;ll be
-              redirected to create your admin account there. Multi-user support is
-              coming in a future update (Phase 8).
+              Creating an account will allow you to log in and access the dashboard.
+              Email verification is optional and can be configured in settings.
             </p>
           </div>
         </div>
@@ -182,7 +222,7 @@ export default function SignupPage() {
             className="w-full gap-2"
             disabled={loading}
           >
-            {loading ? 'Redirecting to setup...' : 'Create Account'} {!loading && <ArrowRight className="w-5 h-5" />}
+            {loading ? 'Creating account...' : 'Create Account'} {!loading && <ArrowRight className="w-5 h-5" />}
           </Button>
         </form>
 

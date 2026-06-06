@@ -12,7 +12,8 @@ interface SystemHealth {
 
 import { PLATFORM, STRATEGY } from '@/lib/api-config'
 
-const PLATFORM_HEALTH_URL = PLATFORM('/api/v1/health')
+// Platform uses /health/* endpoints, not /api/v1/health
+const PLATFORM_HEALTH_URL = PLATFORM('/health/status')
 const STRATEGY_HEALTH_URL = STRATEGY('/api/v1/health')
 
 async function checkService(url: string, timeoutMs = 5000): Promise<ServiceStatus> {

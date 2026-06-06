@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { Bell, Settings, LogOut, TrendingUp, TrendingDown, Zap, Eye, EyeOff, Menu, X, Loader2 } from 'lucide-react'
 import { DashboardHeader } from '@/components/dashboard/header'
 import { PortfolioCard } from '@/components/dashboard/portfolio-card'
-import { PriceChart } from '@/components/dashboard/price-chart'
+import { PnLChart } from '@/components/dashboard/pnl-chart'
 import { AIFeed } from '@/components/dashboard/ai-feed'
 import { AlertsList } from '@/components/dashboard/alerts-list'
 import { useQueryClient } from '@tanstack/react-query'
@@ -102,13 +102,13 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Charts & Alerts */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Price Performance */}
+                {/* Portfolio P&L Performance */}
                 <Card className="p-6 border-border">
                   <h2 className="text-lg font-semibold mb-6 flex items-center justify-between">
-                    Portfolio Performance
-                    <span className="text-xs font-normal text-muted-foreground">24h</span>
+                    P&amp;L Performance
+                    <span className="text-xs font-normal text-muted-foreground">Tradebook</span>
                   </h2>
-                  <PriceChart />
+                  <PnLChart />
                 </Card>
 
                 {/* Assets Table */}

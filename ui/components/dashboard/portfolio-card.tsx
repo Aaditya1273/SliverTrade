@@ -1,9 +1,15 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Wallet, TrendingUp, TrendingDown, Loader2 } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, Loader2, Info } from 'lucide-react'
 import Link from 'next/link'
 import { usePortfolio } from '@/hooks/usePortfolio'
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import { STRATEGY } from '@/lib/api-config'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+
+const STRATEGY_BASE = STRATEGY('/api/v1')
 
 interface PortfolioCardProps {
   hideBalances: boolean
@@ -12,6 +18,15 @@ interface PortfolioCardProps {
 
 export function PortfolioCard({ hideBalances, apiKey }: PortfolioCardProps) {
   const { funds, totalValue, dayPnL, isLoading, error } = usePortfolio(apiKey ?? null)
+
+  const { data: accuracy } = useQuery({
+    queryKey: ['user-accuracy'],
+    queryFn: async () => {
+      const response = await axios.get(`${STRATEGY_BASE}/user-accuracy`)
+      return response.data.data
+    },
+    refetchInterval: 300000,
+  })
 
   // No broker connected — show connect prompt
   if (!apiKey) {
@@ -91,10 +106,29 @@ export function PortfolioCard({ hideBalances, apiKey }: PortfolioCardProps) {
             <p className="text-xs text-muted-foreground mb-1">Used Margin</p>
             <p className="text-lg font-semibold">{hideBalances ? '••••' : `$${(funds?.used_margin ?? 0).toLocaleString()}`}</p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
-            <p className="text-lg font-semibold">—</p>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Win Rate</p>
+                  <p className="text-lg font-semibold">
+                    {accuracy?.trades_evaluated >= 10
+                      ? `${(accuracy.win_rate * 100).toFixed(1)}%`
+                      : '—'
+                    }
+                  </p>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Win rate based on your executed signals</p>
+                {accuracy?.trades_evaluated < 10 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Needs {10 - (accuracy.trades_evaluated || 0)} more evaluated trades
+                  </p>
+                )}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
     </Card>
