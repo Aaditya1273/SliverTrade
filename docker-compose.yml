@@ -1,5 +1,44 @@
 services:
   # ----------------------------------------------------
+  # 0. PostgreSQL (Production Database — optional for local dev)
+  # ----------------------------------------------------
+  # Uncomment the lines below and set DATABASE_URL in .env to:
+  #   DATABASE_URL=postgresql://silvertrade:silvertrade@postgres:5432/silvertrade
+  # to use PostgreSQL for local development. By default the app uses SQLite.
+  #
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: silvertrade-postgres
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_USER: silvertrade
+  #     POSTGRES_PASSWORD: silvertrade
+  #     POSTGRES_DB: silvertrade
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U silvertrade"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 30s
+  #
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: silvertrade-redis
+  #   restart: unless-stopped
+  #   ports:
+  #     - "6379:6379"
+  #   command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+  #
+  # ----------------------------------------------------
   # 1. SilverTrade Platform (Main API Gateway)
   # ----------------------------------------------------
   platform:
@@ -45,6 +84,9 @@ services:
   # ----------------------------------------------------
   # 3. SilverTrade Strategy Engine (AI Decisions)
   # ----------------------------------------------------
+  # 3-model ensemble: Rules (20%) + Random Forest (40%) + LSTM (40%)
+  # Generates BUY/SELL/HOLD signals with confidence scores.
+  # Fetches market data from the Platform API (or Binance data service).
   trade_strategies:
     build:
       context: ./Trade_Strategies
@@ -53,11 +95,24 @@ services:
     ports:
       - "5007:5007"
     environment:
-      - FLASK_HOST=0.0.0.0
-      - FLASK_PORT=5007
+      - SILVERTRADE_HOST=http://platform:5000
+      - SILVERTRADE_API_KEY=
+      - STRATEGY_PORT=5007
+      - FLASK_ENV=production
+      - FLASK_DEBUG=False
+      - OPENAI_API_KEY=
     volumes:
-      - ./Trade_Strategies:/app
-      - ./Trade_Strategies/.env:/app/.env
+      - trade-strategies-log:/app/log
+      - trade-strategies-models:/app/ml/models
+    depends_on:
+      platform:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5007/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
 
   # ----------------------------------------------------
@@ -75,3 +130,13 @@ services:
     depends_on:
       - platform
     restart: unless-stopped
+
+
+# Named volumes
+volumes:
+  postgres-data:
+    driver: local
+  trade-strategies-log:
+    driver: local
+  trade-strategies-models:
+    driver: local

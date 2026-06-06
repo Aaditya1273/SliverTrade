@@ -1,0 +1,116 @@
+# =============================================================================
+# SilverTrade AI — Monitoring Stack (Opt-in Override)
+# =============================================================================
+# Adds Prometheus, Grafana, and AlertManager to any base compose file.
+# Designed to be combined with docker-compose.yml or docker-compose.staging.yml.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+#   docker compose -f docker-compose.staging.yml -f docker-compose.monitoring.yml up -d
+#
+# Or standalone (monitoring only, assumes platform services running on host):
+#   docker compose -f docker-compose.monitoring.yml up -d
+# =============================================================================
+
+networks:
+  silvertrade-net:
+    name: silvertrade-net
+    driver: bridge
+
+volumes:
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+
+services:
+  # ----------------------------------------------------
+  # Prometheus — Metrics collection & alert evaluation
+  # ----------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: silvertrade-prometheus
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ----------------------------------------------------
+  # AlertManager — Alert routing & notifications
+  # ----------------------------------------------------
+  alertmanager:
+    build:
+      context: ./monitoring/alertmanager
+      dockerfile: Dockerfile
+    container_name: silvertrade-alertmanager
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "9093:9093"
+    environment:
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - PAGERDUTY_ROUTING_KEY=${PAGERDUTY_ROUTING_KEY:-}
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - ALERTMANAGER_URL=http://localhost:9093
+    volumes:
+      - ./monitoring/alertmanager/config.yml:/etc/alertmanager/config.yml:ro
+      - ./monitoring/alertmanager/templates:/etc/alertmanager/templates:ro
+      - alertmanager-data:/alertmanager
+    depends_on:
+      prometheus:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9093/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ----------------------------------------------------
+  # Grafana — Dashboards & visualization
+  # ----------------------------------------------------
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: silvertrade-grafana
+    restart: unless-stopped
+    networks:
+      - silvertrade-net
+    ports:
+      - "3001:3000"  # 3001 to avoid conflict with Next.js on 3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-silvertrade}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards/silvertrade:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
