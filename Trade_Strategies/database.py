@@ -131,6 +131,20 @@ def init_db() -> None:
         """)
 
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS alert_rules (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                enabled         INTEGER DEFAULT 1,
+                min_confidence  REAL DEFAULT 50,
+                symbols         TEXT DEFAULT '[]',
+                channels        TEXT DEFAULT '["browser"]',
+                quiet_hours_start INTEGER,
+                quiet_hours_end   INTEGER,
+                created_at      TEXT DEFAULT (datetime('now')),
+                updated_at      TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+        cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_signals_timestamp ON signals(timestamp DESC)
         """)
         cur.execute("""
@@ -310,6 +324,89 @@ def get_missed_opportunities(days: int = 7, limit: int = 50) -> Dict[str, Any]:
             "high_confidence_missed": high_conf,
         },
     }
+
+
+def get_executed_signals_with_outcomes() -> List[Dict[str, Any]]:
+    """Fetch signals that were executed and have been evaluated."""
+    with _db_cursor() as cur:
+        cur.execute("""
+            SELECT * FROM signals
+            WHERE executed = 1
+              AND evaluated_at IS NOT NULL
+            ORDER BY timestamp DESC
+        """)
+        rows = cur.fetchall()
+
+    results = []
+    for row in rows:
+        d = dict(row)
+        d["indicators"] = json.loads(d.get("indicators", "{}"))
+        d["model_breakdown"] = json.loads(d.get("model_breakdown", "{}"))
+        d["mock_data"] = bool(d.get("mock_data"))
+        d["executed"] = bool(d.get("executed"))
+        d["was_correct"] = bool(d["was_correct"]) if d["was_correct"] is not None else None
+        results.append(d)
+
+    return results
+
+
+# ── Alert Rules ─────────────────────────────────────────────────────
+
+def get_alert_rules() -> List[Dict[str, Any]]:
+    """Fetch all alert rules."""
+    with _db_cursor() as cur:
+        cur.execute("SELECT * FROM alert_rules ORDER BY id DESC")
+        rows = cur.fetchall()
+
+    results = []
+    for row in rows:
+        d = dict(row)
+        d["symbols"] = json.loads(d.get("symbols", "[]"))
+        d["channels"] = json.loads(d.get("channels", '["browser"]'))
+        d["enabled"] = bool(d.get("enabled"))
+        results.append(d)
+
+    return results
+
+
+def save_alert_rule(rule: Dict[str, Any]) -> int:
+    """Save or update an alert rule. Returns the rule ID."""
+    rule_id = rule.get("id")
+    with _db_cursor() as cur:
+        if rule_id:
+            cur.execute("""
+                UPDATE alert_rules SET
+                    enabled = ?,
+                    min_confidence = ?,
+                    symbols = ?,
+                    channels = ?,
+                    quiet_hours_start = ?,
+                    quiet_hours_end = ?,
+                    updated_at = datetime('now')
+                WHERE id = ?
+            """, (
+                int(rule.get("enabled", True)),
+                rule.get("min_confidence", 50),
+                json.dumps(rule.get("symbols", [])),
+                json.dumps(rule.get("channels", ["browser"])),
+                rule.get("quiet_hours_start"),
+                rule.get("quiet_hours_end"),
+                rule_id,
+            ))
+            return rule_id
+        else:
+            cur.execute("""
+                INSERT INTO alert_rules (enabled, min_confidence, symbols, channels, quiet_hours_start, quiet_hours_end)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                int(rule.get("enabled", True)),
+                rule.get("min_confidence", 50),
+                json.dumps(rule.get("symbols", [])),
+                json.dumps(rule.get("channels", ["browser"])),
+                rule.get("quiet_hours_start"),
+                rule.get("quiet_hours_end"),
+            ))
+            return cur.lastrowid or 0
 
 
 # ── Backtest Results ─────────────────────────────────────────────────

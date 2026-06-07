@@ -73,14 +73,8 @@ EXPOSE 5007
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=15s \
     CMD curl -sf http://127.0.0.1:5007/api/v1/health || exit 1
 
-# Run with gunicorn (4 workers, each handling up to 1000 connections)
-# Timeout set high (600s) for model training endpoints (/api/v1/train/rf, /train/lstm)
-# which can take several minutes on large datasets.
-CMD ["gunicorn", "strategies_app:app", \
-     "--bind", "0.0.0.0:5007", \
-     "--workers", "4", \
-     "--worker-class", "sync", \
-     "--timeout", "600", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+# Use gunicorn.conf.py for all configuration.
+# Operators can override any setting via environment variables
+# (GUNICORN_WORKERS, GUNICORN_TIMEOUT, GUNICORN_BIND, etc.)
+# without modifying the config file.
+CMD ["gunicorn", "strategies_app:app", "--config", "gunicorn.conf.py"]

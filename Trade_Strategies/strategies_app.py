@@ -21,7 +21,7 @@ import json
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -389,6 +389,41 @@ def get_accuracy():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@app.route("/api/v1/user-accuracy", methods=["GET"])
+def get_user_accuracy():
+    """Get user-specific win rate (only executed signals).
+
+    Returns win rate for signals the user actually executed.
+    """
+    _ensure_initialised()
+    try:
+        from database import get_executed_signals_with_outcomes
+        executed = get_executed_signals_with_outcomes()
+        if not executed:
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "win_rate": None,
+                    "trades_evaluated": 0,
+                    "note": "No executed trades evaluated yet"
+                }
+            })
+        
+        wins = [s for s in executed if s.get("was_correct")]
+        win_rate = len(wins) / len(executed)
+        
+        return jsonify({
+            "status": "success",
+            "data": {
+                "win_rate": round(win_rate, 4),
+                "trades_evaluated": len(executed),
+                "note": "Requires 10+ evaluated trades" if len(executed) < 10 else None
+            }
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/v1/missed-opportunities", methods=["GET"])
 def get_missed_opportunities():
     """Get missed profit opportunities.
@@ -405,6 +440,59 @@ def get_missed_opportunities():
         from database import get_missed_opportunities
         result = get_missed_opportunities(days=days, limit=limit)
         return jsonify({"status": "success", "data": result})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Alert Rules ─────────────────────────────────────────────────────
+
+@app.route("/api/v1/alert-rules", methods=["GET"])
+def get_alert_rules():
+    """Get user's alert rules."""
+    _ensure_initialised()
+    try:
+        from database import get_alert_rules
+        rules = get_alert_rules()
+        return jsonify({"status": "success", "data": rules})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/alert-rules", methods=["POST"])
+def save_alert_rule():
+    """Save or update an alert rule."""
+    _ensure_initialised()
+    try:
+        data = request.get_json(silent=True) or {}
+        from database import save_alert_rule
+        rule_id = save_alert_rule(data)
+        return jsonify({"status": "success", "data": {"id": rule_id}})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/test-alert", methods=["POST"])
+def test_alert():
+    """Send a test notification to verify alert configuration."""
+    _ensure_initialised()
+    try:
+        from alerts_engine import AlertsEngine
+        engine = AlertsEngine()
+        
+        test_signal = {
+            "id": "test-" + str(uuid.uuid4())[:8],
+            "symbol": "BTC/USDT",
+            "decision": "BUY",
+            "confidence": 85,
+            "price": 50000.0,
+            "reasoning": "This is a test alert to verify your notification settings are working correctly.",
+        }
+        
+        rules = [{"enabled": True, "min_confidence": 50, "symbols": [], "channels": ["browser"]}]
+        for rule in rules:
+            engine._send_notification(test_signal, rule)
+        
+        return jsonify({"status": "success", "message": "Test alert sent"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

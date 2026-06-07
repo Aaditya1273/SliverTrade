@@ -101,17 +101,13 @@ class LSTMSignalModel:
         sequence = ohlcv[-SEQUENCE_LENGTH:]
         features = []
         for candle in sequence:
+            # Only OHLCV — matches _prepare_sequences in lstm_train.py
             features.append([
                 float(candle.get("open", 0)),
                 float(candle.get("high", 0)),
                 float(candle.get("low", 0)),
                 float(candle.get("close", 0)),
                 float(candle.get("volume", 0)),
-                float(candle.get("rsi", 0)),
-                float(candle.get("ema_9", 0)),
-                float(candle.get("ema_21", 0)),
-                float(candle.get("macd", 0)),
-                float(candle.get("atr", 0)),
             ])
 
         n_features = len(features[0]) if features else 1
