@@ -1,0 +1,110 @@
+# =============================================================================
+# SilverTrade AI — Critical Alerting Rules (Phase 9)
+# =============================================================================
+
+groups:
+  - name: critical
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up{job="platform"} == 0
+        for: 30s
+        annotations:
+          summary: "Platform API is DOWN"
+          description: "Platform API has been down for more than 30 seconds"
+        labels:
+          severity: critical
+          team: platform
+
+      - alert: StrategyEngineDown
+        expr: up{job="strategy_engine"} == 0
+        for: 30s
+        annotations:
+          summary: "Strategy Engine is DOWN"
+          description: "Strategy Engine has been down for more than 30 seconds"
+        labels:
+          severity: critical
+          team: platform
+
+      - alert: HighErrorRate
+        expr: rate(flask_http_request_total{status=~"5.."}[5m]) > 0.05
+        for: 2m
+        annotations:
+          summary: "Error rate > 5% for 2 minutes"
+          description: "HTTP 5xx error rate is {{ $value | humanizePercentage }}"
+        labels:
+          severity: warning
+          team: platform
+
+      - alert: OrderPlacementFailing
+        expr: rate(broker_api_requests_total{endpoint="placeorder",status="error"}[5m]) > 0.1
+        for: 1m
+        annotations:
+          summary: "Order placement failures > 10%"
+          description: "Order placement failure rate is {{ $value | humanizePercentage }}"
+        labels:
+          severity: critical
+          team: platform
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_pool_connections{state="overflow"} > 30
+        for: 1m
+        annotations:
+          summary: "Database connection pool near exhaustion"
+          description: "{{ $value }} connections in overflow state"
+        labels:
+          severity: critical
+          team: platform
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes > 3e9
+        for: 5m
+        annotations:
+          summary: "Container using > 3GB memory"
+          description: "Memory usage is {{ $value | humanize }}"
+        labels:
+          severity: warning
+          team: platform
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 5m
+        annotations:
+          summary: "CPU usage > 80% for 5 minutes"
+          description: "CPU usage is {{ $value | humanizePercentage }}"
+        labels:
+          severity: warning
+          team: platform
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        annotations:
+          summary: "Disk space < 10%"
+          description: "Available disk space is {{ $value | humanizePercentage }}"
+        labels:
+          severity: critical
+          team: platform
+
+  - name: business
+    interval: 60s
+    rules:
+      - alert: NoSignalsGenerated
+        expr: increase(signals_generated_total[1h]) == 0
+        for: 2h
+        annotations:
+          summary: "No signals generated in 2 hours"
+          description: "Signal generation appears to be stalled"
+        labels:
+          severity: warning
+          team: platform
+
+      - alert: LowActiveUsers
+        expr: active_users_total < 10
+        for: 24h
+        annotations:
+          summary: "Active users below threshold"
+          description: "Only {{ $value }} active users in last 24h"
+        labels:
+          severity: info
+          team: business
