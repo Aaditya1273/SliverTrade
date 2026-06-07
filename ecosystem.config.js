@@ -2,8 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'SilverTrade-Platform',
-      script: 'venv/bin/python3',
-      args: 'app.py',
+      script: 'uv',
+      args: 'run python app.py',
       cwd: './Platfrom',
       interpreter: 'none',
       env: {
@@ -12,8 +12,8 @@ module.exports = {
     },
     {
       name: 'SilverTrade-Data',
-      script: 'venv/bin/python3',
-      args: 'app.py',
+      script: 'uv',
+      args: 'run python app.py',
       cwd: './data_fetch',
       interpreter: 'none',
       env: {
@@ -22,8 +22,8 @@ module.exports = {
     },
     {
       name: 'SilverTrade-AI-Engine',
-      script: 'venv/bin/python3',
-      args: 'strategies_app.py',
+      script: 'uv',
+      args: 'run python strategies_app.py',
       cwd: './Trade_Strategies',
       interpreter: 'none',
       env: {
@@ -33,10 +33,11 @@ module.exports = {
     {
       name: 'SilverTrade-UI',
       script: 'npm',
-      args: 'run dev',
+      args: 'start',
       cwd: './ui',
       env: {
         PORT: 3000,
+        NODE_ENV: 'production',
       }
     }
   ]
