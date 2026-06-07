@@ -2605,3 +2605,45 @@ class TelegramBotService:
 
 # Create global instance
 telegram_bot_service = TelegramBotService()
+
+
+# ------------------------------------------------------------------ #
+# Module-level convenience functions (aliases)                        #
+# These allow test files and production code to call functions       #
+# without importing the singleton instance directly.                  #
+# ------------------------------------------------------------------ #
+
+
+def get_telegram_bot():
+    """Return the global TelegramBotService singleton.
+
+    This is primarily used by the test suite and by the web UI
+    to check bot status without importing the instance directly.
+    """
+    return telegram_bot_service
+
+
+def init_bot_sync(token, _unused=None):
+    """Initialize the bot with the given token (module-level convenience).
+
+    Delegates to ``telegram_bot_service.initialize_bot_sync(token)``.
+    The second positional argument is accepted for backward compatibility
+    with callers that pass ``(token, None)`` but is ignored.
+    """
+    return telegram_bot_service.initialize_bot_sync(token)
+
+
+def start_bot_sync():
+    """Start the bot (module-level convenience).
+
+    Delegates to ``telegram_bot_service.start_bot()``.
+    """
+    return telegram_bot_service.start_bot()
+
+
+def stop_bot_sync():
+    """Stop the bot (module-level convenience).
+
+    Delegates to ``telegram_bot_service.stop_bot()``.
+    """
+    return telegram_bot_service.stop_bot()

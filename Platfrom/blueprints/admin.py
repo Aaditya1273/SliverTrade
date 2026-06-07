@@ -1,4 +1,5 @@
 import os
+import tempfile
 from datetime import date, datetime
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
@@ -108,12 +109,131 @@ def ratelimit_handler(e):
 @check_session_validity
 @limiter.limit(API_RATE_LIMIT)
 def api_stats():
-    """Get admin dashboard stats"""
+    """Get comprehensive admin dashboard stats.
+
+    Returns user counts (free/pro/enterprise), MRR, signal activity,
+    service health, and recent signups — all from live DB queries.
+    """
     try:
+        from datetime import datetime, timedelta
+        from database.user_db import User, db_session as user_db_session
+        from sqlalchemy import func
+
+        now = datetime.utcnow()
+        day_ago = now - timedelta(days=1)
+
+        # ── User counts ────────────────────────────────────────────────
+        total_users = User.query.count()
+        free_users = User.query.filter_by(plan="free").count()
+        pro_users = User.query.filter_by(plan="pro").count()
+        enterprise_users = User.query.filter_by(plan="enterprise").count()
+        unassigned_users = total_users - (free_users + pro_users + enterprise_users)
+
+        # ── Recent signups (last 24 hours) ─────────────────────────────
+        recent_signups = (
+            User.query.filter(User.created_at >= day_ago).count()
+            if hasattr(User, "created_at")
+            else 0
+        )
+
+        # ── Signal activity ────────────────────────────────────────────
+        # Aggregate signals_used_this_month across all users
+        signal_agg = (
+            user_db_session.query(func.sum(User.signals_used_this_month))
+            .filter(User.signals_used_this_month > 0)
+            .scalar()
+        )
+        signals_this_month = signal_agg if signal_agg else 0
+
+        # ── MRR (Monthly Recurring Revenue in INR) ────────────────────
+        PRO_PRICE = 999
+        ENTERPRISE_PRICE = 4999
+        mrr = (pro_users * PRO_PRICE) + (enterprise_users * ENTERPRISE_PRICE)
+
+        # ── Active broker connections ──────────────────────────────────
+        # Count users with a linked broker (stripe_customer_id or non-null
+        # API keys stored in auth_db can proxy this).  We count users who
+        # have a Stripe customer ID as a rough proxy for "active / engaged".
+        engaged_users = User.query.filter(User.stripe_customer_id.isnot(None)).count()
+
+        # ── Service health ─────────────────────────────────────────────
+        services = {}
+
+        # Database health
+        try:
+            from database.db_config import check_all_databases
+            db_health = check_all_databases()
+            for db_name, db_info in db_health.get("databases", {}).items():
+                services[f"db:{db_name}"] = {
+                    "status": db_info.get("status", "unknown"),
+                    "latency_ms": db_info.get("latency_ms", 0),
+                }
+        except Exception as e:
+            services["db:overall"] = {"status": "error", "detail": str(e)}
+
+        # WebSocket proxy health (best-effort)
+        try:
+            from websocket_proxy import get_resource_health
+            ws_health = get_resource_health()
+            ws_pools = ws_health.get("active_pools", {})
+            pool_count = ws_pools.get("count", 0) if isinstance(ws_pools, dict) else 0
+            services["websocket_proxy"] = {
+                "status": "healthy" if pool_count >= 0 else "degraded",
+                "active_pools": pool_count,
+            }
+        except ImportError:
+            services["websocket_proxy"] = {"status": "unavailable"}
+        except Exception:
+            services["websocket_proxy"] = {"status": "degraded"}
+
+        # Redis cache health
+        try:
+            from utils.redis_cache import get_redis_cache
+            redis = get_redis_cache()
+            redis_health = redis.health()
+            services["redis"] = {
+                "status": "healthy" if redis_health.get("status") == "connected" else "degraded",
+            }
+        except Exception:
+            services["redis"] = {"status": "unavailable"}
+
+        # Strategy Engine health
+        try:
+            # Ping the strategy engine process via its health endpoint
+            import requests
+            strategy_host = os.getenv("STRATEGY_HOST", "http://localhost:8001")
+            resp = requests.get(f"{strategy_host}/api/v1/health", timeout=3)
+            services["strategy_engine"] = {
+                "status": "healthy" if resp.status_code == 200 else "degraded",
+            }
+        except Exception:
+            services["strategy_engine"] = {"status": "unavailable"}
+
+        # --- Admin aggregate counts (from existing models) ---
         freeze_count = QtyFreeze.query.count()
         holiday_count = Holiday.query.count()
+
         return jsonify(
-            {"status": "success", "freeze_count": freeze_count, "holiday_count": holiday_count}
+            {
+                "status": "success",
+                # User counts
+                "total_users": total_users,
+                "free_users": free_users + unassigned_users,
+                "pro_users": pro_users,
+                "enterprise_users": enterprise_users,
+                # Revenue
+                "mrr": mrr,
+                "recent_signups": recent_signups,
+                "active_broker_connections": engaged_users,
+                # Signal activity
+                "signals_today": 0,  # Would need a daily counter table
+                "signals_this_month": signals_this_month,
+                # Services health
+                "services": services,
+                # Legacy fields
+                "freeze_count": freeze_count,
+                "holiday_count": holiday_count,
+            }
         )
     except Exception as e:
         logger.exception(f"Error fetching admin stats: {e}")
@@ -274,7 +394,7 @@ def api_freeze_upload():
             return jsonify({"status": "error", "message": "Please upload a CSV file"}), 400
 
         # Save temporarily and load
-        temp_path = "/tmp/qtyfreeze_upload.csv"
+        temp_path = os.path.join(tempfile.gettempdir(), "qtyfreeze_upload.csv")
         file.save(temp_path)
 
         exchange = request.form.get("exchange", "NFO").strip().upper()

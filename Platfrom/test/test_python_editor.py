@@ -50,7 +50,7 @@ def test_editor_functionality():
 
     # Step 1: Check if server is running
     try:
-        response = requests.get(f"{BASE_URL}/status")
+        response = requests.get(f"{BASE_URL}/status", timeout=10)
         if response.status_code != 200:
             print(f"Error: Server returned status {response.status_code}")
             return False
@@ -69,7 +69,7 @@ def test_editor_functionality():
         files = {"file": (test_file.name, f, "text/x-python")}
         data = {"name": TEST_STRATEGY_NAME}
 
-        response = requests.post(f"{BASE_URL}/upload", files=files, data=data)
+        response = requests.post(f"{BASE_URL}/upload", files=files, data=data, timeout=10)
 
         if response.status_code != 200:
             print(f"[ERROR] Failed to upload strategy: {response.text}")
@@ -95,7 +95,7 @@ def test_editor_functionality():
     print("  - Strategy should be EDITABLE when stopped")
 
     # Step 5: Start the strategy
-    response = requests.post(f"{BASE_URL}/start/{strategy_id}")
+    response = requests.post(f"{BASE_URL}/start/{strategy_id}", timeout=10)
     if response.status_code != 200:
         print(f"[ERROR] Failed to start strategy: {response.text}")
     else:
@@ -115,6 +115,7 @@ def test_editor_functionality():
             f"{BASE_URL}/save/{strategy_id}",
             json={"content": "modified content"},
             headers={"Content-Type": "application/json"},
+            timeout=10,
         )
 
         if save_response.status_code == 400:
@@ -123,7 +124,7 @@ def test_editor_functionality():
             print(f"[WARNING] Unexpected response: {save_response.status_code}")
 
         # Step 8: Stop the strategy
-        response = requests.post(f"{BASE_URL}/stop/{strategy_id}")
+        response = requests.post(f"{BASE_URL}/stop/{strategy_id}", timeout=10)
         if response.status_code == 200:
             print("[OK] Strategy stopped")
 
@@ -134,6 +135,7 @@ def test_editor_functionality():
             f"{BASE_URL}/save/{strategy_id}",
             json={"content": modified_code},
             headers={"Content-Type": "application/json"},
+            timeout=10,
         )
 
         if save_response.status_code == 200:
@@ -145,7 +147,7 @@ def test_editor_functionality():
     print("\nCleaning up...")
 
     # Delete the strategy
-    response = requests.delete(f"{BASE_URL}/delete/{strategy_id}")
+    response = requests.delete(f"{BASE_URL}/delete/{strategy_id}", timeout=10)
     if response.status_code == 200:
         print("[OK] Strategy deleted")
 

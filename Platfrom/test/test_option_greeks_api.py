@@ -44,7 +44,7 @@ def test_nifty_call_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -76,7 +76,7 @@ def test_banknifty_put_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -111,7 +111,7 @@ def test_custom_interest_rate():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -139,7 +139,7 @@ def test_sensex_option_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -167,7 +167,7 @@ def test_currency_option_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -196,7 +196,7 @@ def test_commodity_option_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -227,7 +227,7 @@ def test_mcx_custom_expiry_time():
     print("   Using custom expiry_time for accurate Greeks calculation")
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -257,7 +257,7 @@ def test_equity_option_greeks():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         result = response.json()
@@ -285,7 +285,7 @@ def test_invalid_symbol_format():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -311,7 +311,7 @@ def test_expired_option():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -335,7 +335,7 @@ def test_compare_call_put_greeks():
 
     try:
         print("\n📞 CALL Option:")
-        call_response = requests.post(url, json=call_payload)
+        call_response = requests.post(url, json=call_payload, timeout=10)
         call_result = call_response.json()
 
         if call_result.get("status") == "success":
@@ -344,7 +344,7 @@ def test_compare_call_put_greeks():
             print(f"   IV: {call_result['implied_volatility']}%")
 
         print("\n📉 PUT Option:")
-        put_response = requests.post(url, json=put_payload)
+        put_response = requests.post(url, json=put_payload, timeout=10)
         put_result = put_response.json()
 
         if put_result.get("status") == "success":

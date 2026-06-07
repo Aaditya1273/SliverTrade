@@ -49,7 +49,7 @@ def test_option_symbol_nifty_index():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -79,7 +79,7 @@ def test_option_symbol_with_embedded_expiry():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -110,7 +110,7 @@ def test_option_symbol_banknifty():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -141,7 +141,7 @@ def test_option_symbol_equity():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -172,7 +172,7 @@ def test_validation_error():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -203,7 +203,7 @@ def test_all_offsets():
         }
 
         try:
-            response = requests.post(url, json=payload)
+            response = requests.post(url, json=payload, timeout=10)
             data = response.json()
 
             if data.get("status") == "success":

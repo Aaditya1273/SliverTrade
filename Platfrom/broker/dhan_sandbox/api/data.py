@@ -767,7 +767,8 @@ class BrokerData:
         total_volume = sum(int(float(v)) for v in volumes if v) if volumes else 0
         
         # Deterministic dummy OI based on security_id for sandbox
-        dummy_oi = int(hashlib.md5(str(security_id).encode()).hexdigest()[:8], 16) % 100000 + 1000
+        # nosec — MD5 used for deterministic dummy OI in sandbox, not for security
+        dummy_oi = int(hashlib.sha256(str(security_id).encode()).hexdigest()[:8], 16) % 100000 + 1000
 
         result = {
             "ltp": ltp,

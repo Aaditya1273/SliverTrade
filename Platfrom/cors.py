@@ -53,4 +53,6 @@ def get_cors_config():
 
 
 # Initialize Flask-CORS without the app object
-cors = CORS(resources={r"/api/*": get_cors_config()})
+# Configuration is applied in app.py via cors.init_app(app, **get_cors_config())
+# This avoids double-configuration issues between constructor resources and init_app kwargs
+cors = CORS()

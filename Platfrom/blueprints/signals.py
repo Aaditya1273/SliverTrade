@@ -28,9 +28,13 @@ def get_signals():
 
 @signals_bp.route("/latest", methods=["GET"])
 def get_latest_signal():
-    """Get the most recent signal"""
+    """Get the most recent signal — returns empty data when none available"""
     if not signals_history:
-        return jsonify({"status": "error", "message": "No signals available"}), 404
+        return jsonify({
+            "status": "success",
+            "signal": None,
+            "message": "No signals available yet"
+        })
         
     return jsonify({
         "status": "success",

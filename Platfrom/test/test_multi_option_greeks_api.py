@@ -48,7 +48,7 @@ def test_multiple_nifty_options():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         result = response.json()
         print("Response Body:")
@@ -97,7 +97,7 @@ def test_with_custom_underlying():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         result = response.json()
         print("Response Body:")
@@ -134,7 +134,7 @@ def test_mixed_options():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         result = response.json()
 
@@ -172,7 +172,7 @@ def test_invalid_symbol():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         result = response.json()
         print("Response Body:")
@@ -198,7 +198,7 @@ def test_empty_symbols():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         result = response.json()
         print("Response Body:")

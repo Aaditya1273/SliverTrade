@@ -51,19 +51,25 @@ def _emergency_alert(message: str, order_ref: str, api_key: str = "") -> None:
 
     if _EMERGENCY_WEBHOOK:
         try:
-            import urllib.request
+            import requests
 
-            payload = {
-                "text": full_msg,
-                "order_ref": order_ref,
-                "severity": "critical",
-                "source": "order_safety",
-            }.encode("utf-8")
-            urllib.request.urlopen(
-                _EMERGENCY_WEBHOOK,
-                data=payload,
-                timeout=5,
-            )
+            if not _EMERGENCY_WEBHOOK.startswith("https://"):
+                logger.error(f"Emergency webhook URL must use HTTPS: {_EMERGENCY_WEBHOOK[:30]}...")
+                return
+
+            try:
+                requests.post(
+                    _EMERGENCY_WEBHOOK,
+                    json={
+                        "text": full_msg,
+                        "order_ref": order_ref,
+                        "severity": "critical",
+                        "source": "order_safety",
+                    },
+                    timeout=5,
+                )
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to fire emergency webhook: {e}")
         except Exception as e:
             logger.error(f"Failed to fire emergency webhook: {e}")
 

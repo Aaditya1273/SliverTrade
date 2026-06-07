@@ -196,7 +196,7 @@ def check_session_validity(f):
             session.clear()
 
             # Check if this is an AJAX/fetch request
-            from flask import jsonify, request
+            from flask import request
 
             is_ajax = (
                 request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -208,14 +208,17 @@ def check_session_validity(f):
             if is_ajax:
                 # Return JSON response for AJAX requests instead of redirect
                 # This prevents consuming rate limits on the login endpoint
+                # NOTE: Returns a plain dict (not jsonify) so Flask-RESTx can
+                # serialize it properly — jsonify returns a Response object that
+                # RESTx cannot re-serialize (causes "Object of type Response is
+                # not JSON serializable"). Dict + status tuple works with both
+                # Flask 2.2+ and Flask-RESTx.
                 logger.info("Invalid session detected - returning 401 for AJAX request")
-                return jsonify(
-                    {
-                        "status": "error",
-                        "error": "session_expired",
-                        "message": "Your session has expired. Please log in again.",
-                    }
-                ), 401
+                return {
+                    "status": "error",
+                    "error": "session_expired",
+                    "message": "Your session has expired. Please log in again.",
+                }, 401
 
             logger.info("Invalid session detected - redirecting to login")
             return redirect(url_for("auth.login"))

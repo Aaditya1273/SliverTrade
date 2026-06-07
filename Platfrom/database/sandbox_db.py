@@ -397,7 +397,7 @@ def init_db():
 
 def init_default_config():
     """Initialize default sandbox configuration"""
-    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.exc import IntegrityError, ProgrammingError
 
     default_configs = [
         {
@@ -513,6 +513,14 @@ def init_default_config():
         except IntegrityError:
             db_session.rollback()
             logger.debug(f"Config already exists: {config['config_key']}")
+        except ProgrammingError as e:
+            db_session.rollback()
+            err_msg = str(e).lower()
+            # Sandbox DB tables may not exist yet on first Postgres setup.
+            if "does not exist" in err_msg:
+                logger.warning(f"Sandbox DB: sandbox_config table not available — delaying config init ({e})")
+                return  # Stop trying — tables will be created on next restart
+            logger.exception(f"Error adding config {config['config_key']}: {e}")
         except Exception as e:
             db_session.rollback()
             logger.exception(f"Error adding config {config['config_key']}: {e}")

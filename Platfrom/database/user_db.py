@@ -1,12 +1,13 @@
 # database/user_db.py
 
 import os
+from datetime import datetime
 
 import pyotp
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from cachetools import TTLCache
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -55,6 +56,24 @@ class User(Base):
     # change matters only on Postgres/MySQL.
     totp_secret = Column(String(255), nullable=False)  # Fernet-encrypted at rest
     is_admin = Column(Boolean, default=False)
+    # Phase 8: Subscription fields
+    is_active = Column(Boolean, default=True)
+    is_email_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_login = Column(DateTime)
+    plan = Column(String, default='free')  # free | pro | enterprise
+    plan_expires_at = Column(DateTime)
+    stripe_customer_id = Column(String)
+    # Usage limits
+    signals_used_this_month = Column(Integer, default=0)
+    signals_limit = Column(Integer, default=50)
+    # Security
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime)
+    # Phase 10: Account deletion
+    deletion_requested_at = Column(DateTime)
+    deletion_scheduled_at = Column(DateTime)
+    deletion_token = Column(String)
 
     def get_totp_secret(self):
         """Return the user's TOTP secret in plaintext.
@@ -109,6 +128,36 @@ def init_db():
     from database.db_init_helper import init_db_with_logging
 
     init_db_with_logging(Base, engine, "User DB", logger)
+    
+    # Phase 8: Add new columns if they don't exist (for existing installations)
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    columns = [col['name'] for col in inspector.get_columns('users')]
+    with engine.connect() as conn:
+        
+        new_columns = [
+            ('is_active', 'BOOLEAN DEFAULT TRUE'),
+            ('is_email_verified', 'BOOLEAN DEFAULT FALSE'),
+            ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
+            ('last_login', 'TIMESTAMP'),
+            ('plan', 'VARCHAR DEFAULT "free"'),
+            ('plan_expires_at', 'TIMESTAMP'),
+            ('stripe_customer_id', 'VARCHAR'),
+            ('signals_used_this_month', 'INTEGER DEFAULT 0'),
+            ('signals_limit', 'INTEGER DEFAULT 50'),
+            ('failed_login_attempts', 'INTEGER DEFAULT 0'),
+            ('locked_until', 'TIMESTAMP'),
+        ]
+        
+        for col_name, col_def in new_columns:
+            if col_name not in columns:
+                try:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}")
+                    conn.commit()
+                    logger.info(f"Added column {col_name} to users table")
+                except Exception as e:
+                    logger.warning(f"Failed to add column {col_name}: {e}")
+                    conn.rollback()
 
 
 def add_user(username, email, password, is_admin=False):

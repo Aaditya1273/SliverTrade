@@ -444,7 +444,7 @@ def start_strategy_process(strategy_id):
                     f"Strategy file {file_path} is not executable. Setting execute permission."
                 )
                 try:
-                    os.chmod(file_path, 0o755)
+                    os.chmod(file_path, 0o700)
                 except Exception as e:
                     logger.warning(f"Could not set execute permission: {e}")
                     # Continue anyway, Python can still run it
@@ -465,7 +465,7 @@ def start_strategy_process(strategy_id):
             if not IS_WINDOWS:
                 try:
                     # Ensure log directory is writable
-                    os.chmod(log_file.parent, 0o755)
+                    os.chmod(log_file.parent, 0o700)
                 except Exception:
                     pass
 
@@ -1584,7 +1584,7 @@ def new_strategy():
             # Make file executable on Unix-like systems
             if not IS_WINDOWS:
                 try:
-                    os.chmod(file_path, 0o755)
+                    os.chmod(file_path, 0o700)
                 except Exception:
                     pass
 

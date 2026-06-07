@@ -57,7 +57,7 @@ def test_iron_condor():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -89,7 +89,7 @@ def test_long_straddle():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -121,7 +121,7 @@ def test_short_straddle():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -153,7 +153,7 @@ def test_bull_call_spread():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -186,7 +186,7 @@ def test_long_call_butterfly():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -218,7 +218,7 @@ def test_call_ratio_spread():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -252,7 +252,7 @@ def test_iron_butterfly():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -300,7 +300,7 @@ def test_limit_orders():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -344,7 +344,7 @@ def test_future_underlying():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -373,7 +373,7 @@ def test_validation_error():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -406,7 +406,7 @@ def test_jade_lizard():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -449,7 +449,7 @@ def test_diagonal_spread():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -492,7 +492,7 @@ def test_calendar_spread():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))

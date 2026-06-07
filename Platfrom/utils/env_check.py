@@ -81,7 +81,7 @@ def check_tmp_noexec() -> None:
         with open('/proc/mounts', 'r') as f:
             for line in f:
                 parts = line.split()
-                if len(parts) >= 4 and parts[1] == '/tmp':
+                if len(parts) >= 4 and parts[1] == '/tmp':  # nosec B108: reading /proc/mounts, not using /tmp
                     mount_options = parts[3].split(',')
                     if 'noexec' in mount_options:
                         print("\n" + "=" * 70)

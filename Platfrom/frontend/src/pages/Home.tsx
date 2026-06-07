@@ -22,6 +22,7 @@ export default function Home() {
 
   const navLinks = [
     { href: '/', label: 'Home', internal: true },
+    { href: '/pricing', label: 'Pricing', internal: true },
     { href: '/faq', label: 'FAQ', internal: true },
     { href: 'https://silvertrade.in/discord', label: 'Community', internal: false },
     { href: 'https://silvertrade.in/roadmap', label: 'Roadmap', internal: false },

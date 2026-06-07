@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { useBrokerStore } from '@/stores/brokerStore'
 import { useSessionStore } from '@/stores/sessionStore'
+import { useSubscriptionStore } from '@/stores/subscriptionStore'
 import { useThemeStore } from '@/stores/themeStore'
 
 interface AuthSyncProps {
@@ -18,6 +19,8 @@ export function AuthSync({ children }: AuthSyncProps) {
   const { setUser, setApiKey, logout } = useAuthStore()
   const { fetchCapabilities, clearCapabilities } = useBrokerStore()
   const { setActiveSessionCount } = useSessionStore()
+  const fetchSubscription = useSubscriptionStore((s) => s.fetchSubscription)
+  const resetSubscription = useSubscriptionStore((s) => s.reset)
   const { syncAppMode } = useThemeStore()
 
   useEffect(() => {
@@ -50,6 +53,8 @@ export function AuthSync({ children }: AuthSyncProps) {
             if (data.active_sessions !== undefined) {
               setActiveSessionCount(data.active_sessions)
             }
+            // Fetch subscription info globally so all components can use it
+            fetchSubscription()
           } else if (data.status === 'success' && data.authenticated && !data.logged_in) {
             // User is logged in but hasn't connected broker yet
             setUser({
@@ -59,10 +64,13 @@ export function AuthSync({ children }: AuthSyncProps) {
               loginTime: null,
             })
             clearCapabilities()
+            // Fetch subscription info (works even without broker)
+            fetchSubscription()
           } else {
             // Not authenticated or status is not success - clear Zustand store
             logout()
             clearCapabilities()
+            resetSubscription()
           }
         } else {
           // Any non-OK response (401, 500, etc.) - clear Zustand store

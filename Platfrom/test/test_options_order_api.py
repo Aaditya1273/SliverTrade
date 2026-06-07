@@ -60,7 +60,7 @@ def test_nifty_atm_call_buy():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -98,7 +98,7 @@ def test_banknifty_itm2_put_sell():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -135,7 +135,7 @@ def test_embedded_expiry():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -173,7 +173,7 @@ def test_limit_order():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -211,7 +211,7 @@ def test_sl_order():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))
@@ -257,7 +257,7 @@ def test_iron_condor_legs():
         }
 
         try:
-            response = requests.post(url, json=payload)
+            response = requests.post(url, json=payload, timeout=10)
             data = response.json()
 
             if data.get("status") == "success":
@@ -300,7 +300,7 @@ def test_validation_error():
     print(json.dumps(payload, indent=2))
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=10)
         print(f"\nResponse Status: {response.status_code}")
         print("Response Body:")
         print(json.dumps(response.json(), indent=2))

@@ -26,18 +26,147 @@ API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "50 per second")
 orders_bp = Blueprint("orders_bp", __name__, url_prefix="/")
 
 
+@orders_bp.route("/api/v1/risk/validate", methods=["POST"])
+@limiter.limit(API_RATE_LIMIT)
+def risk_validate():
+    """
+    Pre-execution risk validation. Returns warnings/blocks without executing.
+    Used by the OrderConfirmDialog for review-before-trade.
+    """
+    try:
+        data = request.json or {}
+        symbol = data.get("symbol", "")
+        decision = data.get("decision", "")
+        action = "BUY" if decision == "BUY" else "SELL" if decision == "SELL" else decision
+        exchange = data.get("exchange", "NSE")
+        quantity = data.get("quantity", "1")
+        price = data.get("price", "0")
+
+        login_username = session.get("user")
+        if not login_username:
+            return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+        # Get user settings
+        from database.settings_db import get_user_settings
+        settings = get_user_settings(login_username) or {}
+
+        # Fetch portfolio for risk checks
+        portfolio = {}
+        open_positions = []
+        try:
+            from database.settings_db import get_analyze_mode
+            if get_analyze_mode():
+                from database.auth_db import get_api_key_for_tradingview
+                api_key = get_api_key_for_tradingview(login_username)
+                if api_key:
+                    from services.funds_service import get_funds
+                    success, funds_resp, _ = get_funds(api_key=api_key)
+                    if success and funds_resp.get("data"):
+                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
+                        portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
+                    # Get open positions
+                    from services.positionbook_service import get_positionbook
+                    pos_success, pos_resp, _ = get_positionbook(api_key=api_key)
+                    if pos_success and pos_resp.get("data"):
+                        open_positions = pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+            else:
+                from database.auth_db import get_auth_token
+                auth_token = get_auth_token(login_username)
+                broker = session.get("broker")
+                if auth_token and broker:
+                    from services.funds_service import get_funds
+                    success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
+                    if success and funds_resp.get("data"):
+                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
+                        portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
+                    # Get open positions
+                    from services.positionbook_service import get_positionbook
+                    pos_success, pos_resp, _ = get_positionbook(auth_token=auth_token, broker=broker)
+                    if pos_success and pos_resp.get("data"):
+                        open_positions = pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+        except Exception as e:
+            logger.warning(f"Portfolio fetch for risk validation failed: {e}")
+
+        portfolio["open_positions"] = open_positions
+
+        # Get current price for the symbol
+        current_price = data.get("current_price")
+        if not current_price or float(current_price) <= 0:
+            try:
+                import requests
+                quote_resp = requests.post(
+                    f"{request.host_url.rstrip('/')}/api/v1/quotes",
+                    json={"apikey": data.get("apikey", ""), "symbol": symbol, "exchange": exchange},
+                    timeout=5
+                )
+                if quote_resp.status_code == 200:
+                    quote_data = quote_resp.json()
+                    current_price = str(quote_data.get("data", {}).get("ltp", 0))
+            except Exception:
+                pass
+
+        if not current_price or float(current_price) <= 0:
+            current_price = "0"
+
+        # Build order dict for risk engine
+        order_data = {
+            "symbol": symbol,
+            "action": action,
+            "exchange": exchange,
+            "quantity": str(quantity),
+            "price": str(current_price),
+            "product": data.get("product", "MIS"),
+        }
+
+        # Run risk validation
+        from services.risk_engine import RiskEngine
+        risk_engine = RiskEngine()
+        risk_result = risk_engine.validate(order_data, settings, portfolio)
+
+        response = {
+            "status": "success",
+            "approved": risk_result.approved,
+            "warnings": risk_result.warnings,
+            "blocks": risk_result.blocks,
+            "portfolio": {
+                "available_balance": portfolio.get("available_balance", 0),
+                "total_value": portfolio.get("total_value", 0),
+                "day_pnl": portfolio.get("day_pnl", 0),
+            },
+        }
+
+        if not risk_result.approved:
+            response["message"] = "Risk checks failed"
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        logger.exception(f"Error in risk_validate: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": "Risk validation failed",
+            "approved": False,
+            "warnings": ["Unable to validate risk — proceed with caution"],
+            "blocks": [],
+        }), 200
+
+
 @orders_bp.route("/api/v1/execute-signal", methods=["POST"])
 @limiter.limit(API_RATE_LIMIT)
 def execute_signal():
-    """Execute a trade signal from the AI Decision Engine"""
+    """Execute a trade signal from the AI Decision Engine with Phase 4 safety checks"""
     try:
         data = request.json
         if not data:
             return jsonify({"status": "error", "message": "No signal data provided"}), 400
 
+        signal_id = data.get("signal_id")
         symbol = data.get("symbol")
         decision = data.get("decision")
         confidence = data.get("confidence", 0)
+        exchange = data.get("exchange", "NSE")
         
         if not symbol or not decision:
             return jsonify({"status": "error", "message": "Missing symbol or decision"}), 400
@@ -48,32 +177,204 @@ def execute_signal():
         if not action:
             return jsonify({"status": "error", "message": f"Cannot execute action for decision: {decision}"}), 400
 
-        # Preparation for order execution
-        # In production, we'd fetch the user's default quantity/product from settings
+        # Phase 4: Signal staleness check (reject if > 5 minutes old)
+        if signal_id:
+            try:
+                from datetime import datetime, timezone, timedelta
+                # Try to fetch signal timestamp from Strategy Engine
+                import requests
+                strategy_host = os.getenv("STRATEGY_HOST", "http://127.0.0.1:5007")
+                try:
+                    signal_resp = requests.get(f"{strategy_host}/api/v1/signals/{signal_id}", timeout=5)
+                    if signal_resp.status_code == 200:
+                        signal_data = signal_resp.json().get("data", {})
+                        signal_timestamp = signal_data.get("timestamp")
+                        if signal_timestamp:
+                            signal_time = datetime.fromisoformat(signal_timestamp.replace('Z', '+00:00'))
+                            if datetime.now(timezone.utc) - signal_time > timedelta(minutes=5):
+                                return jsonify({"status": "rejected", "message": "Signal expired (older than 5 minutes)"}), 400
+                except Exception:
+                    # If Strategy Engine unreachable, skip staleness check (graceful degradation)
+                    pass
+            except Exception:
+                pass
+
+        # Phase 4: Get user settings for confidence threshold and risk %
+        login_username = session.get("user")
+        if not login_username:
+            return jsonify({"status": "error", "message": "User not authenticated"}), 401
+
+        try:
+            from database.settings_db import get_user_settings
+            settings = get_user_settings(login_username) or {}
+            min_confidence = settings.get("min_signal_confidence", 60)
+            risk_pct = settings.get("risk_per_trade_pct", 2.0)
+            default_product = settings.get("default_product_type", "MIS")
+            default_order_type = settings.get("default_order_type", "MARKET")
+        except Exception:
+            min_confidence = 60
+            risk_pct = 2.0
+            default_product = "MIS"
+            default_order_type = "MARKET"
+
+        # Phase 4: Confidence threshold check
+        if confidence < min_confidence:
+            return jsonify({"status": "rejected", "message": f"Signal confidence {confidence}% below threshold {min_confidence}%"}), 400
+
+        # Phase 4: Duplicate order prevention (check for open orders for same symbol)
+        try:
+            if get_analyze_mode():
+                api_key = get_api_key_for_tradingview(login_username)
+                if api_key:
+                    success, orderbook_resp, _ = get_orderbook(api_key=api_key)
+                    if success and orderbook_resp.get("data"):
+                        for order in orderbook_resp["data"].get("orders", []):
+                            if order.get("symbol") == symbol and order.get("order_status") in ["OPEN", "PENDING", "TRIGGER PENDING"]:
+                                return jsonify({"status": "rejected", "message": "Open order exists for this symbol"}), 409
+            else:
+                auth_token = get_auth_token(login_username)
+                broker = session.get("broker")
+                if auth_token and broker:
+                    success, orderbook_resp, _ = get_orderbook(auth_token=auth_token, broker=broker)
+                    if success and orderbook_resp.get("data"):
+                        for order in orderbook_resp["data"].get("orders", []):
+                            if order.get("symbol") == symbol and order.get("order_status") in ["OPEN", "PENDING", "TRIGGER PENDING"]:
+                                return jsonify({"status": "rejected", "message": "Open order exists for this symbol"}), 409
+        except Exception as e:
+            logger.warning(f"Duplicate order check failed: {e}")
+
+        # Phase 4: Auto position sizing if quantity not provided
+        quantity = data.get("quantity")
+        if not quantity:
+            try:
+                # Get available funds
+                if get_analyze_mode():
+                    api_key = get_api_key_for_tradingview(login_username)
+                    if api_key:
+                        from services.funds_service import get_funds
+                        success, funds_resp, _ = get_funds(api_key=api_key)
+                        if success and funds_resp.get("data"):
+                            available = float(funds_resp["data"].get("available_balance", 0))
+                            # Get current price
+                            try:
+                                import requests
+                                quote_resp = requests.post(
+                                    f"{request.host_url.rstrip('/')}/api/v1/quotes",
+                                    json={"apikey": api_key, "symbol": symbol, "exchange": exchange},
+                                    timeout=10
+                                )
+                                if quote_resp.status_code == 200:
+                                    quote_data = quote_resp.json()
+                                    price = float(quote_data.get("data", {}).get("ltp", 0))
+                                    if price > 0:
+                                        risk_amount = available * (risk_pct / 100)
+                                        quantity = str(max(1, int(risk_amount / price)))
+                            except Exception:
+                                quantity = "1"
+                else:
+                    auth_token = get_auth_token(login_username)
+                    broker = session.get("broker")
+                    if auth_token and broker:
+                        from services.funds_service import get_funds
+                        success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
+                        if success and funds_resp.get("data"):
+                            available = float(funds_resp["data"].get("available_balance", 0))
+                            try:
+                                import requests
+                                quote_resp = requests.post(
+                                    f"{request.host_url.rstrip('/')}/api/v1/quotes",
+                                    json={"apikey": get_api_key_for_tradingview(login_username), "symbol": symbol, "exchange": exchange},
+                                    timeout=10
+                                )
+                                if quote_resp.status_code == 200:
+                                    quote_data = quote_resp.json()
+                                    price = float(quote_data.get("data", {}).get("ltp", 0))
+                                    if price > 0:
+                                        risk_amount = available * (risk_pct / 100)
+                                        quantity = str(max(1, int(risk_amount / price)))
+                            except Exception:
+                                quantity = "1"
+            except Exception as e:
+                logger.warning(f"Auto position sizing failed: {e}")
+                quantity = "1"
+        else:
+            quantity = str(quantity)
+
+        # Prepare order data with user defaults
         order_data = {
             "strategy": "SilverTrade AI Signal",
-            "exchange": data.get("exchange", "NSE"),
+            "exchange": exchange,
             "symbol": symbol,
             "action": action,
-            "product_type": "MIS", # Intraday default
-            "pricetype": "MARKET",
-            "quantity": data.get("quantity", "1"),
-            "price": "0",
-            "trigger_price": "0",
+            "product_type": data.get("product", default_product),
+            "pricetype": data.get("price_type", default_order_type),
+            "quantity": quantity,
+            "price": data.get("price", "0") if data.get("price_type") == "LIMIT" else "0",
+            "trigger_price": data.get("stop_loss", "0"),
         }
 
-        # Check for analyze mode (sandbox)
+        # Phase 7: Risk engine validation
+        try:
+            from services.risk_engine import RiskEngine
+            risk_engine = RiskEngine()
+            
+            # Fetch portfolio for risk checks
+            portfolio = {}
+            if get_analyze_mode():
+                api_key = get_api_key_for_tradingview(login_username)
+                if api_key:
+                    from services.funds_service import get_funds
+                    success, funds_resp, _ = get_funds(api_key=api_key)
+                    if success and funds_resp.get("data"):
+                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
+                        portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
+            else:
+                auth_token = get_auth_token(login_username)
+                broker = session.get("broker")
+                if auth_token and broker:
+                    from services.funds_service import get_funds
+                    success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
+                    if success and funds_resp.get("data"):
+                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
+                        portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
+            
+            # Add price to order_data for risk checks
+            try:
+                import requests
+                quote_resp = requests.post(
+                    f"{request.host_url.rstrip('/')}/api/v1/quotes",
+                    json={"apikey": get_api_key_for_tradingview(login_username), "symbol": symbol, "exchange": exchange},
+                    timeout=10
+                )
+                if quote_resp.status_code == 200:
+                    quote_data = quote_resp.json()
+                    order_data["price"] = str(quote_data.get("data", {}).get("ltp", 0))
+            except Exception:
+                pass
+            
+            risk_result = risk_engine.validate(order_data, settings, portfolio)
+            
+            if not risk_result.approved:
+                return jsonify({
+                    "status": "rejected",
+                    "message": "Order rejected by risk engine",
+                    "blocks": risk_result.blocks,
+                    "warnings": risk_result.warnings
+                }), 400
+        except Exception as e:
+            logger.warning(f"Risk engine check failed: {e}")
+            # Continue without risk check if engine fails
+
+        # Execute order
         if get_analyze_mode():
-            login_username = session.get("user", "guest")
             api_key = get_api_key_for_tradingview(login_username)
             if not api_key:
                 return jsonify({"status": "error", "message": "API key required for sandbox execution"}), 401
             
             success, response_data, status_code = place_smart_order(order_data=order_data, api_key=api_key)
-            return jsonify(response_data), status_code
         else:
-            # Live mode
-            login_username = session.get("user")
             auth_token = get_auth_token(login_username)
             broker = session.get("broker")
             
@@ -81,7 +382,21 @@ def execute_signal():
                 return jsonify({"status": "error", "message": "User not authenticated for live trading"}), 401
                 
             success, response_data, status_code = place_smart_order(order_data=order_data, auth_token=auth_token, broker=broker)
-            return jsonify(response_data), status_code
+
+        # Phase 4: Mark signal as executed in Strategy Engine database
+        if success and signal_id:
+            try:
+                import requests
+                strategy_host = os.getenv("STRATEGY_HOST", "http://127.0.0.1:5007")
+                requests.post(
+                    f"{strategy_host}/api/v1/signals/{signal_id}/mark-executed",
+                    json={"order_id": response_data.get("orderid", "")},
+                    timeout=5
+                )
+            except Exception as e:
+                logger.warning(f"Failed to mark signal as executed: {e}")
+
+        return jsonify(response_data), status_code
 
     except Exception as e:
         logger.exception(f"Error in execute_signal: {str(e)}")

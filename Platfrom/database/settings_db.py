@@ -3,9 +3,11 @@
 import base64
 import os  # kept for API_KEY_PEPPER, SMTP encryption
 
+from datetime import datetime
+
 from cachetools import TTLCache
 from cryptography.fernet import Fernet
-from sqlalchemy import Boolean, Column, Integer, MetaData, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, MetaData, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
@@ -255,6 +257,104 @@ def set_security_settings(
     # Invalidate cache after update
     if "security_settings" in _settings_cache:
         del _settings_cache["security_settings"]
+
+
+class UserSettings(Base):
+    """Per-user trading settings for the UI."""
+    __tablename__ = "user_settings"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(80), unique=True, nullable=False, index=True)
+
+    # Trading defaults
+    default_exchange = Column(String(20), default="NSE")
+    default_product_type = Column(String(20), default="MIS")
+    default_order_type = Column(String(20), default="MARKET")
+
+    # Risk management
+    risk_per_trade_pct = Column(Float, default=2.0)  # 0.5% - 5%
+    min_signal_confidence = Column(Integer, default=60)  # 0-100
+    max_open_positions = Column(Integer, default=5)
+    daily_loss_limit_pct = Column(Integer, default=5)  # halt trading if day P&L < -X%
+
+    # Auto-execute mode
+    auto_execute = Column(Boolean, default=False)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+def get_user_settings(username: str) -> dict:
+    """Get user-specific trading settings.
+
+    Returns a dict with defaults for any unset fields.
+    """
+    defaults = {
+        "default_exchange": "NSE",
+        "default_product_type": "MIS",
+        "default_order_type": "MARKET",
+        "risk_per_trade_pct": 2,
+        "min_signal_confidence": 60,
+        "max_open_positions": 5,
+        "daily_loss_limit_pct": 5,
+        "auto_execute": False,
+    }
+
+    try:
+        settings = db_session.query(UserSettings).filter_by(username=username).first()
+        if not settings:
+            return dict(defaults)
+
+        return {
+            "default_exchange": settings.default_exchange or defaults["default_exchange"],
+            "default_product_type": settings.default_product_type or defaults["default_product_type"],
+            "default_order_type": settings.default_order_type or defaults["default_order_type"],
+            "risk_per_trade_pct": settings.risk_per_trade_pct or defaults["risk_per_trade_pct"],
+            "min_signal_confidence": settings.min_signal_confidence or defaults["min_signal_confidence"],
+            "max_open_positions": settings.max_open_positions or defaults["max_open_positions"],
+            "daily_loss_limit_pct": settings.daily_loss_limit_pct or defaults["daily_loss_limit_pct"],
+            "auto_execute": bool(settings.auto_execute) if settings.auto_execute is not None else False,
+        }
+    except Exception as e:
+        logger.error(f"Failed to get user settings for {username}: {e}")
+        return dict(defaults)
+
+
+def set_user_settings(username: str, settings_data: dict) -> bool:
+    """Save user-specific trading settings.
+
+    Only updates fields that are provided in settings_data.
+    Returns True on success, False on failure.
+    """
+    try:
+        settings = db_session.query(UserSettings).filter_by(username=username).first()
+        if not settings:
+            settings = UserSettings(username=username)
+            db_session.add(settings)
+
+        # Map of API field names to model columns
+        field_map = {
+            "default_exchange": "default_exchange",
+            "default_product_type": "default_product_type",
+            "default_order_type": "default_order_type",
+            "risk_per_trade_pct": "risk_per_trade_pct",
+            "min_signal_confidence": "min_signal_confidence",
+            "max_open_positions": "max_open_positions",
+            "daily_loss_limit_pct": "daily_loss_limit_pct",
+            "auto_execute": "auto_execute",
+        }
+
+        for api_key, col_name in field_map.items():
+            if api_key in settings_data and settings_data[api_key] is not None:
+                setattr(settings, col_name, settings_data[api_key])
+
+        db_session.commit()
+        logger.info(f"User settings updated for {username}")
+        return True
+    except Exception as e:
+        db_session.rollback()
+        logger.error(f"Failed to save user settings for {username}: {e}")
+        return False
 
 
 def clear_settings_cache():

@@ -1,13 +1,17 @@
 """
 Helper module for database initialization with better logging
+Handles Postgres index re-creation gracefully (CREATE INDEX on existing tables
+fails with "relation already exists" since SQLAlchemy's checkfirst only guards
+table creation, not index creation).
 """
 
 from sqlalchemy import inspect
+from sqlalchemy.exc import ProgrammingError
 
 
 def init_db_with_logging(base, engine, db_name, logger):
     """
-    Initialize database tables with detailed logging
+    Initialize database tables with detailed logging.
 
     Args:
         base: SQLAlchemy Base (declarative_base)
@@ -30,7 +34,20 @@ def init_db_with_logging(base, engine, db_name, logger):
     tables_already_exist = model_tables & existing_tables
 
     # Create tables (only creates missing ones)
-    base.metadata.create_all(bind=engine)
+    try:
+        base.metadata.create_all(bind=engine)
+    except ProgrammingError as e:
+        err_msg = str(e).lower()
+        # Postgres raises ProgrammingError when CREATE INDEX fails because the
+        # index already exists. SQLAlchemy's checkfirst=True only guards table
+        # creation, not index creation — so on restart the indexes defined in
+        # __table_args__ trigger "relation already exists".
+        if "already exists" in err_msg or "duplicate" in err_msg:
+            logger.warning(
+                f"{db_name}: Some indexes already exist (expected on restart) — continuing"
+            )
+        else:
+            raise
 
     # Log appropriately
     if tables_to_create:

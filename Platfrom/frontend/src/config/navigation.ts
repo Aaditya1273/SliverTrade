@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardList,
   Code2,
+  CreditCard,
   Database,
   FileBarChart,
   FileStack,
@@ -60,6 +61,7 @@ export const mobileSheetItems = navItems.filter((item) => !bottomNavPaths.includ
 // Profile dropdown menu items
 export const profileMenuItems: NavItem[] = [
   { href: '/profile', label: 'Profile', icon: User },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/apikey', label: 'API Key', icon: Key },
   { href: '/master-contract', label: 'Master Contract', icon: FileStack },
   { href: '/telegram', label: 'Telegram Bot', icon: MessageSquare },

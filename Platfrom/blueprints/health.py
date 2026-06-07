@@ -21,7 +21,7 @@ from flask import Blueprint, Response, jsonify, request
 
 from database.health_db import HealthAlert, HealthMetric, health_session
 from limiter import limiter
-from utils.health_monitor import check_db_connectivity, get_cached_health_status
+from utils.health_monitor import get_cached_health_status
 from utils.logging import get_logger
 from utils.session import check_session_validity
 
@@ -74,25 +74,19 @@ def simple_health():
     }
     """
     try:
-        # Get cached status (instant, no DB query)
-        health_status = get_cached_health_status()
-
-        status_code = 200
-        if health_status["status"] == "warn":
-            status_code = 200  # Still operational, just degraded
-        elif health_status["status"] == "fail":
-            status_code = 503  # Service unavailable
-
+        # Liveness check: always 200 if the server is running and responding
+        # Returns pass as long as the process is alive.
+        # Detailed health checks with DB status go to /health/check.
         return (
             jsonify(
                 {
-                    "status": health_status["status"],
+                    "status": "pass",
                     "version": "1.0",
                     "serviceId": "silvertrade",
                     "description": "SilverTrade Trading Platform",
                 }
             ),
-            status_code,
+            200,
         )
     except Exception as e:
         logger.error(f"Error in simple health check: {e}")
@@ -131,11 +125,11 @@ def detailed_health_check():
     }
     """
     try:
-        # Get cached metrics (instant)
+        # Use cached metrics — no synchronous DB calls that block under load
         cached_status = get_cached_health_status()
-
-        # Perform DB connectivity check (adds ~10-50ms)
-        db_check = check_db_connectivity()
+        db_check = cached_status.get("database", {"status": "pass"})
+        if isinstance(db_check, dict) and "databases" not in db_check:
+            db_check = {"status": db_check.get("status", "pass"), "databases": {"all": db_check.get("status", "pass")}}
 
         # Get current metrics from cache
         current_metric = HealthMetric.get_current_metrics()

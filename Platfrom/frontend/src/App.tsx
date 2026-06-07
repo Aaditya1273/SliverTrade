@@ -16,6 +16,7 @@ const Setup = lazy(() => import('@/pages/Setup'))
 const Login = lazy(() => import('@/pages/Login'))
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'))
 const Download = lazy(() => import('@/pages/Download'))
+const Pricing = lazy(() => import('@/pages/Pricing'))
 const ServerError = lazy(() => import('@/pages/ServerError'))
 const RateLimited = lazy(() => import('@/pages/RateLimited'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
@@ -114,6 +115,9 @@ function HoldingsRoute() {
   return <Holdings />
 }
 
+// Billing
+const Billing = lazy(() => import('@/pages/Billing'))
+
 // Admin pages
 const AdminIndex = lazy(() => import('@/pages/admin/AdminIndex'))
 const FreezeQty = lazy(() => import('@/pages/admin/FreezeQty'))
@@ -154,6 +158,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/download" element={<Download />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/error" element={<ServerError />} />
               <Route path="/rate-limited" element={<RateLimited />} />
 
@@ -256,6 +261,7 @@ function App() {
                 <Route path="/health" element={<HealthMonitor />} />
                 {/* Phase 7: Settings & Action Center */}
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/billing" element={<Billing />} />
                 <Route path="/master-contract" element={<MasterContract />} />
                 <Route path="/action-center" element={<ActionCenter />} />
               </Route>

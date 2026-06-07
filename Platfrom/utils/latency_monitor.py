@@ -114,11 +114,15 @@ def track_latency(api_type):
                 # Start response processing stage
                 tracker.start_stage("broker_response")
 
-                # Get response data
-                if hasattr(response, "json"):
-                    response_data = response.json
-                elif isinstance(response, tuple) and len(response) > 0:
-                    response_data = response[0]
+                # Get response data (handles Flask Response, tuples, and dicts)
+                if isinstance(response, tuple) and len(response) > 0:
+                    first = response[0]
+                    if hasattr(first, "json"):
+                        response_data = first.json or {}
+                    else:
+                        response_data = first
+                elif hasattr(response, "json"):
+                    response_data = response.json or {}
                 else:
                     response_data = {}
 

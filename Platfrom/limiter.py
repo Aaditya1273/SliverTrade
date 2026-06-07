@@ -27,6 +27,15 @@ from flask_limiter.util import get_remote_address
 #   RATE_LIMIT_STORAGE_URL=redis://:password@localhost:6379/0
 #   RATE_LIMIT_STORAGE_URL=redis+sentinel://localhost:26379/service_name
 #   RATE_LIMIT_STORAGE_URL=memory://                    (default)
+
+def get_rate_limit() -> str:
+    """Return the default API rate limit string.
+
+    Override via the ``API_RATE_LIMIT`` env var (e.g. ``"10 per minute"``).
+    """
+    return os.getenv("API_RATE_LIMIT", "30 per minute")
+
+
 _storage_uri = os.getenv("RATE_LIMIT_STORAGE_URL", "memory://")
 
 limiter = Limiter(

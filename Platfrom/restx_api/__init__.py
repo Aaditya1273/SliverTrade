@@ -56,6 +56,7 @@ from .synthetic_future import api as synthetic_future_ns
 from .telegram_bot import api as telegram_ns
 from .ticker import api as ticker_ns
 from .tradebook import api as tradebook_ns
+from .settings import api as settings_ns
 
 # Add namespaces
 api.add_namespace(place_order_ns, path="/placeorder")
@@ -101,4 +102,5 @@ api.add_namespace(pnl_symbols_ns, path="/pnl")
 api.add_namespace(place_gtt_order_ns, path="/placegttorder")
 api.add_namespace(modify_gtt_order_ns, path="/modifygttorder")
 api.add_namespace(cancel_gtt_order_ns, path="/cancelgttorder")
+api.add_namespace(settings_ns, path="/settings")
 api.add_namespace(gtt_orderbook_ns, path="/gttorderbook")

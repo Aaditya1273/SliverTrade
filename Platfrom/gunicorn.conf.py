@@ -82,7 +82,7 @@ loglevel = os.getenv("GUNICORN_LOG_LEVEL", "warning")
 # ---------------------------------------------------------------------------
 # Worker tmp dir — must be on a writable volume, not a read-only mount
 # ---------------------------------------------------------------------------
-worker_tmp_dir = os.getenv("GUNICORN_WORKER_TMP_DIR", "/tmp/gunicorn_workers")
+worker_tmp_dir = os.getenv("GUNICORN_WORKER_TMP_DIR", os.path.join(os.sep, 'tmp', 'gunicorn_workers'))
 
 # ---------------------------------------------------------------------------
 # Hooks

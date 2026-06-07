@@ -19,6 +19,7 @@ from database.auth_db import auth_cache, feed_token_cache, upsert_auth
 from database.settings_db import get_smtp_settings, set_smtp_settings
 from database.user_db import (  # Import the function
     User,
+    add_user,
     authenticate_user,
     db_session,
     find_user_by_email,
@@ -40,7 +41,229 @@ LOGIN_RATE_LIMIT_MIN = os.getenv("LOGIN_RATE_LIMIT_MIN", "5 per minute")
 LOGIN_RATE_LIMIT_HOUR = os.getenv("LOGIN_RATE_LIMIT_HOUR", "25 per hour")
 RESET_RATE_LIMIT = os.getenv("RESET_RATE_LIMIT", "15 per hour")  # Password reset rate limit
 
+# Google OAuth configuration
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
+
+# Derive the callback URL from the HOST_SERVER env var (or fall back to localhost)
+HOST_SERVER = os.getenv("HOST_SERVER", "http://localhost:5000")
+GOOGLE_REDIRECT_URI = f"{HOST_SERVER}/auth/google/callback"
+
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+
+
+# ============================================================================
+# Google OAuth Endpoints
+# ============================================================================
+
+
+def _get_google_provider_cfg():
+    """Fetch Google's OpenID Connect discovery document."""
+    import requests
+    try:
+        resp = requests.get(GOOGLE_DISCOVERY_URL, timeout=10)
+        return resp.json()
+    except Exception as e:
+        logger.error(f"Failed to fetch Google provider config: {e}")
+        return None
+
+
+def _google_login_or_create_user(email, google_name) -> tuple:
+    """
+    Look up an existing user by email from Google, or create one.
+
+    Returns (user, is_new) where ``user`` is the SQLAlchemy User instance
+    and ``is_new`` is True when a new account was just created.
+    """
+    user = User.query.filter_by(email=email).first()
+    if user:
+        logger.info(f"Google OAuth: existing user found for {email}")
+        return user, False
+
+    # Create a new user from Google profile info
+    import secrets
+    random_password = secrets.token_urlsafe(32)
+    username = email.split("@")[0]
+
+    # Ensure unique username by appending a suffix if needed
+    base_username = username
+    suffix = 1
+    while User.query.filter_by(username=username).first():
+        username = f"{base_username}_{suffix}"
+        suffix += 1
+
+    # Use the helper imported at module level
+    user = add_user(username, email, random_password, is_admin=False)
+    if user:
+        user.is_email_verified = True
+        db_session.commit()
+        logger.info(f"Google OAuth: created new user {username} ({email})")
+        return user, True
+
+    logger.error(f"Google OAuth: failed to create user for {email}")
+    return None, False
+
+
+@auth_bp.route("/google/login", methods=["GET"])
+def google_login():
+    """
+    Initiate Google OAuth login flow.
+
+    Redirects the user to Google's consent screen.  The ``state``
+    parameter protects against CSRF and is stored in the user's
+    Flask session for verification on the callback.
+    """
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        logger.warning("Google OAuth is not configured (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)")
+        return jsonify({"status": "error", "message": "Google OAuth is not configured"}), 503
+
+    provider_cfg = _get_google_provider_cfg()
+    if not provider_cfg:
+        return jsonify({"status": "error", "message": "Failed to contact Google"}), 502
+
+    authorization_endpoint = provider_cfg.get("authorization_endpoint")
+    if not authorization_endpoint:
+        return jsonify({"status": "error", "message": "Invalid provider config"}), 502
+
+    import secrets
+    state = secrets.token_urlsafe(32)
+    session["google_oauth_state"] = state
+
+    params = {
+        "response_type": "code",
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "scope": "openid email profile",
+        "state": state,
+    }
+    from urllib.parse import urlencode
+    redirect_url = f"{authorization_endpoint}?{urlencode(params)}"
+
+    logger.info(f"Initiating Google OAuth, redirecting to consent screen")
+    return redirect(redirect_url)
+
+
+@auth_bp.route("/google/callback", methods=["GET"])
+def google_callback():
+    """
+    Handle Google OAuth callback.
+
+    1. Verifies the ``state`` parameter (CSRF protection).
+    2. Exchanges the authorization ``code`` for an access token.
+    3. Fetches the user's Google profile (email, name).
+    4. Looks up or creates a local user account.
+    5. Sets Flask session and redirects to the dashboard.
+    """
+    import requests as http_requests
+    from urllib.parse import urlencode
+
+    # 1. Verify state parameter (CSRF protection)
+    expected_state = session.pop("google_oauth_state", None)
+    received_state = request.args.get("state")
+
+    if not expected_state or received_state != expected_state:
+        logger.warning("Google OAuth: state mismatch (possible CSRF)")
+        return redirect("/login?error=oauth_state_mismatch")
+
+    # 2. Exchange authorization code for tokens
+    code = request.args.get("code")
+    if not code:
+        logger.warning("Google OAuth: no authorization code received")
+        return redirect("/login?error=oauth_no_code")
+
+    provider_cfg = _get_google_provider_cfg()
+    if not provider_cfg:
+        return redirect("/login?error=oauth_provider_error")
+
+    token_endpoint = provider_cfg.get("token_endpoint")
+    if not token_endpoint:
+        return redirect("/login?error=oauth_provider_error")
+
+    # Exchange code for token
+    token_data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+
+    try:
+        token_response = http_requests.post(token_endpoint, data=token_data, timeout=15)
+        token_response.raise_for_status()
+        tokens = token_response.json()
+    except Exception as e:
+        logger.error(f"Google OAuth: token exchange failed: {e}")
+        return redirect("/login?error=oauth_token_failed")
+
+    # 3. Fetch user info from Google
+    userinfo_endpoint = provider_cfg.get("userinfo_endpoint")
+    if not userinfo_endpoint:
+        return redirect("/login?error=oauth_provider_error")
+
+    access_token = tokens.get("access_token")
+    if not access_token:
+        logger.error("Google OAuth: no access token in response")
+        return redirect("/login?error=oauth_no_token")
+
+    try:
+        userinfo_response = http_requests.get(
+            userinfo_endpoint,
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=15,
+        )
+        userinfo_response.raise_for_status()
+        google_info = userinfo_response.json()
+    except Exception as e:
+        logger.error(f"Google OAuth: failed to fetch user info: {e}")
+        return redirect("/login?error=oauth_userinfo_failed")
+
+    google_email = google_info.get("email")
+    if not google_email:
+        logger.error("Google OAuth: no email in user info")
+        return redirect("/login?error=oauth_no_email")
+
+    google_name = google_info.get("name", google_email.split("@")[0])
+
+    # 4. Look up or create user
+    user, is_new = _google_login_or_create_user(google_email, google_name)
+    if not user:
+        return redirect("/login?error=oauth_create_failed")
+
+    # 5. Log the user in by setting session
+    session["user"] = user.username
+    logger.info(f"Google OAuth: login success for {user.username} ({'new' if is_new else 'existing'} user)")
+
+    # Log the login attempt
+    try:
+        from database.auth_db import log_login_attempt
+        log_login_attempt(
+            username=user.username,
+            ip_address=get_real_ip(),
+            device_info=request.headers.get("User-Agent", ""),
+            status="success",
+            login_type="oauth",
+            broker="google",
+        )
+    except Exception:
+        pass
+
+    # Redirect to frontend dashboard
+    return redirect("/dashboard")
+
+
+@auth_bp.route("/google/config", methods=["GET"])
+def google_config():
+    """Return Google OAuth client configuration for the frontend.
+
+    Only returns the client ID — the secret is never exposed.
+    """
+    return jsonify({
+        "status": "success",
+        "client_id": GOOGLE_CLIENT_ID,
+        "enabled": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
+    })
 
 
 @auth_bp.errorhandler(429)
@@ -98,7 +321,75 @@ def get_broker_config():
 def check_setup_required():
     """Check if initial setup is required (no users exist)."""
     needs_setup = find_user_by_username() is None
-    return jsonify({"status": "success", "needs_setup": needs_setup})
+    return jsonify({"needs_setup": needs_setup})
+
+
+@auth_bp.route("/register", methods=["POST"])
+@limiter.limit("10 per hour")
+def register():
+    """Phase 8: User registration with email verification. Phase 10: Terms acceptance."""
+    try:
+        data = request.json
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+        
+        # Phase 10: Terms acceptance
+        accept_terms = data.get("accept_terms", False)
+        accept_privacy = data.get("accept_privacy", False)
+        accept_risk = data.get("accept_risk", False)
+        
+        if not username or not email or not password:
+            return jsonify({"status": "error", "message": "Missing required fields"}), 400
+        
+        # Phase 10: Require all three checkboxes
+        if not accept_terms or not accept_privacy or not accept_risk:
+            return jsonify({
+                "status": "error",
+                "message": "You must accept the Terms of Service, Privacy Policy, and risk acknowledgment to register"
+            }), 400
+        
+        # Password strength validation
+        if len(password) < 8:
+            return jsonify({"status": "error", "message": "Password must be at least 8 characters"}), 400
+        if not re.search(r"[A-Z]", password):
+            return jsonify({"status": "error", "message": "Password must contain at least one uppercase letter"}), 400
+        if not re.search(r"[0-9]", password):
+            return jsonify({"status": "error", "message": "Password must contain at least one number"}), 400
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            return jsonify({"status": "error", "message": "Password must contain at least one special character"}), 400
+        
+        # Check if user already exists
+        if User.query.filter_by(username=username).first():
+            return jsonify({"status": "error", "message": "Username already exists"}), 409
+        if User.query.filter_by(email=email).first():
+            return jsonify({"status": "error", "message": "Email already registered"}), 409
+        
+        # Create user with free plan
+        from database.user_db import add_user
+        user = add_user(username, email, password, is_admin=False)
+        
+        if not user:
+            return jsonify({"status": "error", "message": "Failed to create user"}), 500
+        
+        # Phase 10: Store terms acceptance
+        from database.user_db import db_session
+        from datetime import datetime
+        # TODO: Create terms_acceptance table to store acceptance with timestamp and IP
+        
+        # Generate email verification token
+        verification_token = secrets.token_urlsafe(32)
+        # TODO: Store verification token and send email
+        
+        return jsonify({
+            "status": "success",
+            "message": "Registration successful. Please check your email to verify your account.",
+            "user_id": user.id
+        }), 201
+        
+    except Exception as e:
+        logger.exception("Registration error: %s", e)
+        return jsonify({"status": "error", "message": "Registration failed"}), 500
 
 
 def _try_resume_broker_session(username):

@@ -34,6 +34,9 @@ from blueprints.brlogin import brlogin_bp
 from blueprints.broker_credentials import (
     broker_credentials_bp,  # Import the broker credentials blueprint
 )
+from blueprints.billing import billing_bp  # Import the billing blueprint
+from blueprints.account import account_bp  # Import the account blueprint
+from blueprints.chat import chat_bp  # Import the chat blueprint
 from blueprints.chartink import chartink_bp  # Import the chartink blueprint
 from blueprints.strategy_portfolio import strategy_portfolio_bp  # Strategy Builder portfolio
 from blueprints.core import core_bp
@@ -96,6 +99,7 @@ from database.leverage_db import init_db as ensure_leverage_tables_exists
 from database.sandbox_db import init_db as ensure_sandbox_tables_exists
 from database.settings_db import init_db as ensure_settings_tables_exists
 from database.strategy_db import init_db as ensure_strategy_tables_exists
+from database.chat_db import init_db as ensure_chat_tables_exists
 from database.symbol import init_db as ensure_master_contract_tables_exists
 from database.telegram_db import get_bot_config
 from database.traffic_db import init_logs_db as ensure_traffic_logs_exists
@@ -118,6 +122,9 @@ from utils.socketio_error_handler import (
 )
 from utils.traffic_logger import init_traffic_logging  # Import traffic logging
 from utils.version import get_version  # Import version management
+
+# Initialize RAG service (trading knowledge base for AI chat)
+from services.rag_service import rag as rag_service
 
 # Import WebSocket proxy server - using relative import to avoid @ symbol issues
 from websocket_proxy.app_integration import start_websocket_proxy
@@ -322,6 +329,9 @@ def create_app():
     app.register_blueprint(oiprofile_bp)  # Register OI Profile blueprint
     app.register_blueprint(flow_bp)  # Register Flow blueprint
     app.register_blueprint(broker_credentials_bp)  # Register Broker credentials blueprint
+    app.register_blueprint(billing_bp)  # Register Billing blueprint
+    app.register_blueprint(account_bp)  # Register Account blueprint
+    app.register_blueprint(chat_bp)  # Register Chat blueprint
     app.register_blueprint(system_permissions_bp)  # Register System permissions blueprint
     app.register_blueprint(strategy_portfolio_bp)  # Register Strategy Portfolio blueprint
 
@@ -350,6 +360,15 @@ def create_app():
         csrf.exempt(app.view_functions["health_bp.simple_health"])
         csrf.exempt(app.view_functions["health_bp.detailed_health_check"])
 
+        # Exempt billing webhook endpoint from CSRF (Stripe sends signature header, not CSRF token)
+        csrf.exempt(app.view_functions["billing.stripe_webhook"])
+
+        # Exempt chat API endpoints from CSRF (use API key authentication)
+        csrf.exempt(app.view_functions["chat.chat"])
+        csrf.exempt(app.view_functions["chat.get_conversations"])
+        csrf.exempt(app.view_functions["chat.get_conversation"])
+        csrf.exempt(app.view_functions["chat.chat_stream"])
+
         # Initialize latency monitoring (after registering API blueprint)
         init_latency_monitoring(app)
 
@@ -364,6 +383,240 @@ def create_app():
 
 
     return app
+
+
+def setup_environment(app):
+    with app.app_context():
+        # load broker plugins (lazy - no actual imports until login)
+        app.broker_auth_functions = load_broker_auth_functions()
+        load_broker_capabilities()  # cache plugin.json data in memory
+
+    # Setup ngrok cleanup handlers (always register, regardless of ngrok being enabled)
+    # This ensures proper cleanup on shutdown even if ngrok is enabled/disabled via UI
+    # The actual tunnel creation happens in the __main__ block below
+    from utils.ngrok_manager import setup_ngrok_handlers
+
+    setup_ngrok_handlers()
+
+    # Run database init + schedulers in background thread
+    # Tables already exist after first run; this is a safety check
+    import threading
+
+    # Event to signal when DB init is complete (cache restoration waits on this)
+    app.db_ready = threading.Event()
+
+    def _init_databases_and_schedulers():
+        with app.app_context():
+            import time
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            from database.chart_prefs_db import ensure_chart_prefs_tables_exists
+            from database.market_calendar_db import ensure_market_calendar_tables_exists
+            from database.qty_freeze_db import ensure_qty_freeze_tables_exists
+            from database.strategy_portfolio_db import (
+                ensure_strategy_portfolio_tables_exists,
+            )
+
+            db_init_functions = [
+                ("Auth DB", ensure_auth_tables_exists),
+                ("User DB", ensure_user_tables_exists),
+                ("Master Contract DB", ensure_master_contract_tables_exists),
+                ("API Log DB", ensure_api_log_tables_exists),
+                ("Analyzer DB", ensure_analyzer_tables_exists),
+                ("Settings DB", ensure_settings_tables_exists),
+                ("Chartink DB", ensure_chartink_tables_exists),
+                ("Traffic Logs DB", ensure_traffic_logs_exists),
+                ("Latency DB", ensure_latency_tables_exists),
+                ("Strategy DB", ensure_strategy_tables_exists),
+                ("Sandbox DB", ensure_sandbox_tables_exists),
+                ("Chat DB", ensure_chat_tables_exists),
+                ("Action Center DB", ensure_action_center_tables_exists),
+                ("Chart Prefs DB", ensure_chart_prefs_tables_exists),
+                ("Market Calendar DB", ensure_market_calendar_tables_exists),
+                ("Qty Freeze DB", ensure_qty_freeze_tables_exists),
+                ("Historify DB", ensure_historify_tables_exists),
+                ("Flow DB", ensure_flow_tables_exists),
+                ("Leverage DB", ensure_leverage_tables_exists),
+                ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
+            ]
+
+            db_init_start = time.time()
+            with ThreadPoolExecutor(max_workers=15) as executor:
+                futures = {executor.submit(func): name for name, func in db_init_functions}
+                for future in as_completed(futures):
+                    db_name = futures[future]
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logger.error(f"Failed to initialize {db_name}: {e}")
+
+            db_init_time = (time.time() - db_init_start) * 1000
+            logger.debug(f"All databases initialized in parallel ({db_init_time:.0f}ms)")
+
+            # Signal that DB tables are ready (unblocks cache restoration)
+            app.db_ready.set()
+
+            # Initialize RAG service (ChromaDB vector store for AI chat knowledge)
+            try:
+                rag_service.initialize()
+            except Exception as e:
+                logger.warning(f"Failed to initialize RAG service: {e}")
+
+            # Initialize schedulers AFTER database initialization
+            try:
+                init_python_strategy()
+                logger.debug("Python strategy scheduler initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Python strategy scheduler: {e}")
+
+            try:
+                from services.flow_scheduler_service import init_flow_scheduler
+
+                init_flow_scheduler()
+                logger.debug("Flow scheduler initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Flow scheduler: {e}")
+
+            try:
+                from services.historify_scheduler_service import init_historify_scheduler
+
+                init_historify_scheduler(socketio=socketio)
+                logger.debug("Historify scheduler initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize Historify scheduler: {e}")
+
+            try:
+                from services.signal_reset_service import init_signal_reset_scheduler
+
+                init_signal_reset_scheduler()
+                logger.debug("Signal reset scheduler initialized (cron: 1st of month at 00:01 IST)")
+            except Exception as e:
+                logger.error(f"Failed to initialize signal reset scheduler: {e}")
+
+            # Auto-start analyzer mode services (depends on DB being ready)
+            try:
+                from database.settings_db import get_analyze_mode
+
+                if get_analyze_mode():
+                    from sandbox.execution_thread import start_execution_engine
+                    from sandbox.squareoff_thread import start_squareoff_scheduler
+
+                    def start_engine():
+                        success, message = start_execution_engine()
+                        return ("execution_engine", success, message)
+
+                    def start_scheduler():
+                        success, message = start_squareoff_scheduler()
+                        return ("squareoff_scheduler", success, message)
+
+                    def run_catchup():
+                        from sandbox.position_manager import catchup_missed_settlements
+                        catchup_missed_settlements()
+                        return ("catchup_settlement", True, "Completed")
+
+                    with ThreadPoolExecutor(max_workers=3) as executor:
+                        futures = [
+                            executor.submit(start_engine),
+                            executor.submit(start_scheduler),
+                            executor.submit(run_catchup),
+                        ]
+                        for future in as_completed(futures):
+                            try:
+                                service_name, success, message = future.result()
+                                if service_name == "execution_engine":
+                                    if success:
+                                        logger.debug("Execution engine auto-started (Analyzer mode is ON)")
+                                    else:
+                                        logger.warning(f"Failed to auto-start execution engine: {message}")
+                                elif service_name == "squareoff_scheduler":
+                                    if success:
+                                        logger.debug("Square-off scheduler auto-started (Analyzer mode is ON)")
+                                    else:
+                                        logger.warning(f"Failed to auto-start square-off scheduler: {message}")
+                                elif service_name == "catchup_settlement":
+                                    logger.debug("Catch-up settlement check completed on startup")
+                            except Exception as e:
+                                logger.error(f"Error starting service: {e}")
+            except Exception as e:
+                logger.error(f"Error checking analyzer mode on startup: {e}")
+
+            # Auto-start Telegram bot if it was active (after DB tables exist)
+            try:
+                import sys
+
+                bot_config = get_bot_config()
+                if bot_config.get("is_active") and bot_config.get("bot_token"):
+                    logger.debug("Auto-starting Telegram bot (background)...")
+
+                    if "eventlet" in sys.modules:
+                        success, message = telegram_bot_service.initialize_bot_sync(
+                            token=bot_config["bot_token"]
+                        )
+                        if success:
+                            success, message = telegram_bot_service.start_bot()
+                            if success:
+                                logger.debug(f"Telegram bot auto-started successfully: {message}")
+                            else:
+                                logger.error(f"Failed to auto-start Telegram bot: {message}")
+                        else:
+                            logger.error(f"Failed to initialize Telegram bot: {message}")
+                    else:
+                        import asyncio
+
+                        try:
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            try:
+                                success, message = loop.run_until_complete(
+                                    telegram_bot_service.initialize_bot(
+                                        token=bot_config["bot_token"]
+                                    )
+                                )
+                            finally:
+                                loop.close()
+
+                            if success:
+                                success, message = telegram_bot_service.start_bot()
+                                if success:
+                                    logger.debug(f"Telegram bot auto-started successfully: {message}")
+                                else:
+                                    logger.error(f"Failed to auto-start Telegram bot: {message}")
+                            else:
+                                logger.error(f"Failed to initialize Telegram bot: {message}")
+                        except Exception as e:
+                            logger.error(f"Error in Telegram bot startup: {e}")
+            except Exception as e:
+                logger.error(f"Error auto-starting Telegram bot: {e}")
+
+    threading.Thread(target=_init_databases_and_schedulers, daemon=True).start()
+
+
+app = create_app()
+
+# Explicitly call the setup environment function
+setup_environment(app)
+
+# Restore caches from database in background (not needed until first trade/lookup)
+import threading
+
+def _restore_caches_background():
+    # Wait for DB tables to be created before querying
+    app.db_ready.wait()
+    with app.app_context():
+        try:
+            from database.cache_restoration import restore_all_caches
+
+            cache_result = restore_all_caches()
+
+            if cache_result["success"]:
+                symbol_count = cache_result["symbol_cache"].get("symbols_loaded", 0)
+                auth_count = cache_result["auth_cache"].get("tokens_loaded", 0)
+                if symbol_count > 0 or auth_count > 0:
+                    logger.debug(f"Cache restoration: {symbol_count} symbols, {auth_count} auth tokens")
+        except Exception as e:
+            logger.debug(f"Cache restoration skipped: {e}")
+
+threading.Thread(target=_restore_caches_background, daemon=True).start()
 
 
 # ── Correlation ID ────────────────────────────────────────────────────
@@ -510,228 +763,8 @@ def get_host_config():
     """Return the HOST_SERVER configuration for frontend webhook URL generation"""
     from flask import jsonify
     host_server = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
-    is_localhost = any(local in host_server.lower()
-                       for local in ["localhost", "127.0.0.1", "0.0.0.0"])
+    is_localhost = any(local in host_server.lower()                                       for local in ["localhost", "127.0.0.1", "0.0.0.0"])  # nosec B104 — checking for all-interfaces detection, not binding
     return jsonify({"host_server": host_server, "is_localhost": is_localhost})
-
-
-def setup_environment(app):
-    with app.app_context():
-        # load broker plugins (lazy - no actual imports until login)
-        app.broker_auth_functions = load_broker_auth_functions()
-        load_broker_capabilities()  # cache plugin.json data in memory
-
-    # Setup ngrok cleanup handlers (always register, regardless of ngrok being enabled)
-    # This ensures proper cleanup on shutdown even if ngrok is enabled/disabled via UI
-    # The actual tunnel creation happens in the __main__ block below
-    from utils.ngrok_manager import setup_ngrok_handlers
-
-    setup_ngrok_handlers()
-
-    # Run database init + schedulers in background thread
-    # Tables already exist after first run; this is a safety check
-    import threading
-
-    # Event to signal when DB init is complete (cache restoration waits on this)
-    app.db_ready = threading.Event()
-
-    def _init_databases_and_schedulers():
-        with app.app_context():
-            import time
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-
-            from database.chart_prefs_db import ensure_chart_prefs_tables_exists
-            from database.market_calendar_db import ensure_market_calendar_tables_exists
-            from database.qty_freeze_db import ensure_qty_freeze_tables_exists
-            from database.strategy_portfolio_db import (
-                ensure_strategy_portfolio_tables_exists,
-            )
-
-            db_init_functions = [
-                ("Auth DB", ensure_auth_tables_exists),
-                ("User DB", ensure_user_tables_exists),
-                ("Master Contract DB", ensure_master_contract_tables_exists),
-                ("API Log DB", ensure_api_log_tables_exists),
-                ("Analyzer DB", ensure_analyzer_tables_exists),
-                ("Settings DB", ensure_settings_tables_exists),
-                ("Chartink DB", ensure_chartink_tables_exists),
-                ("Traffic Logs DB", ensure_traffic_logs_exists),
-                ("Latency DB", ensure_latency_tables_exists),
-                ("Strategy DB", ensure_strategy_tables_exists),
-                ("Sandbox DB", ensure_sandbox_tables_exists),
-                ("Action Center DB", ensure_action_center_tables_exists),
-                ("Chart Prefs DB", ensure_chart_prefs_tables_exists),
-                ("Market Calendar DB", ensure_market_calendar_tables_exists),
-                ("Qty Freeze DB", ensure_qty_freeze_tables_exists),
-                ("Historify DB", ensure_historify_tables_exists),
-                ("Flow DB", ensure_flow_tables_exists),
-                ("Leverage DB", ensure_leverage_tables_exists),
-                ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
-            ]
-
-            db_init_start = time.time()
-            with ThreadPoolExecutor(max_workers=15) as executor:
-                futures = {executor.submit(func): name for name, func in db_init_functions}
-                for future in as_completed(futures):
-                    db_name = futures[future]
-                    try:
-                        future.result()
-                    except Exception as e:
-                        logger.error(f"Failed to initialize {db_name}: {e}")
-
-            db_init_time = (time.time() - db_init_start) * 1000
-            logger.debug(f"All databases initialized in parallel ({db_init_time:.0f}ms)")
-
-            # Signal that DB tables are ready (unblocks cache restoration)
-            app.db_ready.set()
-
-            # Initialize schedulers AFTER database initialization
-            try:
-                init_python_strategy()
-                logger.debug("Python strategy scheduler initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize Python strategy scheduler: {e}")
-
-            try:
-                from services.flow_scheduler_service import init_flow_scheduler
-
-                init_flow_scheduler()
-                logger.debug("Flow scheduler initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize Flow scheduler: {e}")
-
-            try:
-                from services.historify_scheduler_service import init_historify_scheduler
-
-                init_historify_scheduler(socketio=socketio)
-                logger.debug("Historify scheduler initialized")
-            except Exception as e:
-                logger.error(f"Failed to initialize Historify scheduler: {e}")
-
-            # Auto-start analyzer mode services (depends on DB being ready)
-            try:
-                from database.settings_db import get_analyze_mode
-
-                if get_analyze_mode():
-                    from sandbox.execution_thread import start_execution_engine
-                    from sandbox.squareoff_thread import start_squareoff_scheduler
-
-                    def start_engine():
-                        success, message = start_execution_engine()
-                        return ("execution_engine", success, message)
-
-                    def start_scheduler():
-                        success, message = start_squareoff_scheduler()
-                        return ("squareoff_scheduler", success, message)
-
-                    def run_catchup():
-                        from sandbox.position_manager import catchup_missed_settlements
-                        catchup_missed_settlements()
-                        return ("catchup_settlement", True, "Completed")
-
-                    with ThreadPoolExecutor(max_workers=3) as executor:
-                        futures = [
-                            executor.submit(start_engine),
-                            executor.submit(start_scheduler),
-                            executor.submit(run_catchup),
-                        ]
-                        for future in as_completed(futures):
-                            try:
-                                service_name, success, message = future.result()
-                                if service_name == "execution_engine":
-                                    if success:
-                                        logger.debug("Execution engine auto-started (Analyzer mode is ON)")
-                                    else:
-                                        logger.warning(f"Failed to auto-start execution engine: {message}")
-                                elif service_name == "squareoff_scheduler":
-                                    if success:
-                                        logger.debug("Square-off scheduler auto-started (Analyzer mode is ON)")
-                                    else:
-                                        logger.warning(f"Failed to auto-start square-off scheduler: {message}")
-                                elif service_name == "catchup_settlement":
-                                    logger.debug("Catch-up settlement check completed on startup")
-                            except Exception as e:
-                                logger.error(f"Error starting service: {e}")
-            except Exception as e:
-                logger.error(f"Error checking analyzer mode on startup: {e}")
-
-            # Auto-start Telegram bot if it was active (after DB tables exist)
-            try:
-                import sys
-
-                bot_config = get_bot_config()
-                if bot_config.get("is_active") and bot_config.get("bot_token"):
-                    logger.debug("Auto-starting Telegram bot (background)...")
-
-                    if "eventlet" in sys.modules:
-                        success, message = telegram_bot_service.initialize_bot_sync(
-                            token=bot_config["bot_token"]
-                        )
-                        if success:
-                            success, message = telegram_bot_service.start_bot()
-                            if success:
-                                logger.debug(f"Telegram bot auto-started successfully: {message}")
-                            else:
-                                logger.error(f"Failed to auto-start Telegram bot: {message}")
-                        else:
-                            logger.error(f"Failed to initialize Telegram bot: {message}")
-                    else:
-                        import asyncio
-
-                        try:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            try:
-                                success, message = loop.run_until_complete(
-                                    telegram_bot_service.initialize_bot(
-                                        token=bot_config["bot_token"]
-                                    )
-                                )
-                            finally:
-                                loop.close()
-
-                            if success:
-                                success, message = telegram_bot_service.start_bot()
-                                if success:
-                                    logger.debug(f"Telegram bot auto-started successfully: {message}")
-                                else:
-                                    logger.error(f"Failed to auto-start Telegram bot: {message}")
-                            else:
-                                logger.error(f"Failed to initialize Telegram bot: {message}")
-                        except Exception as e:
-                            logger.error(f"Error in Telegram bot startup: {e}")
-            except Exception as e:
-                logger.error(f"Error auto-starting Telegram bot: {e}")
-
-    threading.Thread(target=_init_databases_and_schedulers, daemon=True).start()
-
-
-app = create_app()
-
-# Explicitly call the setup environment function
-setup_environment(app)
-
-# Restore caches from database in background (not needed until first trade/lookup)
-import threading
-
-def _restore_caches_background():
-    # Wait for DB tables to be created before querying
-    app.db_ready.wait()
-    with app.app_context():
-        try:
-            from database.cache_restoration import restore_all_caches
-
-            cache_result = restore_all_caches()
-
-            if cache_result["success"]:
-                symbol_count = cache_result["symbol_cache"].get("symbols_loaded", 0)
-                auth_count = cache_result["auth_cache"].get("tokens_loaded", 0)
-                if symbol_count > 0 or auth_count > 0:
-                    logger.debug(f"Cache restoration: {symbol_count} symbols, {auth_count} auth tokens")
-        except Exception as e:
-            logger.debug(f"Cache restoration skipped: {e}")
-
-threading.Thread(target=_restore_caches_background, daemon=True).start()
 
 
 # Database session cleanup (teardown handler)
@@ -934,7 +967,7 @@ if __name__ == "__main__":
         from utils.version import get_version as _get_ver
         _ver = _get_ver()
         _dip = host_ip
-        if host_ip == "0.0.0.0":
+        if host_ip == "0.0.0.0":  # nosec B104 — resolving display IP, not binding
             import socket as _sk
             try:
                 _s = _sk.socket(_sk.AF_INET, _sk.SOCK_DGRAM)
@@ -977,11 +1010,12 @@ if __name__ == "__main__":
             f"{C}{BL}{H*(_W-2)}{BR}{R}", "",
         ]), flush=True)
 
+    # nosec B104 — Docker/K8s requires binding to all interfaces
     socketio.run(
-        app, 
-        host=host_ip, 
-        port=port, 
-        debug=debug, 
+        app,
+        host=host_ip,
+        port=port,
+        debug=debug,
         reloader_options=reloader_options,
         allow_unsafe_werkzeug=True
     )

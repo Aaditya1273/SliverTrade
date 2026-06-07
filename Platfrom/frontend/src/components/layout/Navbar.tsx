@@ -21,6 +21,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { PlanBadge } from '@/components/billing/PlanBadge'
 import { isActiveRoute, mobileSheetItems, navItems, profileMenuItems } from '@/config/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
@@ -194,6 +195,9 @@ export function Navbar() {
               {user.broker}
             </Badge>
           )}
+
+          {/* Plan Badge */}
+          <PlanBadge className="hidden sm:flex" />
 
           {/* Mode Badge */}
           <Badge
