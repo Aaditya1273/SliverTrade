@@ -46,6 +46,7 @@ from database.symbol import enhanced_search_symbols
 from limiter import limiter
 from utils.logging import get_logger
 from utils.session import check_session_validity, is_session_valid
+from utils.plan_limits import check_capacity_or_error, check_plan_capacity, check_signal_capacity_for_user, count_user_strategies, increment_signal_usage
 
 logger = get_logger(__name__)
 
@@ -366,6 +367,12 @@ def new_strategy():
                 return redirect(url_for("auth.login"))
 
             logger.info(f"Creating strategy for user: {user_id}")
+
+            # Check plan capacity before creating
+            ok, _ = check_capacity_or_error("active_strategies", count_user_strategies(user_id))
+            if not ok:
+                flash("You've reached the plan limit for active strategies. Please upgrade to add more.", "error")
+                return redirect(url_for("strategy_bp.new_strategy"))
 
             # Get form data
             platform = request.form.get("platform", "").strip()
@@ -774,6 +781,7 @@ def api_get_strategy(strategy_id):
 
 @strategy_bp.route("/api/strategy", methods=["POST"])
 @check_session_validity
+@check_plan_capacity("active_strategies", count_user_strategies)
 @limiter.limit(STRATEGY_RATE_LIMIT)
 def api_create_strategy():
     """API: Create new strategy (JSON)"""
@@ -1024,8 +1032,23 @@ def webhook(webhook_id):
                 payload.update({"quantity": str(quantity)})
                 endpoint = "placeorder"
 
+        # Only count entry signals against plan limit (exit/cover must always
+        # be allowed to prevent stranded open positions).
+        is_entry = not use_smart_order
+
+        # Check capacity BEFORE queueing so we don't orphan orders
+        if is_entry:
+            ok, err_response = check_signal_capacity_for_user(strategy.user_id)
+            if not ok:
+                return err_response
+
         # Queue the order
         queue_order(endpoint, payload)
+
+        # Increment usage after successful queue
+        if is_entry:
+            increment_signal_usage(strategy.user_id)
+
         return jsonify({"message": f"Order queued successfully for {data['symbol']}"}), 200
 
     except Exception as e:

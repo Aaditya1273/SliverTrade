@@ -4,6 +4,16 @@ export interface PlanUsage {
   signals_used_this_month: number
   signals_limit: number | null
   signals_remaining: number | null
+  /** ISO timestamp of the last monthly signal reset, or null if never reset. */
+  last_signal_reset_at?: string | null
+  /** Current number of webhook strategies owned by the user. */
+  active_strategies_count?: number
+  /** Current number of Python strategy scripts uploaded. */
+  python_strategies_count?: number
+  /** Current number of Chartink strategies configured. */
+  chartink_strategies_count?: number
+  /** Current number of Flow workflows. */
+  flow_workflows_count?: number
 }
 
 export interface PlanLimits {
@@ -49,6 +59,20 @@ export interface PortalResponse {
   message?: string
 }
 
+export interface SignalUsageRecord {
+  month_year: string
+  signals_used: number
+  signals_limit: number | null
+  plan_at_time: string | null
+  recorded_at: string | null
+}
+
+export interface UsageHistoryResponse {
+  status: 'success' | 'error'
+  history?: SignalUsageRecord[]
+  message?: string
+}
+
 export const billingApi = {
   /**
    * Get the current user's subscription status.
@@ -77,6 +101,14 @@ export const billingApi = {
    */
   getPortalUrl: async (): Promise<PortalResponse> => {
     const response = await webClient.get<PortalResponse>('/billing/portal')
+    return response.data
+  },
+
+  /**
+   * Get archived monthly signal usage history.
+   */
+  getUsageHistory: async (): Promise<UsageHistoryResponse> => {
+    const response = await webClient.get<UsageHistoryResponse>('/billing/usage-history')
     return response.data
   },
 }

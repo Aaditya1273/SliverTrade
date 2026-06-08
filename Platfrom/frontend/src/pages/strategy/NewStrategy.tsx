@@ -1,9 +1,10 @@
 import { ArrowLeft, Info, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { strategyApi } from '@/api/strategy'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CountGate } from '@/components/billing/FeatureGate'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,6 +30,8 @@ export default function NewStrategy() {
     end_time: '15:00',
     squareoff_time: '15:15',
   })
+  const [strategyCount, setStrategyCount] = useState(0)
+  const [countLoaded, setCountLoaded] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const validateForm = () => {
@@ -66,6 +69,14 @@ export default function NewStrategy() {
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
+
+  // Fetch current strategy count for limit gating
+  useEffect(() => {
+    strategyApi.getStrategies().then((strategies) => {
+      setStrategyCount(strategies.length)
+      setCountLoaded(true)
+    }).catch(() => setCountLoaded(true))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -283,9 +294,24 @@ export default function NewStrategy() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Strategy'}
-              </Button>
+              <div className="flex-1">
+                {countLoaded && (
+                  <CountGate
+                    currentCount={strategyCount}
+                    limitKey="active_strategies"
+                    itemLabel="strategies"
+                  >
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Creating...' : 'Create Strategy'}
+                    </Button>
+                  </CountGate>
+                )}
+                {!countLoaded && (
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Strategy'}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </CardContent>

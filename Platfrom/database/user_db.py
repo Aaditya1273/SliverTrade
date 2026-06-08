@@ -74,6 +74,8 @@ class User(Base):
     deletion_requested_at = Column(DateTime)
     deletion_scheduled_at = Column(DateTime)
     deletion_token = Column(String)
+    # Reset tracking (Phase 11)
+    last_signal_reset_at = Column(DateTime)
 
     def get_totp_secret(self):
         """Return the user's TOTP secret in plaintext.
@@ -145,6 +147,7 @@ def init_db():
             ('stripe_customer_id', 'VARCHAR'),
             ('signals_used_this_month', 'INTEGER DEFAULT 0'),
             ('signals_limit', 'INTEGER DEFAULT 50'),
+            ('last_signal_reset_at', 'TIMESTAMP'),
             ('failed_login_attempts', 'INTEGER DEFAULT 0'),
             ('locked_until', 'TIMESTAMP'),
         ]

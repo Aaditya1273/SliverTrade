@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { PLANS, billingApi, type SubscriptionInfo } from '@/api/billing'
+import { UsageOverview } from '@/components/billing/UsageOverview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -217,6 +218,9 @@ export default function BillingPage() {
           )}
         </CardFooter>
       </Card>
+
+      {/* Usage Overview */}
+      <UsageOverview />
 
       {/* Upgrade Options (if not enterprise) */}
       {!isPaidPlan && (

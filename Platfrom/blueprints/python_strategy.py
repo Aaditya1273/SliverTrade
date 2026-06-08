@@ -45,6 +45,7 @@ from database.market_calendar_db import (
 )
 from utils.constants import CRYPTO_EXCHANGES
 from utils.session import check_session_validity
+from utils.plan_limits import check_capacity_or_error, check_plan_capacity, count_user_python_strategies
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -1527,6 +1528,11 @@ def new_strategy():
         return redirect(url_for("auth.login"))
 
     if request.method == "POST":
+        # Check plan capacity before allowing upload
+        ok, err = check_capacity_or_error("python_strategies", count_user_python_strategies(user_id))
+        if not ok:
+            return err
+
         if "strategy_file" not in request.files:
             if is_ajax:
                 return jsonify({"status": "error", "message": "No file selected"}), 400

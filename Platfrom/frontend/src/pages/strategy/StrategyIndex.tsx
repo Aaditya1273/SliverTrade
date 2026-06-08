@@ -12,6 +12,7 @@ import {
   Webhook,
   Zap,
 } from 'lucide-react'
+import { SignalUsageBanner } from '@/components/billing/SignalUsageBanner'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
@@ -145,6 +146,9 @@ export default function StrategyIndex() {
           </Button>
         </div>
       </div>
+
+      {/* Signal usage banner */}
+      {strategies.length > 0 && <SignalUsageBanner className="mb-4" />}
 
       {/* Webhook Info Alert */}
       <Alert>

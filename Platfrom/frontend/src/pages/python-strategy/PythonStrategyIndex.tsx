@@ -14,6 +14,8 @@ import {
   Square,
   Trash2,
 } from 'lucide-react'
+import { PlanFeatureCapabilities } from '@/components/billing/PlanFeatureCapabilities'
+import { SignalUsageBanner } from '@/components/billing/SignalUsageBanner'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
@@ -262,6 +264,9 @@ export default function PythonStrategyIndex() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
+      {/* Signal usage banner */}
+      {strategies.length > 0 && <SignalUsageBanner className="mb-4" />}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -342,6 +347,9 @@ export default function PythonStrategyIndex() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Plan Feature Capabilities */}
+      <PlanFeatureCapabilities currentCount={strategies.length} />
 
       {/* Current Time */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -9,6 +9,7 @@ import {
   Shield,
   Star,
 } from 'lucide-react'
+import { PlanComparison } from '@/components/billing/PlanComparison'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
@@ -207,49 +208,15 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Comparison Table */}
+      {/* Plan Comparison (side-by-side visual grid replacing the old table) */}
       <section className="border-t bg-muted/30">
         <div className="container mx-auto px-4 py-16">
           <h2 className="text-2xl font-bold text-center mb-2">Compare plans in detail</h2>
           <p className="text-muted-foreground text-center mb-10 max-w-xl mx-auto">
-            Everything you need to automate your algo trading, from basic webhooks to advanced
-            strategy engines.
+            Every feature side-by-side — hover over any row for a detailed description.
           </p>
 
-          <div className="max-w-3xl mx-auto overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 pr-4 font-medium">Feature</th>
-                  <th className="text-center py-3 px-4 font-medium">Free</th>
-                  <th className="text-center py-3 px-4 font-medium text-primary">Pro</th>
-                  <th className="text-center py-3 px-4 font-medium">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {[
-                  ['Signals per month', '50', '10,000', 'Unlimited'],
-                  ['Active strategies', '1', 'Unlimited', 'Unlimited'],
-                  ['Webhook support', 'Basic', 'Advanced', 'Custom endpoints'],
-                  ['Telegram notifications', '✓', '✓ + Charts', '✓ + Charts'],
-                  ['Option chain & Greeks', '—', '✓', '✓'],
-                  ['Python strategy engine', '—', '✓', '✓'],
-                  ['Flow workflow editor', '—', '✓', '✓'],
-                  ['Multiple brokers', '—', '—', '✓'],
-                  ['Sandbox & analyzer', 'Basic', 'Basic', 'Advanced'],
-                  ['Priority support', '—', '✓', 'Dedicated'],
-                  ['SLA guarantee', '—', '—', '✓'],
-                ].map(([feature, free, pro, enterprise]) => (
-                  <tr key={feature} className="hover:bg-muted/50 transition-colors">
-                    <td className="py-3 pr-4 font-medium">{feature}</td>
-                    <td className="text-center py-3 px-4 text-muted-foreground">{free}</td>
-                    <td className="text-center py-3 px-4">{pro}</td>
-                    <td className="text-center py-3 px-4">{enterprise}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PlanComparison className="max-w-5xl mx-auto" />
         </div>
       </section>
 

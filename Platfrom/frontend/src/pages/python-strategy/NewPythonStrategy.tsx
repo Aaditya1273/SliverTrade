@@ -1,9 +1,11 @@
 import { ArrowLeft, Clock, FileCode, Info, Upload } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { showToast } from '@/utils/toast'
 import { pythonStrategyApi } from '@/api/python-strategy'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { CountGate } from '@/components/billing/FeatureGate'
+import { pythonStrategyApi } from '@/api/python-strategy'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
@@ -56,6 +58,8 @@ export default function NewPythonStrategy() {
   const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [showExample, setShowExample] = useState(false)
+  const [strategyCount, setStrategyCount] = useState(0)
+  const [countLoaded, setCountLoaded] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // Exchange drives the holiday/session calendar
@@ -149,6 +153,14 @@ export default function NewPythonStrategy() {
       }
     }
   }
+
+  // Fetch current python strategy count for limit gating
+  useEffect(() => {
+    pythonStrategyApi.getStrategies().then((strategies) => {
+      setStrategyCount(Array.isArray(strategies) ? strategies.length : 0)
+      setCountLoaded(true)
+    }).catch(() => setCountLoaded(true))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -383,9 +395,24 @@ export default function NewPythonStrategy() {
               >
                 Cancel
               </Button>
-              <Button type="submit" className="flex-1" disabled={loading}>
-                {loading ? 'Uploading...' : 'Upload Strategy'}
-              </Button>
+              <div className="flex-1">
+                {countLoaded && (
+                  <CountGate
+                    currentCount={strategyCount}
+                    limitKey="python_strategies"
+                    itemLabel="Python strategies"
+                  >
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? 'Uploading...' : 'Upload Strategy'}
+                    </Button>
+                  </CountGate>
+                )}
+                {!countLoaded && (
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? 'Uploading...' : 'Upload Strategy'}
+                  </Button>
+                )}
+              </div>
             </div>
           </form>
         </CardContent>

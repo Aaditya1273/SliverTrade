@@ -23,6 +23,8 @@ import {
   Webhook,
   XCircle,
 } from 'lucide-react'
+import { CountGate } from '@/components/billing/FeatureGate'
+import { SignalUsageBanner } from '@/components/billing/SignalUsageBanner'
 import {
   listWorkflows,
   createWorkflow,
@@ -611,14 +613,21 @@ export default function FlowIndex() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <SignalUsageBanner compact className="mr-2" />
           <Button variant="outline" onClick={() => setIsImportOpen(true)}>
             <Upload className="mr-2 h-4 w-4" />
             Import
           </Button>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Workflow
-          </Button>
+          <CountGate
+            currentCount={workflows?.length ?? 0}
+            limitKey="flow_workflows"
+            itemLabel="workflows"
+          >
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Workflow
+            </Button>
+          </CountGate>
         </div>
       </div>
 

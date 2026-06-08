@@ -88,6 +88,7 @@ from cors import cors  # Import the CORS instance
 from csp import apply_csp_middleware  # Import the CSP middleware
 from extensions import init_redis  # Import Redis initialisation
 from database.action_center_db import init_db as ensure_action_center_tables_exists
+from database.signal_usage_history_db import init_db as ensure_signal_usage_history_tables_exists
 from database.analyzer_db import init_db as ensure_analyzer_tables_exists
 from database.apilog_db import init_db as ensure_api_log_tables_exists
 from database.auth_db import init_db as ensure_auth_tables_exists
@@ -435,9 +436,10 @@ def setup_environment(app):
                 ("Market Calendar DB", ensure_market_calendar_tables_exists),
                 ("Qty Freeze DB", ensure_qty_freeze_tables_exists),
                 ("Historify DB", ensure_historify_tables_exists),
-                ("Flow DB", ensure_flow_tables_exists),
-                ("Leverage DB", ensure_leverage_tables_exists),
-                ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
+            ("Flow DB", ensure_flow_tables_exists),
+            ("Leverage DB", ensure_leverage_tables_exists),
+            ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
+            ("Signal Usage History DB", ensure_signal_usage_history_tables_exists),
             ]
 
             db_init_start = time.time()
@@ -797,6 +799,7 @@ def shutdown_database_sessions(exception=None):
         ("database.market_calendar_db", "db_session"),
         ("database.telegram_db", "db_session"),
         ("database.symbol", "db_session"),
+        ("database.signal_usage_history_db", "db_session"),
     ]
 
     for module_name, session_attr in _sessions:

@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, request, session
 
 from database.auth_db import get_api_key_for_tradingview
 from utils.session import check_session_validity
+from utils.plan_limits import check_plan_capacity, count_user_workflows
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ def list_workflows():
 
 @flow_bp.route("/api/workflows", methods=["POST"])
 @check_session_validity
+@check_plan_capacity("flow_workflows", count_user_workflows)
 def create_workflow():
     """Create a new workflow"""
     from database.flow_db import create_workflow

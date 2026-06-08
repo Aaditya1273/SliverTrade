@@ -45,6 +45,7 @@ from database.symbol import enhanced_search_symbols
 from limiter import limiter
 from utils.logging import get_logger
 from utils.session import check_session_validity
+from utils.plan_limits import check_capacity_or_error, check_plan_capacity, check_signal_capacity_for_user, count_user_chartink_strategies, increment_signal_usage
 
 logger = get_logger(__name__)
 
@@ -308,6 +309,12 @@ def new_strategy():
                 logger.error("No user_id found in session")
                 flash("Session expired. Please login again.", "error")
                 return redirect(url_for("auth.login"))
+
+            # Check plan capacity before creating
+            ok, _ = check_capacity_or_error("chartink_strategies", count_user_chartink_strategies(user_id))
+            if not ok:
+                flash("You've reached the plan limit for Chartink strategies. Please upgrade to add more.", "error")
+                return redirect(url_for("chartink_bp.new_strategy"))
 
             # Validate strategy name
             name = request.form.get("name", "").strip()
@@ -692,6 +699,7 @@ def api_get_strategy(strategy_id):
 
 @chartink_bp.route("/api/strategy", methods=["POST"])
 @check_session_validity
+@check_plan_capacity("chartink_strategies", count_user_chartink_strategies)
 @limiter.limit(STRATEGY_RATE_LIMIT)
 def api_create_strategy():
     """API: Create new strategy (JSON)"""
@@ -884,6 +892,17 @@ def webhook(webhook_id):
             logger.error(f"No API key found for user {strategy.user_id}")
             return jsonify({"status": "error", "error": "No API key found"}), 401
 
+        # Only count entry signals (BUY/SHORT) against plan limit.
+        # Exit/cover signals (SELL/COVER — use_smart_order=True) must always
+        # be allowed to prevent stranded open positions.
+        is_entry = not use_smart_order
+
+        # Check capacity BEFORE queueing any orders
+        if is_entry:
+            ok, err_response = check_signal_capacity_for_user(strategy.user_id)
+            if not ok:
+                return err_response
+
         # Process each symbol
         processed_symbols = []
         for symbol in symbols:
@@ -939,6 +958,10 @@ def webhook(webhook_id):
             processed_symbols.append(symbol)
 
         if processed_symbols:
+            # Increment usage after successful processing
+            if is_entry:
+                increment_signal_usage(strategy.user_id)
+
             return jsonify(
                 {
                     "status": "success",

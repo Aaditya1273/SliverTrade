@@ -30,22 +30,50 @@ JOB_ID = "monthly_signal_limit_reset"
 
 
 def _reset_all_signal_counters():
-    """Reset ``signals_used_this_month`` to 0 for every user.
+    """Archive current signal usage for every user, then reset counters
+    and stamp ``last_signal_reset_at`` with the current UTC time.
 
-    Runs in the APScheduler worker thread.  The operation is wrapped
-    in a single UPDATE query for efficiency.
+    Archiving happens first so that historical analytics are preserved
+    before the monthly counter is zeroed.
+
+    Runs in the APScheduler worker thread.
     """
     try:
         from database.user_db import User, db_session
+        from database.signal_usage_history_db import archive_user_signal_usage
         from sqlalchemy import update
+        from datetime import datetime
 
-        stmt = update(User).values(signals_used_this_month=0)
+        now = datetime.utcnow()
+
+        # ── 1. Archive current usage before reset ──
+        users = User.query.all()
+        archived_count = 0
+        for user in users:
+            used = user.signals_used_this_month or 0
+            if used > 0:
+                archive_user_signal_usage(
+                    user_id=user.id,
+                    signals_used=used,
+                    signals_limit=user.signals_limit,
+                    plan=user.plan,
+                    recorded_at=now,
+                )
+                archived_count += 1
+
+        # ── 2. Reset counters ──
+        stmt = update(User).values(
+            signals_used_this_month=0,
+            last_signal_reset_at=now,
+        )
         db_session.execute(stmt)
         db_session.commit()
 
         count = User.query.count()
         logger.info(
-            f"[SignalReset] Reset signals_used_this_month for {count} user(s)"
+            f"[SignalReset] Archived {archived_count} user(s) usage, "
+            f"reset signals_used_this_month for {count} user(s) "
+            f"(last_reset={now.isoformat()})"
         )
     except Exception as e:
         logger.exception(f"[SignalReset] Failed to reset signal counters: {e}")
@@ -106,6 +134,16 @@ def init_signal_reset_scheduler():
 def get_signal_reset_scheduler() -> BackgroundScheduler | None:
     """Return the global scheduler instance, or ``None`` if not yet initialised."""
     return _scheduler
+
+
+def trigger_manual_reset():
+    """Manually trigger the signal counter reset on-demand.
+
+    Wraps ``_reset_all_signal_counters`` with manual-trigger logging.
+    Intended for admin testing and manual intervention.
+    """
+    logger.info("[SignalReset] Manual reset triggered by admin")
+    _reset_all_signal_counters()
 
 
 def shutdown_signal_reset_scheduler():

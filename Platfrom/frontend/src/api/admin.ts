@@ -31,7 +31,20 @@ export const adminApi = {
     return {
       freeze_count: response.data.freeze_count,
       holiday_count: response.data.holiday_count,
+      last_signal_reset_at: response.data.last_signal_reset_at,
     }
+  },
+
+  // ============================================================================
+  // Signal Reset
+  // ============================================================================
+
+  /**
+   * Trigger a manual signal counter reset (archives usage then zeros counters)
+   */
+  triggerSignalReset: async (): Promise<ApiResponse> => {
+    const response = await webClient.post<ApiResponse>('/admin/api/signal-reset')
+    return response.data
   },
 
   // ============================================================================

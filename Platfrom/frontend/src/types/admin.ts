@@ -84,4 +84,5 @@ export interface TimingsResponse {
 export interface AdminStats {
   freeze_count: number
   holiday_count: number
+  last_signal_reset_at?: string | null
 }

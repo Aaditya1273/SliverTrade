@@ -103,57 +103,8 @@ def customer_portal():
             "message": "Failed to create portal"
         }), 500
 
-
-# Plan-level feature limits — maps plan name to its caps.
-# These are the server-side source of truth; the frontend PLANS array
-# should match for display.
-PLAN_LIMITS = {
-    "free": {
-        "signals_per_month": 50,
-        "active_strategies": 1,
-        "python_strategies": 0,
-        "chartink_strategies": 1,
-        "flow_workflows": 1,
-        "api_rate_limit": "20 per minute",
-        "has_telegram_charts": False,
-        "has_option_chain": False,
-        "has_python_engine": False,
-        "has_flow_editor": False,
-        "has_multiple_brokers": False,
-        "has_advanced_analytics": False,
-        "has_dedicated_support": False,
-    },
-    "pro": {
-        "signals_per_month": 10000,
-        "active_strategies": None,  # unlimited
-        "python_strategies": 10,
-        "chartink_strategies": None,  # unlimited
-        "flow_workflows": 10,
-        "api_rate_limit": "60 per minute",
-        "has_telegram_charts": True,
-        "has_option_chain": True,
-        "has_python_engine": True,
-        "has_flow_editor": True,
-        "has_multiple_brokers": False,
-        "has_advanced_analytics": True,
-        "has_dedicated_support": False,
-    },
-    "enterprise": {
-        "signals_per_month": None,  # unlimited
-        "active_strategies": None,  # unlimited
-        "python_strategies": None,  # unlimited
-        "chartink_strategies": None,  # unlimited
-        "flow_workflows": None,  # unlimited
-        "api_rate_limit": "120 per minute",
-        "has_telegram_charts": True,
-        "has_option_chain": True,
-        "has_python_engine": True,
-        "has_flow_editor": True,
-        "has_multiple_brokers": True,
-        "has_advanced_analytics": True,
-        "has_dedicated_support": True,
-    },
-}
+from utils.plan_limits import PLAN_LIMITS, count_user_strategies, count_user_chartink_strategies, count_user_python_strategies, count_user_workflows
+from database.signal_usage_history_db import get_usage_history_for_user
 
 
 @billing_bp.route('/subscription', methods=['GET'])
@@ -185,11 +136,16 @@ def get_subscription():
                 "is_active": is_active,
                 "usage": {
                     "signals_used_this_month": user.signals_used_this_month or 0,
+                    "last_signal_reset_at": user.last_signal_reset_at.isoformat() if user.last_signal_reset_at else None,
                     "signals_limit": limits["signals_per_month"],
                     "signals_remaining": (
                         None if limits["signals_per_month"] is None
                         else max(0, limits["signals_per_month"] - (user.signals_used_this_month or 0))
                     ),
+                    "active_strategies_count": count_user_strategies(user_id),
+                    "python_strategies_count": count_user_python_strategies(user_id),
+                    "chartink_strategies_count": count_user_chartink_strategies(user_id),
+                    "flow_workflows_count": count_user_workflows(user_id),
                 },
                 "limits": limits,
             }
@@ -200,6 +156,35 @@ def get_subscription():
         return jsonify({
             "status": "error",
             "message": "Failed to fetch subscription"
+        }), 500
+
+
+@billing_bp.route('/usage-history', methods=['GET'])
+@limiter.limit(API_RATE_LIMIT)
+def get_usage_history():
+    """Return the current user's archived monthly signal usage history."""
+    try:
+        user_id = get_user_id()
+        records = get_usage_history_for_user(user_id, limit=12)
+
+        return jsonify({
+            "status": "success",
+            "history": [
+                {
+                    "month_year": r.month_year,
+                    "signals_used": r.signals_used,
+                    "signals_limit": r.signals_limit,
+                    "plan_at_time": r.plan_at_time,
+                    "recorded_at": r.recorded_at.isoformat() if r.recorded_at else None,
+                }
+                for r in records
+            ],
+        })
+    except Exception as e:
+        logger.exception("Usage history fetch error: %s", e)
+        return jsonify({
+            "status": "error",
+            "message": "Failed to fetch usage history"
         }), 500
 
 

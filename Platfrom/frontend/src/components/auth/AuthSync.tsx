@@ -54,7 +54,7 @@ export function AuthSync({ children }: AuthSyncProps) {
               setActiveSessionCount(data.active_sessions)
             }
             // Fetch subscription info globally so all components can use it
-            fetchSubscription()
+            await fetchSubscription()
           } else if (data.status === 'success' && data.authenticated && !data.logged_in) {
             // User is logged in but hasn't connected broker yet
             setUser({

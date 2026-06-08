@@ -105,6 +105,29 @@ def ratelimit_handler(e):
 # ============================================================================
 
 
+@admin_bp.route("/api/signal-reset", methods=["POST"])
+@check_session_validity
+@limiter.limit("5 per minute")
+def api_signal_reset():
+    """Manually trigger a monthly signal counter reset for testing.
+
+    Archives current usage for all users, then resets counters to 0.
+    Restricted to admins via ``check_session_validity``.
+    Use a low rate limit to prevent accidental repeated triggers.
+    """
+    try:
+        from services.signal_reset_service import trigger_manual_reset
+
+        trigger_manual_reset()
+        return jsonify({
+            "status": "success",
+            "message": "Signal counters reset completed. Usage was archived before reset.",
+        })
+    except Exception as e:
+        logger.exception(f"Error in manual signal reset: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @admin_bp.route("/api/stats")
 @check_session_validity
 @limiter.limit(API_RATE_LIMIT)
@@ -209,6 +232,14 @@ def api_stats():
         except Exception:
             services["strategy_engine"] = {"status": "unavailable"}
 
+        # --- Last signal reset timestamp ---
+        last_reset = (
+            user_db_session.query(func.max(User.last_signal_reset_at))
+            .filter(User.last_signal_reset_at.isnot(None))
+            .scalar()
+        )
+        last_signal_reset_at = last_reset.isoformat() if last_reset else None
+
         # --- Admin aggregate counts (from existing models) ---
         freeze_count = QtyFreeze.query.count()
         holiday_count = Holiday.query.count()
@@ -228,6 +259,7 @@ def api_stats():
                 # Signal activity
                 "signals_today": 0,  # Would need a daily counter table
                 "signals_this_month": signals_this_month,
+                "last_signal_reset_at": last_signal_reset_at,
                 # Services health
                 "services": services,
                 # Legacy fields

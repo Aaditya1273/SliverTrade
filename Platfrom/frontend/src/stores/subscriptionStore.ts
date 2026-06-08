@@ -53,8 +53,13 @@ const FREE_LIMITS: PlanLimits = {
 
 const FREE_USAGE: PlanUsage = {
   signals_used_this_month: 0,
+  last_signal_reset_at: null,
   signals_limit: 50,
   signals_remaining: 50,
+  active_strategies_count: 0,
+  python_strategies_count: 0,
+  chartink_strategies_count: 0,
+  flow_workflows_count: 0,
 }
 
 export const useSubscriptionStore = create<SubscriptionStore>()(
