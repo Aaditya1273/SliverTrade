@@ -5,11 +5,13 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Send, Brain, Loader2, History, ExternalLink } from 'lucide-react'
+import { Send, Brain, Loader2, History } from 'lucide-react'
 import { PLATFORM } from '@/lib/api-config'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from 'sonner'
 import axios from 'axios'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { OrderConfirmDialog } from '@/components/trading/order-confirm-dialog'
 
 const PLATFORM_BASE = PLATFORM('/api/v1')
 
@@ -53,8 +55,11 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [conversationId, setConversationId] = useState('')
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
+  const [pendingOrderAction, setPendingOrderAction] = useState<Record<string, any> | null>(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const nextIdRef = useRef(2)
+  const queryClient = useQueryClient()
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -273,11 +278,94 @@ export default function ChatPage() {
     }
   }
 
+  // ── Order execution from suggested actions ──
+  const executeOrderMutation = useMutation({
+    mutationFn: async (params: Record<string, any>) => {
+      if (!apiKey) throw new Error('NO_BROKER')
+      const response = await axios.post(
+        PLATFORM('/api/v1/execute-signal'),
+        {
+          apikey: apiKey,
+          symbol: params.symbol,
+          exchange: params.exchange || 'NSE',
+          decision: params.decision || 'BUY',
+          confidence: params.confidence || 85,
+          quantity: params.quantity || '1',
+          price_type: params.price_type || 'MARKET',
+          price: params.price || undefined,
+          stop_loss: params.stop_loss || params.stopLoss || undefined,
+          take_profit: params.take_profit || params.takeProfit || undefined,
+          product: params.product || 'MIS',
+        },
+        { withCredentials: true }
+      )
+      if (response.data.status === 'error' || response.data.status === 'rejected') {
+        throw new Error(response.data.message || 'Order failed')
+      }
+      return response.data
+    },
+    onSuccess: (data) => {
+      toast.success(`Order placed: ${data.orderid || 'Success'}`)
+      queryClient.invalidateQueries({ queryKey: ['orderbook'] })
+      queryClient.invalidateQueries({ queryKey: ['positions'] })
+      setConfirmDialogOpen(false)
+      setPendingOrderAction(null)
+    },
+    onError: (error: Error) => {
+      if (error.message.startsWith('NO_BROKER')) {
+        toast.error('Connect a broker first', {
+          action: { label: 'Setup', onClick: () => router.push('/setup') }
+        })
+      } else {
+        toast.error(`Order failed: ${error.message}`)
+      }
+      setConfirmDialogOpen(false)
+      setPendingOrderAction(null)
+    }
+  })
+
+  // ── Symbol display helper ──
+  const symbolDisplay = (symbol: string): string => symbol.split('/')[0].split(/[0-9]/)[0] || symbol
+
   const handleSuggestedAction = (action: any) => {
     if (action.action === 'navigate' && action.params?.path) {
       router.push(action.params.path)
     } else if (action.action === 'execute_order') {
-      toast.info('Order execution from chat coming soon')
+      if (!apiKey) {
+        toast.error('Connect a broker to trade', {
+          action: { label: 'Setup', onClick: () => router.push('/setup') }
+        })
+        return
+      }
+      // Store the pending order and open confirmation dialog
+      setPendingOrderAction(action.params || action)
+      setConfirmDialogOpen(true)
+    }
+  }
+
+  // Build order details for the confirmation dialog from suggested action params
+  const buildOrderDetails = () => {
+    if (!pendingOrderAction) return null
+    const p = pendingOrderAction
+    const decision = (p.decision || 'BUY').toLowerCase()
+    const sym = p.symbol || ''
+    return {
+      action: decision as 'buy' | 'sell',
+      symbol: sym,
+      displaySymbol: symbolDisplay(sym),
+      exchange: p.exchange || 'NSE',
+      amount: String(p.quantity || '1'),
+      price: p.price ? parseFloat(p.price) : null,
+      orderType: (p.price_type || 'MARKET').toLowerCase() as 'market' | 'limit',
+      stopLoss: p.stop_loss || p.stopLoss || '',
+      takeProfit: p.take_profit || p.takeProfit || '',
+      leverage: p.leverage || 1,
+    }
+  }
+
+  const handleConfirmOrder = () => {
+    if (pendingOrderAction) {
+      executeOrderMutation.mutate(pendingOrderAction)
     }
   }
 
@@ -368,22 +456,14 @@ export default function ChatPage() {
         {/* Suggested Questions */}
         {messages.length === 1 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { icon: 'trending', text: 'What\'s your outlook on Bitcoin?' },
-              { icon: 'chart', text: 'How should I rebalance?' },
-              { icon: 'zap', text: 'Best entry strategy now?' },
-              { icon: 'book', text: 'Explain candlestick patterns' },
-            ].map((q, i) => (
+            {SUGGESTED_QUESTIONS.map((q, i) => (
               <button
                 key={i}
                 onClick={() => setInput(q.text)}
                 className="p-4 rounded-lg border border-border bg-card/50 hover:border-accent/30 hover:bg-card/70 transition-all text-left group"
               >
                 <div className="text-lg mb-2 group-hover:text-accent transition-colors">
-                  {q.icon === 'trending' && '📈'}
-                  {q.icon === 'chart' && '📊'}
-                  {q.icon === 'zap' && '⚡'}
-                  {q.icon === 'book' && '📚'}
+                  {q.icon}
                 </div>
                 <p className="text-sm font-medium">{q.text}</p>
               </button>
@@ -391,6 +471,20 @@ export default function ChatPage() {
           </div>
         )}
       </div>
+
+      {/* Order Confirmation Dialog */}
+      {pendingOrderAction && buildOrderDetails() && (
+        <OrderConfirmDialog
+          open={confirmDialogOpen}
+          onOpenChange={(val) => {
+            setConfirmDialogOpen(val)
+            if (!val) setPendingOrderAction(null)
+          }}
+          orderDetails={buildOrderDetails()!}
+          onConfirm={handleConfirmOrder}
+          isPending={executeOrderMutation.isPending}
+        />
+      )}
     </main>
   )
 }

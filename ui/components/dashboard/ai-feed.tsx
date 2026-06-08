@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { STRATEGY, PLATFORM } from '@/lib/api-config'
 import { useAuth } from '@/hooks/useAuth'
 import { useSettings, type TradingSettings } from '@/hooks/useSettings'
+import { SignalDisclaimer } from '@/components/legal/signal-disclaimer'
 
 const STRATEGY_BASE = STRATEGY('/api/v1')
 
@@ -391,6 +392,9 @@ export function AIFeed() {
           </div>
         )}
       </div>
+
+      {/* Risk Disclaimer — cannot be hidden or minimized */}
+      <SignalDisclaimer />
     </Card>
   )
 }

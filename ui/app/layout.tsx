@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import QueryProvider from '@/components/providers/query-provider'
+import { CookieConsent } from '@/components/legal/cookie-consent'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -46,6 +47,7 @@ export default function RootLayout({
       <body className="font-sans antialiased text-foreground">
         <QueryProvider>
           {children}
+          <CookieConsent />
         </QueryProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
