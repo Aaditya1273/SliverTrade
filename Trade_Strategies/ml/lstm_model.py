@@ -71,7 +71,11 @@ class LSTMSignalModel:
                 num_classes=5,
             )
             self.model = model
-            self.model.load_state_dict(torch.load(self.model_path, map_location="cpu"))
+            # weights_only=True prevents arbitrary code execution via pickle
+            # See: https://pytorch.org/docs/stable/generated/torch.load.html
+            self.model.load_state_dict(
+                torch.load(self.model_path, map_location="cpu", weights_only=True)
+            )
             self.model.eval()
             self._trained = True
             logger.info("LSTM model loaded from %s", self.model_path)
