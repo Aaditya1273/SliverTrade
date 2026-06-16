@@ -60,22 +60,26 @@ export default function DashboardPage() {
             <Link href="/" className="text-xl font-bold tracking-tight hidden md:block mb-8">SilverTrade</Link>
             
             <nav className="space-y-2">
-              <a href="#" className="flex items-center gap-3 px-4 py-2 rounded-lg bg-accent/10 text-accent font-medium transition-colors">
+              <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2 rounded-lg bg-accent/10 text-accent font-medium transition-colors">
                 <TrendingUp className="w-5 h-5" />
                 Dashboard
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
+              </Link>
+              <Link href="/dashboard/trade" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
                 <Zap className="w-5 h-5" />
-                AI Signals
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
+                Trade
+              </Link>
+              <Link href="/dashboard/missed" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
                 <Bell className="w-5 h-5" />
-                Alerts
-              </a>
-              <a href="#" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
+                Missed Signals
+              </Link>
+              <Link href="/dashboard/chat" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
+                <Bell className="w-5 h-5" />
+                AI Chat
+              </Link>
+              <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-2 rounded-lg text-muted-foreground hover:bg-card/50 transition-colors">
                 <Settings className="w-5 h-5" />
                 Settings
-              </a>
+              </Link>
             </nav>
 
             <div className="mt-8 pt-8 border-t border-border">

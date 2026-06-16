@@ -109,9 +109,11 @@ export function DashboardHeader({ hideBalances, setHideBalances }: DashboardHead
         <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
           <Bell className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Settings className="w-5 h-5" />
-        </Button>
+        <Link href="/dashboard/settings">
+          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" title="Settings">
+            <Settings className="w-5 h-5" />
+          </Button>
+        </Link>
       </div>
     </header>
     </>

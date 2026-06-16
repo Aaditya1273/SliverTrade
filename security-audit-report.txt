@@ -1,0 +1,139 @@
+========================================
+SilverTrade AI Security Audit Report
+Date: Sun Jun  7 09:46:42 AM IST 2026
+========================================
+
+
+--- 1. Python Backend Security (Bandit) ---
+Bandit: FAIL (0 high, 100 medium)
+  Platfrom/app.py:758 [MEDIUM] Possible binding to all interfaces.
+  Platfrom/app.py:962 [MEDIUM] Possible binding to all interfaces.
+  Platfrom/blueprints/admin.py:396 [MEDIUM] Probable insecure usage of temp file/directory.
+  Platfrom/blueprints/chartink.py:92 [MEDIUM] Call to requests without timeout
+  Platfrom/blueprints/chartink.py:128 [MEDIUM] Call to requests without timeout
+  Platfrom/blueprints/python_strategy.py:447 [MEDIUM] Chmod setting a permissive mask 0o755 on file (file_path).
+  Platfrom/blueprints/python_strategy.py:468 [MEDIUM] Chmod setting a permissive mask 0o755 on file (parent).
+  Platfrom/blueprints/python_strategy.py:1587 [MEDIUM] Chmod setting a permissive mask 0o755 on file (file_path).
+  Platfrom/broker/aliceblue/streaming/aliceblue_client.py:137 [MEDIUM] Call to requests without timeout
+  Platfrom/broker/aliceblue/streaming/aliceblue_client.py:151 [MEDIUM] Call to requests without timeout
+  Platfrom/broker/aliceblue/streaming/aliceblue_client.py:164 [MEDIUM] Call to requests without timeout
+  Platfrom/broker/aliceblue/streaming/aliceblue_client.py:198 [MEDIUM] Call to requests without timeout
+  Platfrom/broker/aliceblue/streaming/aliceblue_client.py:302 [MEDIUM] Call to requests without timeout
+  Platfrom/broker/fyers/streaming/fyers_tbt_websocket.py:379 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:976 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:1106 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:1406 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:2427 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:2589 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:2794 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:2956 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:3025 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:3313 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/database/historify_db.py:3465 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/gunicorn.conf.py:85 [MEDIUM] Probable insecure usage of temp file/directory.
+  Platfrom/test/test_csrf.py:132 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_csrf.py:159 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_greeks_live.py:40 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_multi_option_greeks_api.py:51 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_multi_option_greeks_api.py:100 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_multi_option_greeks_api.py:137 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_multi_option_greeks_api.py:175 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_multi_option_greeks_api.py:201 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:47 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:79 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:114 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:142 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:170 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:199 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:230 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:260 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:288 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:314 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:338 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_greeks_api.py:347 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:52 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:82 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:113 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:144 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:175 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_option_symbol_api.py:206 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:60 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:92 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:124 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:156 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:189 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:221 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:255 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:303 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:347 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:376 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:409 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:452 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_multiorder_api.py:495 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:63 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:101 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:138 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:176 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:214 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:260 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_options_order_api.py:303 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:53 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:72 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:98 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:114 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:126 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:133 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_python_editor.py:148 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:51 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:78 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:105 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:132 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:159 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:186 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:212 [MEDIUM] Call to requests without timeout
+  Platfrom/test/test_telegram_alert_api.py:239 [MEDIUM] Call to requests without timeout
+  Platfrom/upgrade/migrate_historify.py:282 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_historify_scheduler.py:66 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_sandbox.py:422 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_to_postgresql.py:369 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_to_postgresql.py:378 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_to_postgresql.py:385 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/migrate_to_postgresql.py:636 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/rotate_pepper.py:255 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/upgrade/rotate_pepper.py:270 [MEDIUM] Possible SQL injection vector through string-based query construction.
+  Platfrom/utils/env_check.py:84 [MEDIUM] Probable insecure usage of temp file/directory.
+  Platfrom/utils/order_safety.py:62 [MEDIUM] Audit url open for permitted schemes. Allowing use of file:/ or custom schemes is often unexpected.
+  Trade_Strategies/gunicorn.conf.py:93 [MEDIUM] Probable insecure usage of temp file/directory.
+  Trade_Strategies/ml/lstm_model.py:74 [MEDIUM] Use of unsafe PyTorch load
+  Trade_Strategies/strategies_app.py:619 [MEDIUM] Possible binding to all interfaces.
+
+--- 2. Python Dependency Audit ---
+pip-audit: PASS (0 critical, 0 high)
+
+--- 3. Secrets Detection ---
+detect-secrets: FAIL (-1
+0 findings)
+
+--- 4. Frontend Security (npm audit) ---
+npm audit: PASS (0 critical, 0 high)
+
+--- 5. Git Secrets Check ---
+Git secrets: WARN (review needed)
++                "apikey": PLATFORM_API_KEY,
++                "apikey": PLATFORM_API_KEY,
++                "apikey": PLATFORM_API_KEY,
++No API key required — Binance klines are public.
++- [ ] `API_KEY_PEPPER` is unique, 32+ bytes, generated fresh
++- [ ] OpenAI API key has billing limit set ($100/month cap)
++- [ ] No sensitive data in git history (check with `git log --all -S "password"`)
++- [ ] `.gitignore` covers all `.env` files, secrets, model files
++- [ ] Redis password set
++- [ ] Session token entropy — is it cryptographically random?
+
+--- 6. .gitignore Check ---
+.gitignore: PASS
+Status: ISSUES FOUND
+
+========================================
+Report generated: Sun Jun  7 09:46:56 AM IST 2026
+========================================

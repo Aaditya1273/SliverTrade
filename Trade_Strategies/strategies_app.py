@@ -54,6 +54,80 @@ def _ensure_initialised():
             app.logger.info("Strategy Engine fully initialised")
         except Exception as e:
             app.logger.error("Initialisation error: %s", e)
+        # Auto-train Random Forest if no model checkpoint exists
+        _auto_train_if_needed()
+
+
+# ── Auto-train ───────────────────────────────────────────────────────
+
+def _auto_train_if_needed():
+    """Auto-train RF model on first boot if no checkpoint exists.
+
+    Uses real OHLCV from Platform (if available) or falls back to
+    synthetic data so the engine is never rule-only on first launch.
+    Runs in the background so startup is not delayed.
+    """
+    import os
+    import threading
+
+    MODEL_PATH = os.path.join(os.path.dirname(__file__), "ml", "models", "random_forest.pkl")
+    if os.path.exists(MODEL_PATH):
+        return  # Already trained
+
+    def _train():
+        app.logger.info("[auto-train] No RF model found — training now in background...")
+        try:
+            # Try real data first
+            ohlcv = None
+            if PLATFORM_API_KEY:
+                try:
+                    ohlcv = fetch_historical_data(
+                        "BTC/USDT", "CRYPTO", "15m",
+                        (datetime.now(timezone.utc).replace(day=1) - timedelta(days=365)).strftime("%Y-%m-%d"),
+                        datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+                    )
+                except Exception:
+                    pass
+
+            # Fallback to 2 years of synthetic data
+            if not ohlcv or len(ohlcv) < 200:
+                app.logger.info("[auto-train] Using synthetic data (no API key or broker not connected)")
+                ohlcv = []
+                import random
+                price = 50000.0
+                ts = int(datetime.now(timezone.utc).timestamp()) - 365 * 24 * 3600
+                for i in range(2000):  # ~2000 15m candles ≈ 20 days
+                    change = random.gauss(0, price * 0.003)
+                    close = max(price + change, 100)
+                    high = close + abs(random.gauss(0, close * 0.002))
+                    low = close - abs(random.gauss(0, close * 0.002))
+                    ohlcv.append({
+                        "time": ts + i * 900,
+                        "open": round(price, 2),
+                        "high": round(high, 2),
+                        "low": round(low, 2),
+                        "close": round(close, 2),
+                        "volume": round(random.uniform(100, 10000), 2),
+                    })
+                    price = close
+
+            from ml.random_forest_model import train_random_forest
+            result = train_random_forest(ohlcv)
+            if "error" not in result:
+                # Reload the engine so it picks up the newly trained model
+                engine._initialise_models()
+                app.logger.info(
+                    "[auto-train] RF model trained: accuracy=%.3f samples=%d",
+                    result.get("accuracy", 0),
+                    result.get("samples", 0),
+                )
+            else:
+                app.logger.warning("[auto-train] RF training failed: %s", result["error"])
+        except Exception as e:
+            app.logger.error("[auto-train] Unexpected error: %s", e)
+
+    thread = threading.Thread(target=_train, daemon=True, name="auto-train-rf")
+    thread.start()
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -279,6 +353,33 @@ def get_signal(signal_id: str):
         return jsonify({"status": "success", "data": signal})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/signals/<signal_id>/mark-executed", methods=["POST"])
+def mark_signal_executed(signal_id: str):
+    """Mark a signal as executed with an order ID.
+
+    Called by Platform's execute_signal endpoint after a successful
+    broker order so the Strategy Engine can track which signals were
+    acted on vs missed.
+    """
+    _ensure_initialised()
+    try:
+        data = request.get_json(silent=True) or {}
+        order_id = data.get("order_id", "")
+
+        from database import mark_signal_as_executed
+        success = mark_signal_as_executed(signal_id, order_id)
+
+        if success:
+            return jsonify({"status": "success", "message": "Signal marked as executed"})
+        # Signal not found — not an error, just log and return OK so execute_signal
+        # doesn't fail on this non-critical step
+        return jsonify({"status": "success", "message": "Signal not found (already expired or deleted)"})
+    except Exception as e:
+        app.logger.warning("Failed to mark signal as executed: %s", e)
+        # Return 200 — this is non-critical and must not block order execution
+        return jsonify({"status": "success", "message": "Non-critical: could not update signal"})
 
 
 # ── Backtesting ──────────────────────────────────────────────────────

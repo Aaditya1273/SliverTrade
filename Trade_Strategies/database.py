@@ -498,3 +498,14 @@ def increment_pending_retry(signal_id: str) -> None:
             WHERE signal_id = ?
               AND retry_count < 10
         """, (signal_id,))
+
+
+# ── Alias for backward-compatibility ─────────────────────────────────
+
+def mark_signal_as_executed(signal_id: str, order_id: str = "") -> bool:
+    """Alias for mark_signal_executed — returns True on success."""
+    try:
+        mark_signal_executed(signal_id, order_id)
+        return True
+    except Exception:
+        return False

@@ -8,6 +8,10 @@ module.exports = {
       interpreter: 'none',
       env: {
         PORT: 5000,
+        FLASK_ENV: 'production',
+        // Strategy Engine internal URL — required for execute_signal staleness check
+        // and chat context fetching
+        STRATEGY_HOST: 'http://127.0.0.1:5007',
       }
     },
     {
@@ -28,6 +32,12 @@ module.exports = {
       interpreter: 'none',
       env: {
         PORT: 5007,
+        STRATEGY_PORT: 5007,
+        // Platform URL — required so Strategy Engine can fetch OHLCV data
+        SILVERTRADE_HOST: 'http://127.0.0.1:5000',
+        // SILVERTRADE_API_KEY is read from .env file — set it there
+        // Run: cd Platfrom && uv run python -c "from database.auth_db import get_api_key_for_tradingview; print(get_api_key_for_tradingview('admin'))"
+        // Then add SILVERTRADE_API_KEY to Trade_Strategies/.env
       }
     },
     {

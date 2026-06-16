@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SilverTradeAI - Williams Vix Fix Indicator</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/lib/lightweight-charts-5.0.8.js"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+        .status-indicator {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        .status-connected {
+            background-color: #064e3b;
+            color: #10b981;
+            border: 1px solid #10b981;
+        }
+        .status-disconnected {
+            background-color: #7f1d1d;
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        .status-loading {
+            background-color: #1e40af;
+            color: #3b82f6;
+            border: 1px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-base-200">
+    <div class="navbar bg-base-100 shadow-lg">
+        <div class="flex-1">
+            <a class="btn btn-ghost normal-case text-xl">📈 SilverTradeAI - Williams VIX Fix</a>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Status Indicator -->
+        <div id="connection-status" class="status-indicator status-loading">
+            Loading data from SilverTradeAI...
+        </div>
+
+        <!-- Chart Settings -->
+        <div class="card bg-base-100 shadow-xl mb-6">
+            <div class="card-body">
+                <h2 class="card-title">Chart Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Symbol</span>
+                        </label>
+                        <input type="text" id="symbol" value="SBIN" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Exchange</span>
+                        </label>
+                        <select id="exchange" class="select select-bordered select-sm">
+                            <option value="NSE">NSE</option>
+                            <option value="BSE">BSE</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Interval</span>
+                        </label>
+                        <select id="interval" class="select select-bordered select-sm">
+                            <option value="1m">1 min</option>
+                            <option value="5m" selected>5 min</option>
+                            <option value="15m">15 min</option>
+                            <option value="30m">30 min</option>
+                            <option value="1h">1 hour</option>
+                            <option value="D">1 day</option>
+                        </select>
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Start Date</span>
+                        </label>
+                        <input type="date" id="startDate" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">End Date</span>
+                        </label>
+                        <input type="date" id="endDate" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">&nbsp;</span>
+                        </label>
+                        <button id="loadData" class="btn btn-primary btn-sm">Load Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Williams Vix Fix Settings -->
+        <div class="card bg-base-100 shadow-xl mb-6">
+            <div class="card-body">
+                <h2 class="card-title">Williams Vix Fix Settings</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Basic Parameters -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Period Length</span>
+                        </label>
+                        <input type="number" id="pdLength" value="22" min="1" max="100" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">BBL Length</span>
+                        </label>
+                        <input type="number" id="bblLength" value="20" min="1" max="100" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Multiplier</span>
+                        </label>
+                        <input type="number" id="mult" value="2.0" min="0.1" max="10.0" step="0.1" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Lookback Period</span>
+                        </label>
+                        <input type="number" id="lb" value="50" min="10" max="200" class="input input-bordered input-sm" />
+                    </div>
+                    
+                    <!-- Advanced Parameters -->
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Highest Percentile</span>
+                        </label>
+                        <input type="number" id="ph" value="0.85" min="0.1" max="1.0" step="0.01" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Lowest Percentile</span>
+                        </label>
+                        <input type="number" id="pl" value="1.01" min="1.0" max="2.0" step="0.01" class="input input-bordered input-sm" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Show High Range</span>
+                        </label>
+                        <input type="checkbox" id="hp" checked class="checkbox" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Show Std Dev Line</span>
+                        </label>
+                        <input type="checkbox" id="sd" checked class="checkbox" />
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button id="applyIndicator" class="btn btn-secondary btn-sm">Apply Indicator</button>
+                    <button id="resetParams" class="btn btn-outline btn-sm ml-2">Reset to Defaults</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 gap-6">
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Price Chart</h2>
+                    <div id="priceChart" class="chart-container"></div>
+                </div>
+            </div>
+            
+            <div class="card bg-base-100 shadow-xl">
+                <div class="card-body">
+                    <h2 class="card-title">Williams Vix Fix</h2>
+                    <div id="indicatorChart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicator Information -->
+        <div class="card bg-base-100 shadow-xl mt-6">
+            <div class="card-body">
+                <h2 class="card-title">About Williams VIX Fix</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-semibold mb-2">Description</h3>
+                        <p class="text-sm opacity-75">The Williams VIX Fix measures market fear and identifies potential market bottoms when fear is high. It uses price action instead of options data.</p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-2">Interpretation</h3>
+                        <ul class="text-sm opacity-75 space-y-1">
+                            <li><span class="text-green-400">●</span> High values (green bars) suggest potential buying opportunities</li>
+                            <li><span class="text-orange-400">●</span> Range lines show historical percentile levels</li>
+                            <li><span class="text-cyan-400">●</span> Upper band indicates overbought fear levels</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingModal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Loading...</h3>
+            <span class="loading loading-spinner loading-lg"></span>
+        </div>
+    </div>
+
+    <!-- Load modular JavaScript files -->
+    <script src="/static/js/silvertrade-provider.js"></script>
+    <script src="/static/js/williams-vix-fix-indicator.js"></script>
+    
+    <script>
+
+        // Chart options
+        const chartOptions = {
+            layout: {
+                background: { color: 'transparent' },
+                textColor: '#DDD',
+            },
+            grid: {
+                vertLines: { color: '#2B2B43' },
+                horzLines: { color: '#2B2B43' },
+            },
+            rightPriceScale: {
+                borderColor: '#2B2B43',
+            },
+            timeScale: {
+                borderColor: '#2B2B43',
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: { visible: true },
+                horzLine: { visible: true, labelVisible: true },
+            },
+        };
+
+        const charts = [];
+        let indicatorSeries = [];
+
+        function createMainChart() {
+            const mainChartContainer = document.getElementById('priceChart');
+            const mainChart = LightweightCharts.createChart(mainChartContainer, {
+                ...chartOptions,
+                height: 400,
+                width: mainChartContainer.clientWidth,
+            });
+
+            const mainSeries = mainChart.addSeries(LightweightCharts.CandlestickSeries, {
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+
+            charts.push(mainChart);
+            return { mainChart, mainSeries };
+        }
+
+        function createIndicatorChart() {
+            const indicatorChartContainer = document.getElementById('indicatorChart');
+            const indicatorChart = LightweightCharts.createChart(indicatorChartContainer, {
+                ...chartOptions,
+                height: 400,
+                width: indicatorChartContainer.clientWidth,
+            });
+
+            charts.push(indicatorChart);
+            return indicatorChart;
+        }
+
+        function addIndicator(indicatorChart, plot) {
+            let series;
+            switch (plot.options.style) {
+                case 'line':
+                    series = indicatorChart.addSeries(LightweightCharts.LineSeries, {
+                        color: plot.options.color,
+                        lineWidth: plot.options.linewidth,
+                        lastValueVisible: true,
+                        title: plot.name,
+                    });
+                    
+                    const coloredData = plot.data.map((point) => ({
+                        ...point,
+                        color: point.options?.color || plot.options.color,
+                    }));
+                    series.setData(coloredData);
+                    break;
+                case 'histogram':
+                    series = indicatorChart.addSeries(LightweightCharts.HistogramSeries, {
+                        color: plot.options.color,
+                        lastValueVisible: true,
+                        title: plot.name,
+                    });
+                    
+                    const histogramData = plot.data.map((point) => ({
+                        ...point,
+                        color: point.options?.color || plot.options.color,
+                    }));
+                    series.setData(histogramData);
+                    break;
+            }
+            
+            if (series) {
+                indicatorSeries.push(series);
+            }
+        }
+
+        async function updateCharts() {
+            const symbol = document.getElementById('symbol').value;
+            const exchange = document.getElementById('exchange').value;
+            const interval = document.getElementById('interval').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            const pdLength = parseInt(document.getElementById('pdLength').value);
+            const bblLength = parseInt(document.getElementById('bblLength').value);
+            const mult = parseFloat(document.getElementById('mult').value);
+            const lb = parseInt(document.getElementById('lb').value);
+            const ph = parseFloat(document.getElementById('ph').value);
+            const pl = parseFloat(document.getElementById('pl').value);
+            const hp = document.getElementById('hp').checked;
+            const sd = document.getElementById('sd').checked;
+            
+            const statusElement = document.getElementById('connection-status');
+            
+            try {
+                statusElement.className = 'status-indicator status-loading';
+                statusElement.textContent = 'Loading data...';
+
+                const provider = new SilverTradeAIProvider();
+                const marketData = await provider.getMarketData(symbol, exchange, interval, startDate, endDate);
+
+                // Format candlestick data
+                const candleData = marketData.map((k) => ({
+                    time: k.time,
+                    open: k.open,
+                    high: k.high,
+                    low: k.low,
+                    close: k.close,
+                }));
+
+                // Update main chart
+                window.mainSeries.setData(candleData);
+
+                // Clear existing indicator series
+                indicatorSeries.forEach(series => {
+                    window.indicatorChart.removeSeries(series);
+                });
+                indicatorSeries = [];
+                
+                // Create Williams VIX Fix indicator instance and calculate
+                const williamsVixFix = new WilliamsVixFixIndicator();
+                
+                // Get all parameters from UI
+                const indicatorParams = {
+                    pdLength: pdLength,
+                    bblLength: bblLength,
+                    mult: mult,
+                    lb: lb,
+                    ph: ph,
+                    pl: pl,
+                    hp: hp,
+                    sd: sd
+                };
+                
+                // Validate parameters
+                const validation = williamsVixFix.validateParams(indicatorParams);
+                if (!validation.isValid) {
+                    throw new Error(`Invalid parameters: ${validation.errors.join(', ')}`);
+                }
+                
+                const indicatorData = williamsVixFix.calculate(marketData, indicatorParams);
+                
+                for (let plotName in indicatorData) {
+                    addIndicator(window.indicatorChart, indicatorData[plotName]);
+                }
+
+                // Fit the content
+                window.mainChart.timeScale().fitContent();
+                window.indicatorChart.timeScale().fitContent();
+                
+                // Sync time scales
+                window.mainChart.timeScale().subscribeVisibleTimeRangeChange(() => {
+                    const timeRange = window.mainChart.timeScale().getVisibleRange();
+                    if (timeRange) {
+                        window.indicatorChart.timeScale().setVisibleRange(timeRange);
+                    }
+                });
+                
+                window.indicatorChart.timeScale().subscribeVisibleTimeRangeChange(() => {
+                    const timeRange = window.indicatorChart.timeScale().getVisibleRange();
+                    if (timeRange) {
+                        window.mainChart.timeScale().setVisibleRange(timeRange);
+                    }
+                });
+
+                statusElement.className = 'status-indicator status-connected';
+                statusElement.textContent = `Data loaded successfully ✓ (${symbol} ${exchange} ${interval})`;
+
+            } catch (error) {
+                console.error('Error updating charts:', error);
+                statusElement.className = 'status-indicator status-disconnected';
+                statusElement.textContent = 'Failed to load data: ' + error.message;
+            }
+        }
+
+        function resetParameters() {
+            // Get default parameters from indicator
+            const indicator = new WilliamsVixFixIndicator();
+            const defaults = indicator.getDefaultParams();
+            
+            // Reset all form inputs to default values
+            document.getElementById('pdLength').value = defaults.pdLength;
+            document.getElementById('bblLength').value = defaults.bblLength;
+            document.getElementById('mult').value = defaults.mult;
+            document.getElementById('lb').value = defaults.lb;
+            document.getElementById('ph').value = defaults.ph;
+            document.getElementById('pl').value = defaults.pl;
+            document.getElementById('hp').checked = defaults.hp;
+            document.getElementById('sd').checked = defaults.sd;
+            
+            // Optionally auto-apply the reset parameters
+            updateCharts();
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const tenDaysAgo = new Date();
+            tenDaysAgo.setDate(today.getDate() - 10);
+            
+            // Format dates as YYYY-MM-DD
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            
+            document.getElementById('startDate').value = formatDate(tenDaysAgo);
+            document.getElementById('endDate').value = formatDate(today);
+        }
+
+        // Initialize everything when the DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default dates
+            setDefaultDates();
+            
+            const { mainChart, mainSeries } = createMainChart();
+            const indicatorChart = createIndicatorChart();
+            
+            // Store globally for updates
+            window.mainChart = mainChart;
+            window.mainSeries = mainSeries;
+            window.indicatorChart = indicatorChart;
+            
+            // Add event listeners
+            document.getElementById('loadData').addEventListener('click', updateCharts);
+            document.getElementById('applyIndicator').addEventListener('click', updateCharts);
+            document.getElementById('resetParams').addEventListener('click', resetParameters);
+            
+            // Window resize handler
+            window.addEventListener('resize', () => {
+                const priceWidth = document.getElementById('priceChart').clientWidth;
+                const indicatorWidth = document.getElementById('indicatorChart').clientWidth;
+                
+                mainChart.applyOptions({ width: priceWidth });
+                indicatorChart.applyOptions({ width: indicatorWidth });
+            });
+            
+            // Initial load
+            updateCharts();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+# =============================================================================
+# SilverTrade AI — CI/CD Pipeline
+# =============================================================================
+# Full CI/CD pipeline with quality checks, tests, Docker build with
+# vulnerability scanning, staging deployment, and production deployment
+# (with manual approval gate via GitHub Environments).
+#
+# Triggers:
+#   - Push to main or develop branches
+#   - Pull request targeting main
+#   - Label 'deploy:staging' on merged PR → staging deploy
+#   - Label 'deploy:production' on merged PR → production deploy
+# =============================================================================
+
+name: SilverTrade AI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, labeled, unlabeled]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===========================================================================
+  # STAGE 1: QUALITY CHECKS (fast fail — run immediately in parallel)
+  # ===========================================================================
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Platfrom
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      # ruff replaces flake8 (E/F/W pycodestyle/pyflakes), flake8-bugbear (B),
+      # flake8-comprehensions (C4), isort (I), and pyupgrade (UP).
+      # No separate flake8 step needed.
+      - name: Ruff lint check
+        run: uv run ruff check . --output-format=github
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Platfrom
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: mypy type check
+        run: uv run mypy --ignore-missing-imports --follow-imports=skip .
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Platfrom
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies (including dev)
+        run: uv sync --group dev
+
+      - name: Bandit SAST
+        run: uv run bandit -r . -x .venv,node_modules,test,docs,examples --severity-level medium --confidence-level medium
+
+      - name: pip-audit (dependency scan)
+        run: uv run pip-audit --strict --ignore-vuln PYSEC-2024-1234 --ignore-vuln GHSA-xxx
+
+  frontend-lint:
+    name: Frontend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  # ===========================================================================
+  # STAGE 2: TESTS (run after lint passes)
+  # ===========================================================================
+  test-python:
+    name: Python Tests
+    needs: [lint, type-check, security-scan]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./Platfrom
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: silvertrade_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Ensure coverage output directory exists
+        run: mkdir -p coverage
+      - name: Run pytest with coverage (target: 20%)
+        run: uv run pytest test/ -v --timeout=120 -x --tb=short --cov=. --cov-report=term-missing --cov-report=xml:coverage/coverage.xml --cov-fail-under=20
+        env:
+          DATABASE_URL: sqlite:///tmp/test_silvertrade.db
+          REDIS_URL: redis://localhost:6379/0
+          FLASK_DEBUG: false
+          APP_KEY: ci_test_app_key_12345678901234567890123456789012
+          API_KEY_PEPPER: ci_test_pepper_1234567890123456789012345678901234
+          SECRET_KEY: ci_test_secret_key_12345678901234567890123456789012
+          LOG_LEVEL: ERROR
+          LOG_TO_FILE: false
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ── Strategy Engine Tests ───────────────────────────────────────────────────
+  test-strategies:
+    name: Strategy Engine Tests (48)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./Trade_Strategies
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-suffix: "strategies"
+
+      - name: Install dependencies
+        run: uv pip install -r requirements.txt
+
+      - name: Run strategy engine tests
+        run: |
+          uv run python -m pytest test_strategy_engine.py -v --tb=short --no-header
+
+      - name: Upload test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: strategies-test-log
+          path: ./Trade_Strategies/test_strategy_engine.py
+          retention-days: 7
+
+  # ===========================================================================
+  # STAGE 3: BUILD & VULNERABILITY SCAN (run after tests pass)
+  # ===========================================================================
+  build-docker:
+    name: Build & Scan Docker Images
+    needs: [test-python, frontend-lint, test-strategies]
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      contains(github.event.pull_request.labels.*.name, 'deploy:staging') ||
+      contains(github.event.pull_request.labels.*.name, 'deploy:production')
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    strategy:
+      matrix:
+        service:
+          - name: platform
+            context: ./Platfrom
+            dockerfile: Dockerfile
+          - name: data-fetch
+            context: ./data_fetch
+            dockerfile: Dockerfile
+          - name: strategy-engine
+            context: ./Trade_Strategies
+            dockerfile: Dockerfile
+          - name: ui
+            context: ./ui
+            dockerfile: Dockerfile
+          - name: alertmanager
+            context: ./monitoring/alertmanager
+            dockerfile: Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service.name }}
+          tags: |
+            type=sha,prefix=,format=short
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.version=${{ github.sha }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.context }}/${{ matrix.service.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.30.0
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.service.name }}:${{ steps.meta.outputs.version }}
+          format: sarif
+          output: trivy-${{ matrix.service.name }}.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          skip-dirs: /app/.venv
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.service.name }}.sarif
+          category: trivy-${{ matrix.service.name }}
+
+  # ===========================================================================
+  # STAGE 4: DEPLOY SCRIPTS VALIDATION
+  # ===========================================================================
+  validate-deploy-scripts:
+    name: Validate Deploy Scripts
+    needs: [test-python, frontend-lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check deploy scripts exist
+        run: |
+          for script in deploy/deploy.sh deploy/init-letsencrypt.sh deploy/health-check.sh; do
+            if [ ! -f "$script" ]; then
+              echo "❌ Missing: $script"
+              exit 1
+            fi
+            echo "✅ Found: $script"
+          done
+
+      - name: Validate shell syntax
+        run: |
+          for script in deploy/*.sh; do
+            if bash -n "$script"; then
+              echo "✅ Syntax OK: $script"
+            else
+              echo "❌ Syntax error: $script"
+              exit 1
+            fi
+          done
+
+      - name: Validate docker-compose syntax
+        run: |
+          for compose in docker-compose.yml docker-compose.prod.yml docker-compose.staging.yml; do
+            if docker compose -f "$compose" config > /dev/null 2>&1; then
+              echo "✅ Compose OK: $compose"
+            else
+              echo "❌ Compose error: $compose"
+              exit 1
+            fi
+          done
+
+      - name: Validate nginx config
+        run: |
+          if docker run --rm -v $(pwd)/nginx:/etc/nginx:ro nginx:1.25-alpine nginx -t 2>&1; then
+            echo "✅ Nginx config OK"
+          else
+            echo "❌ Nginx config error"
+            exit 1
+          fi
+
+  # ===========================================================================
+  # STAGE 5: DEPLOY TO STAGING (auto after main merge, or via label)
+  # ===========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [build-docker, validate-deploy-scripts]
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      contains(github.event.pull_request.labels.*.name, 'deploy:staging')
+    environment:
+      name: staging
+      url: https://staging.silvertrade.ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.STAGING_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run pre-deploy health check on current stack
+        run: |
+          ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+            echo "=== Pre-deploy health check ==="
+            curl -sf http://127.0.0.1:5000/api/v1/health && echo " - Platform OK" || echo " - Platform UNKNOWN (new deploy)"
+            curl -sf http://127.0.0.1:5005/api/health && echo " - Data Fetch OK" || echo " - Data Fetch UNKNOWN"
+            curl -sf http://127.0.0.1:5007/api/v1/health && echo " - Strategy OK" || echo " - Strategy UNKNOWN"
+          EOF
+
+      - name: Deploy via Docker Compose
+        run: |
+          ssh ${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }} << 'EOF'
+            set -e
+            cd /opt/silvertrade
+            echo "=== Pulling latest images ==="
+            docker compose -f docker-compose.staging.yml pull
+            echo "=== Starting services ==="
+            docker compose -f docker-compose.staging.yml up -d --remove-orphans
+            echo "=== Waiting for health checks ==="
+            sleep 15
+            docker compose -f docker-compose.staging.yml ps
+            echo "=== Running post-deploy verification ==="
+            bash deploy/health-check.sh --verbose || true
+            echo "=== Cleaning up ==="
+            docker system prune -f --filter "until=24h"
+            echo "=== Staging deployment complete ==="
+          EOF
+
+  # ===========================================================================
+  # STAGE 6: DEPLOY TO PRODUCTION (manual approval via GitHub Environments)
+  # ===========================================================================
+  deploy-production:
+    name: Deploy to Production
+    needs: [build-docker, validate-deploy-scripts]
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, '[deploy:production]')
+    environment:
+      name: production
+      url: https://trade.silvertrade.ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Notify Slack — Production deploy starting
+        uses: slackapi/slack-github-action@v2.0.0
+        continue-on-error: true
+        with:
+          webhook: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "🚀 Production deployment *starting* for ${{ github.ref_name }}@${{ github.sha }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚀 *Production Deployment Starting*\n*Branch:* `${{ github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Workflow:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PRODUCTION_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run pre-deploy health check
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            echo "=== Pre-deploy health check ==="
+            bash /opt/silvertrade/deploy/health-check.sh --json
+          EOF
+
+      - name: Deploy via Docker Compose
+        run: |
+          ssh ${{ secrets.PRODUCTION_USER }}@${{ secrets.PRODUCTION_HOST }} << 'EOF'
+            set -e
+            cd /opt/silvertrade
+            echo "=== Pulling latest production images ==="
+            docker compose -f docker-compose.prod.yml pull
+            echo "=== Starting services with zero-downtime ==="
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans --no-deps --scale platform=2
+            echo "=== Waiting for new containers to pass health checks ==="
+            sleep 30
+            docker compose -f docker-compose.prod.yml ps
+            echo "=== Running post-deploy verification ==="
+            bash deploy/health-check.sh --verbose
+            echo "=== Scaling down old containers ==="
+            docker compose -f docker-compose.prod.yml up -d --scale platform=1
+            echo "=== Cleaning up ==="
+            docker image prune -f --filter "until=24h"
+            echo "=== Production deployment complete ==="
+          EOF
+
+      - name: Notify Slack — Production deploy result
+        if: always()
+        uses: slackapi/slack-github-action@v2.0.0
+        continue-on-error: true
+        with:
+          webhook: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && '✅' || '❌' }} Production deployment *${{ job.status }}* for ${{ github.ref_name }}@${{ github.sha }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ job.status == 'success' && '✅' || '❌' }} *Production Deployment ${{ job.status == 'success' && 'Succeeded' || 'Failed' }}*\n*Branch:* `${{ github.ref_name }}`\n*Commit:* `${{ github.sha }}`\n*Workflow:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+
+  # ===========================================================================
+  # STAGE 7: NOTIFICATIONS (Slack on failure for main branch)
+  # ===========================================================================
+  notify-failure:
+    name: Notify on Failure
+    needs:
+      - lint
+      - type-check
+      - security-scan
+      - frontend-lint
+      - test-python
+      - test-strategies
+      - build-docker
+      - validate-deploy-scripts
+    runs-on: ubuntu-latest
+    if: |
+      failure() && github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
+    steps:
+      - name: Notify Slack — CI failure
+        uses: slackapi/slack-github-action@v2.0.0
+        continue-on-error: true
+        with:
+          webhook: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "❌ CI/CD Pipeline *failed* on `main` — ${{ github.sha }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "❌ *CI/CD Pipeline Failed*\n*Branch:* `main`\n*Commit:* `${{ github.sha }}`\n*Workflow:* ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }

@@ -29,22 +29,23 @@ export default function BillingPage() {
   const { data: billingInfo, isLoading, error } = useQuery<BillingInfo>({
     queryKey: ['billing-info'],
     queryFn: async () => {
-      if (!apiKey) throw new Error('Not authenticated')
-      const response = await axios.get(PLATFORM('/api/v1/user/info'), {
-        params: { apikey: apiKey },
+      // Use /billing/subscription which actually exists on Platform
+      const response = await axios.get(PLATFORM('/billing/subscription'), {
         withCredentials: true,
       })
-      const user = response.data.data || response.data
+      const sub = response.data.subscription || {}
+      const usage = response.data.usage || {}
+      const plan = sub.plan || 'free'
       return {
-        plan: user.plan || 'free',
-        subscription_status: user.subscription_status || 'inactive',
-        next_billing_date: user.subscription_end_date || null,
-        signals_used: user.signals_used_this_month || 0,
-        signals_limit: user.plan === 'pro' ? -1 : user.plan === 'enterprise' ? -1 : 50,
-        features: user.features || {},
+        plan,
+        subscription_status: sub.is_active ? 'active' : 'inactive',
+        next_billing_date: sub.plan_expires_at || null,
+        signals_used: usage.signals_generated_this_month || 0,
+        signals_limit: plan === 'pro' || plan === 'enterprise' ? -1 : 50,
+        features: {},
       }
     },
-    enabled: !!apiKey,
+    enabled: authenticated,
   })
 
   const handleManageSubscription = async () => {

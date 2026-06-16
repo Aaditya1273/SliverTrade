@@ -1,7 +1,7 @@
 <img width="1672" height="941" alt="ChatGPT Image Jun 5, 2026, 06_55_00 AM" src="https://github.com/user-attachments/assets/23a2c7de-d266-4f61-b04c-c9fc5760f66d" />
 
 # 🚀 SilverTrade AI
-### AI-Powered Crypto Decision Engine...
+### AI-Powered Crypto Decision Engine
 
 > Not another trading platform.  
 > **A system that tells you what to do, when to do it, and why.**
@@ -98,8 +98,9 @@ SilverTrade integrates with existing exchanges instead of replacing them.
      (Next.js + v0 + Charts)
 
 ```
+⚙️ Core Components
 
-     ⚙️ Core Components
+
 🧩 Data Layer
 Aggregates price, volume, and market signals
 Sources:
@@ -234,3 +235,4 @@ MIT License
 
 ---
 <!-- fuser -k 5000/tcp 5005/tcp 5006/tcp 5007/tcp 3000/tcp 8765/tcp || true -->
+freebuff --continue 2026-06-05T13-18-07.413Z
