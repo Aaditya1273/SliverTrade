@@ -21,7 +21,7 @@ const publicPaths = [
   '/apple-icon',
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Allow public paths
