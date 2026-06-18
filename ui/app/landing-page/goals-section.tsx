@@ -18,6 +18,8 @@ export default function GoalsSection() {
   useEffect(() => {
     if (!sectionRef.current || !stickyRef.current) return
 
+    const triggers: ScrollTrigger[] = []
+
     const tl = gsap.timeline({
       scrollTrigger: {
         trigger: sectionRef.current,
@@ -26,6 +28,8 @@ export default function GoalsSection() {
         scrub: true,
       },
     })
+
+    triggers.push(tl.scrollTrigger!)
 
     if (headlineRef.current) {
       tl.fromTo(headlineRef.current, { scale: 1.5 }, { scale: 1, ease: 'none' }, 0)
@@ -48,6 +52,7 @@ export default function GoalsSection() {
 
     return () => {
       tl.kill()
+      triggers.forEach((t) => t.kill())
     }
   }, [])
 
@@ -55,8 +60,8 @@ export default function GoalsSection() {
     <section
       ref={sectionRef}
       id="goals"
-      className="relative z-[3]"
-      style={{ height: '200vh', backgroundColor: 'var(--foreground)' }}
+      className="relative z-[3] h-[150vh] md:h-[200vh]"
+      style={{ backgroundColor: 'var(--foreground)' }}
     >
       <div
         ref={stickyRef}

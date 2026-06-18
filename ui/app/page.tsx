@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import Lenis from 'lenis'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -22,11 +22,15 @@ import Footer from './landing-page/footer'
 gsap.registerPlugin(ScrollTrigger)
 
 export default function LandingPage() {
+  const containerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
     const lenis = new Lenis({
-      lerp: 0.15,
-      duration: 1.2,
-      smoothWheel: true,
+      lerp: prefersReduced ? 1 : 0.15,
+      duration: prefersReduced ? 0 : 1.2,
+      smoothWheel: !prefersReduced,
     })
 
     lenis.on('scroll', ScrollTrigger.update)
@@ -43,7 +47,7 @@ export default function LandingPage() {
   }, [])
 
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <AnnouncementBar />
       <Navbar />
       <HeroSection />

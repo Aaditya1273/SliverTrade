@@ -16,6 +16,7 @@ export default function VisionSection() {
   useEffect(() => {
     if (!sectionRef.current || !stickyRef.current) return
 
+    const triggers: ScrollTrigger[] = []
     const wordElements = wordsRef.current.filter(Boolean) as HTMLDivElement[]
 
     wordElements.forEach((word) => {
@@ -31,6 +32,8 @@ export default function VisionSection() {
       },
     })
 
+    triggers.push(tl.scrollTrigger!)
+
     wordElements.forEach((word, i) => {
       const start = i / wordElements.length
       tl.to(word, { y: '0%', ease: 'none' }, start)
@@ -38,15 +41,15 @@ export default function VisionSection() {
 
     return () => {
       tl.kill()
-      ScrollTrigger.getAll().forEach((t) => t.kill())
+      triggers.forEach((t) => t.kill())
     }
   }, [])
 
   return (
     <section
       ref={sectionRef}
-      className="relative z-[3]"
-      style={{ height: '300vh', backgroundColor: 'var(--inverse-bg)' }}
+      className="relative z-[3] h-[200vh] md:h-[300vh]"
+      style={{ backgroundColor: 'var(--inverse-bg)' }}
     >
       <div
         ref={stickyRef}
