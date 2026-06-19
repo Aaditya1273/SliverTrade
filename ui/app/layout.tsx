@@ -5,14 +5,14 @@ import { CookieConsent } from '@/components/legal/cookie-consent'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'CoinYC — AI-Powered Crypto Trading Signals',
-  description: 'RSI, MACD, EMA and Bollinger Bands combined into clear BUY/SELL/HOLD signals. 30+ broker integrations. Real execution.',
+  title: 'SilverTrade — AI-Powered Trading Signals & Broker Execution',
+  description: 'Multi-indicator trading signals (RSI, MACD, EMA, Bollinger Bands) combined into clear BUY/SELL/HOLD decisions. 10+ broker integrations across India and Crypto markets.',
   icons: { icon: '/icon.svg', apple: '/apple-icon.png' },
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F4F1EA',
-  colorScheme: 'light',
+  themeColor: '#0A0A0B',
+  colorScheme: 'dark',
   width: 'device-width',
   initialScale: 1,
 }
