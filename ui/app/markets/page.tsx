@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { Search, TrendingUp, TrendingDown, BarChart3, Bell, Bookmark, Users, Brain, Menu, X, ArrowRight, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { COINS } from '@/lib/market-data'
+import CryptoIcon from '@/components/CryptoIcon'
 import { MiniSparkline, formatCompact, formatPrice, pctColor } from '@/lib/market-utils'
 
 // ── Generate 120 coins from the 20 base coins ────────────────────────
@@ -250,10 +251,7 @@ export default function MarketsPage() {
                       </TD>
                       <TD align="left">
                         <div className="flex items-center gap-2.5">
-                          <span className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                            style={{ backgroundColor: '#E6E1D6', color: '#0E0E0C' }}>
-                            {coin.icon}
-                          </span>
+                          <CryptoIcon symbol={coin.symbol} size={28} />
                           <div>
                             <div className="font-semibold text-[13px]" style={{ color: '#0E0E0C' }}>{coin.symbol}</div>
                             <div className="text-[11px]" style={{ color: '#6B6760' }}>{coin.name}</div>

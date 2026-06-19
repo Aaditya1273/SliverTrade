@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { COINS, type Signal } from '@/lib/market-data'
+import CryptoIcon from '@/components/CryptoIcon'
 import { formatCompact, formatPrice, pctColor } from '@/lib/market-utils'
 import {
   Search, TrendingUp, TrendingDown, Minus, Sparkles, BarChart3,
@@ -86,7 +87,7 @@ export default function CoinDetailPage() {
           <div className="flex items-center gap-2 h-12 overflow-x-auto">
             <div className="flex items-center gap-2 shrink-0">
               <Link href={`/markets/${coin.symbol.toLowerCase()}/trade`} className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0" style={{ backgroundColor: '#E6E1D6' }}>{coin.icon}</span>
+                <CryptoIcon symbol={coin.symbol} size={28} />
                 <h1 className="text-base font-bold">{coin.name}</h1>
                 <span className="text-xs font-mono font-medium" style={{ color: '#6B6760' }}>{coin.symbol}</span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded" style={{ backgroundColor: '#E6E1D6', color: '#6B6760' }}>Rank #{coin.rank}</span>
@@ -223,7 +224,7 @@ export default function CoinDetailPage() {
                 </svg>
                 <div className="absolute top-2 left-3 space-y-0.5">
                   <div className="text-[10px] font-mono" style={{ color: '#6B6760' }}>{coin.symbol}/USD</div>
-                  <div className="text-5xl font-bold tracking-tight leading-none">{formatPrice(coin.price)}</div>
+                  <div className="text-6xl font-bold tracking-tight leading-none">{formatPrice(coin.price)}</div>
                   <div className="flex items-center gap-2 text-xs font-medium"><span style={{ color: pctColor(coin.change24h) }}>{coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(2)}%</span><span style={{ color: '#6B6760' }}>24h</span></div>
                 </div>
               </div>
@@ -261,10 +262,10 @@ export default function CoinDetailPage() {
               {activeInfoTab === 'overview' && (
                 <>                      {/* Markets table (always visible first) */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">Markets</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">Markets</h3>
                     <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
                       <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
-                        <thead><tr className="text-[9px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#F4F1EA', color: '#6B6760' }}>
+                        <thead><tr className="text-[11px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#F4F1EA', color: '#6B6760' }}>
                           {['Exchange', 'Pair', 'Price', 'Volume', 'Liquidity', 'Spread', 'Trust'].map(h => (<th key={h} className="px-2 py-1.5 text-right first:text-left">{h}</th>))}
                         </tr></thead>
                         <tbody>
@@ -286,7 +287,7 @@ export default function CoinDetailPage() {
 
                   {/* News */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">News</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">News</h3>
                     <div className="space-y-1.5">
                       {[
                         { h: `${coin.name} Network Activity Surges 40%`, s: 'On-chain metrics show increased institutional participation.', tag: 'Bullish', tagColor: '#16a34a' },
@@ -298,7 +299,7 @@ export default function CoinDetailPage() {
                             <p className="text-xs font-semibold leading-snug">{item.h}</p>
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0" style={{ backgroundColor: `${item.tagColor}15`, color: item.tagColor }}>{item.tag}</span>
                           </div>
-                          <p className="text-[10px] mt-0.5" style={{ color: '#6B6760' }}>{item.s}</p>
+                          <p className="text-sm mt-0.5" style={{ color: '#6B6760' }}>{item.s}</p>
                         </div>
                       ))}
                     </div>
@@ -306,7 +307,7 @@ export default function CoinDetailPage() {
 
                   {/* Whale Intelligence */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">Whale Activity</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">Whale Activity</h3>
                     <div className="rounded-lg border divide-y" style={{ borderColor: '#D9D3C5' }}>
                       {[
                         { t: 'Accumulation', d: `Top 10 wallets accumulated 850,000 ${coin.symbol}`, c: '+12.4%', clr: '#16a34a' },
@@ -318,7 +319,7 @@ export default function CoinDetailPage() {
                         <div key={i} className="flex items-center justify-between px-2.5 py-2">
                           <div className="flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: item.clr }} />
-                            <div><div className="text-xs font-medium">{item.t}</div><div className="text-[10px]" style={{ color: '#6B6760' }}>{item.d}</div></div>
+                            <div><div className="text-xs font-medium">{item.t}</div><div className="text-sm" style={{ color: '#6B6760' }}>{item.d}</div></div>
                           </div>
                           <span className="text-[11px] font-semibold shrink-0" style={{ color: item.clr }}>{item.c}</span>
                         </div>
@@ -328,20 +329,20 @@ export default function CoinDetailPage() {
 
                   {/* Community Sentiment */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">Community Sentiment</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">Community Sentiment</h3>
                     <div className="grid grid-cols-3 gap-1.5">
                       <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-green-600">Bullish</div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-green-600">Bullish</div>
                         <div className="text-lg font-bold text-green-600">62%</div>
                         <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-green-500" style={{ width: '62%' }} /></div>
                       </div>
                       <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Neutral</div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Neutral</div>
                         <div className="text-lg font-bold" style={{ color: '#6B6760' }}>23%</div>
                         <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full" style={{ width: '23%', backgroundColor: '#6B6760' }} /></div>
                       </div>
                       <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-red-600">Bearish</div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-red-600">Bearish</div>
                         <div className="text-lg font-bold text-red-600">15%</div>
                         <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-red-500" style={{ width: '15%' }} /></div>
                       </div>
@@ -350,19 +351,19 @@ export default function CoinDetailPage() {
 
                   {/* AI Analysis */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">AI Analysis</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">AI Analysis</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                       <div className="p-2.5 rounded-lg border" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#E25A2B' }}>Short-Term (1-7D)</div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#0E0E0C' }}>{coin.symbol === 'DOGE' || coin.symbol === 'SHIB' ? 'Bearish momentum. RSI below 40. Key support test imminent.' : 'Bullish momentum. Price above key moving averages. Room for upside.'}</p>
+                        <div className="text-xl font-semibold uppercase tracking-wider mb-1" style={{ color: '#E25A2B' }}>Short-Term (1-7D)</div>
+                        <p className="text-sm leading-relaxed" style={{ color: '#0E0E0C' }}>{coin.symbol === 'DOGE' || coin.symbol === 'SHIB' ? 'Bearish momentum. RSI below 40. Key support test imminent.' : 'Bullish momentum. Price above key moving averages. Room for upside.'}</p>
                         <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mt-1.5 ${coin.trend === 'bullish' ? 'text-green-700 bg-green-100' : coin.trend === 'bearish' ? 'text-red-700 bg-red-100' : 'text-amber-700 bg-amber-100'}`}>
                           {coin.trend === 'bullish' ? <TrendingUp className="w-2.5 h-2.5" /> : coin.trend === 'bearish' ? <TrendingDown className="w-2.5 h-2.5" /> : <Minus className="w-2.5 h-2.5" />}
                           {coin.trend === 'bullish' ? 'Bullish' : coin.trend === 'bearish' ? 'Bearish' : 'Neutral'}
                         </span>
                       </div>
                       <div className="p-2.5 rounded-lg border" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wider mb-1" style={{ color: '#d97706' }}>Mid-Term (1-4W)</div>
-                        <p className="text-xs leading-relaxed" style={{ color: '#0E0E0C' }}>Macro factors supportive. Institutional accumulation continues. Network fundamentals strengthening.</p>
+                        <div className="text-xl font-semibold uppercase tracking-wider mb-1" style={{ color: '#d97706' }}>Mid-Term (1-4W)</div>
+                        <p className="text-sm leading-relaxed" style={{ color: '#0E0E0C' }}>Macro factors supportive. Institutional accumulation continues. Network fundamentals strengthening.</p>
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded mt-1.5 text-amber-700 bg-amber-100"><Minus className="w-2.5 h-2.5" /> Neutral-Bullish</span>
                       </div>
                     </div>
@@ -394,7 +395,7 @@ export default function CoinDetailPage() {
 
                   {/* Tokenomics */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">Tokenomics</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">Tokenomics</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                       <div className="p-2.5 rounded-lg border space-y-2" style={{ borderColor: '#D9D3C5' }}>
                         {[
@@ -408,7 +409,7 @@ export default function CoinDetailPage() {
                         ))}
                       </div>
                       <div className="p-2.5 rounded-lg border" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="text-[10px] font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#6B6760' }}>Unlock Schedule</div>
+                        <div className="text-xl font-semibold uppercase tracking-wider mb-1.5" style={{ color: '#6B6760' }}>Unlock Schedule</div>
                         {[{ l: 'Next Unlock', v: '2.5M tokens', t: '14 days', p: 35 }, { l: 'Q3 2026', v: '5.0M tokens', t: '~90 days', p: 55 }, { l: 'Fully Diluted', v: 'All released', t: '2028', p: 100 }].map(item => (
                           <div key={item.l} className="mb-1.5"><div className="flex items-center justify-between mb-0.5"><span className="text-[10px]" style={{ color: '#6B6760' }}>{item.l}</span><div className="flex items-center gap-1.5"><span className="text-[10px] font-semibold">{item.v}</span><span className="text-[9px]" style={{ color: '#6B6760' }}>{item.t}</span></div></div><div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-[#E25A2B]" style={{ width: `${item.p}%` }} /></div></div>
                         ))}
@@ -418,7 +419,7 @@ export default function CoinDetailPage() {
 
                   {/* FAQ */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">FAQ</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">FAQ</h3>
                     <div className="space-y-0.5">
                       {[
                         { q: `What is ${coin.name}?`, a: `${coin.name} (${coin.symbol}) is ranked #${coin.rank} with a price of ${formatPrice(coin.price)} and market cap of ${formatCompact(coin.marketCap)}.` },
@@ -431,7 +432,7 @@ export default function CoinDetailPage() {
                             <span className="text-xs font-medium">{faq.q}</span>
                             {expandedFaq === i ? <ChevronUp className="w-3 h-3 shrink-0" style={{ color: '#6B6760' }} /> : <ChevronDown className="w-3 h-3 shrink-0" style={{ color: '#6B6760' }} />}
                           </button>
-                          {expandedFaq === i && <div className="px-2.5 pb-2"><p className="text-xs leading-relaxed" style={{ color: '#6B6760' }}>{faq.a}</p></div>}
+                          {expandedFaq === i && <div className="px-2.5 pb-2"><p className="text-sm leading-relaxed" style={{ color: '#6B6760' }}>{faq.a}</p></div>}
                         </div>
                       ))}
                     </div>
@@ -439,12 +440,12 @@ export default function CoinDetailPage() {
 
                   {/* Similar Assets */}
                   <section>
-                    <h3 className="text-lg font-bold mb-1.5">Similar Assets</h3>
+                    <h3 className="text-3xl font-bold mb-1.5">Similar Assets</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                       {COINS.filter(c => c.symbol !== coin.symbol).slice(0, 4).map(sim => (
                         <Link key={sim.symbol} href={`/markets/${sim.symbol.toLowerCase()}`} className="p-2.5 rounded-lg border transition-all hover:bg-black/[0.02]" style={{ borderColor: '#D9D3C5' }}>
                           <div className="flex items-center gap-1.5 mb-1.5">
-                            <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0" style={{ backgroundColor: '#E6E1D6' }}>{sim.icon}</span>
+                            <CryptoIcon symbol={sim.symbol} size={20} />
                             <div><div className="text-xs font-semibold">{sim.symbol}</div><div className="text-[9px]" style={{ color: '#6B6760' }}>{sim.name}</div></div>
                           </div>
                           <div className="flex items-center justify-between"><span className="text-xs font-semibold">{formatPrice(sim.price)}</span><span className="text-[10px] font-medium" style={{ color: pctColor(sim.change24h) }}>{sim.change24h >= 0 ? '+' : ''}{sim.change24h.toFixed(2)}%</span></div>
@@ -458,11 +459,10 @@ export default function CoinDetailPage() {
 
               {/* ─── MARKETS TAB ─── */}
               {activeInfoTab === 'markets' && (
-                <section><h3 className="text-lg font-bold mb-1.5">All Markets</h3>
+                <section><h3 className="text-3xl font-bold mb-1.5">All Markets</h3>
                   <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
-                    <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>
-                      <thead><tr className="text-[9px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#F4F1EA', color: '#6B6760' }}>
-                        {['Exchange', 'Pair', 'Price', 'Volume', 'Liquidity', 'Spread', 'Trust', 'AI Score'].map(h => (<th key={h} className="px-2.5 py-2 text-right first:text-left">{h}</th>))}
+                    <table className="w-full text-xs" style={{ borderCollapse: 'collapse' }}>                        <thead><tr className="text-[11px] font-semibold uppercase tracking-wider" style={{ backgroundColor: '#F4F1EA', color: '#6B6760' }}>
+                          {['Exchange', 'Pair', 'Price', 'Volume', 'Liquidity', 'Spread', 'Trust', 'AI Score'].map(h => (<th key={h} className="px-2 py-1.5 text-right first:text-left">{h}</th>))}
                       </tr></thead>
                       <tbody>
                         {[{ ex: 'Binance', vol: coin.volume24h * 0.35, liq: 96.2, spr: 0.01, trust: '4.9', ai: 96 }, { ex: 'Bybit', vol: coin.volume24h * 0.22, liq: 94.8, spr: 0.02, trust: '4.8', ai: 91 }, { ex: 'Coinbase', vol: coin.volume24h * 0.18, liq: 93.1, spr: 0.03, trust: '4.7', ai: 88 }, { ex: 'Kraken', vol: coin.volume24h * 0.08, liq: 89.5, spr: 0.04, trust: '4.5', ai: 85 }, { ex: 'KuCoin', vol: coin.volume24h * 0.06, liq: 87.3, spr: 0.03, trust: '4.4', ai: 82 }, { ex: 'Gate.io', vol: coin.volume24h * 0.04, liq: 85.1, spr: 0.05, trust: '4.2', ai: 78 }, { ex: 'OKX', vol: coin.volume24h * 0.03, liq: 83.6, spr: 0.04, trust: '4.3', ai: 80 }].map((row, i) => (
@@ -486,7 +486,7 @@ export default function CoinDetailPage() {
 
               {/* ─── NEWS TAB ─── */}
               {activeInfoTab === 'news' && (
-                <section><h3 className="text-lg font-bold mb-1.5">Latest News</h3>
+                <section><h3 className="text-3xl font-bold mb-1.5">Latest News</h3>
                   <div className="space-y-1.5">
                     {[
                       { h: `${coin.name} Network Activity Surges 40% as Institutional Interest Grows`, s: 'On-chain metrics show significant increase in large transactions and active addresses. Volume up 340% week-over-week.', tag: 'Bullish', tc: '#16a34a', eff: 'High' },
@@ -495,15 +495,15 @@ export default function CoinDetailPage() {
                       { h: `${coin.symbol} Whales Accumulate 50,000 Tokens in 24 Hours`, s: 'Large holders have been accumulating aggressively. Exchange outflows suggest self-custody trend.', tag: 'Bullish', tc: '#16a34a', eff: 'High' },
                       { h: `Technical Analysis: ${coin.symbol} Forms Bullish Pattern`, s: 'Ascending triangle pattern forming on the daily timeframe. Volume profile supports an upward breakout.', tag: 'Neutral', tc: '#d97706', eff: 'Low' },
                     ].map((item, i) => (
-                      <div key={i} className="p-3 rounded-lg border transition-colors hover:bg-black/[0.02]" style={{ borderColor: '#D9D3C5' }}>
-                        <div className="flex items-start justify-between gap-3">
+                      <div key={i} className="p-2 rounded-lg border transition-colors hover:bg-black/[0.02]" style={{ borderColor: '#D9D3C5' }}>
+                        <div className="flex items-start justify-between gap-2">
                           <p className="text-xs font-semibold leading-snug">{item.h}</p>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${item.tc}15`, color: item.tc }}>{item.tag}</span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${item.tc}15`, color: item.tc }}>{item.tag}</span>
                             <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: '#E6E1D6', color: '#6B6760' }}>{item.eff}</span>
                           </div>
                         </div>
-                        <p className="text-[10px] mt-1 leading-relaxed" style={{ color: '#6B6760' }}>{item.s}</p>
+                        <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#6B6760' }}>{item.s}</p>
                       </div>
                     ))}
                   </div>
@@ -513,37 +513,37 @@ export default function CoinDetailPage() {
               {/* ─── COMMUNITY TAB ─── */}
               {activeInfoTab === 'community' && (
                 <section>
-                  <h3 className="text-sm font-bold mb-2">Community</h3>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="p-3 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
+                  <h3 className="text-3xl font-bold mb-1.5">Community</h3>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
                         <div className="text-[9px] font-semibold uppercase tracking-wider text-green-600">Bullish</div>
-                        <div className="text-xl font-bold text-green-600">62%</div>
-                        <div className="w-full h-1.5 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-green-500" style={{ width: '62%' }} /></div>
+                        <div className="text-base font-bold text-green-600">62%</div>
+                        <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-green-500" style={{ width: '62%' }} /></div>
                       </div>
-                      <div className="p-3 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
+                      <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
                         <div className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Neutral</div>
-                        <div className="text-xl font-bold" style={{ color: '#6B6760' }}>23%</div>
-                        <div className="w-full h-1.5 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full" style={{ width: '23%', backgroundColor: '#6B6760' }} /></div>
+                        <div className="text-base font-bold" style={{ color: '#6B6760' }}>23%</div>
+                        <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full" style={{ width: '23%', backgroundColor: '#6B6760' }} /></div>
                       </div>
-                      <div className="p-3 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
+                      <div className="p-2 rounded-lg border text-center" style={{ borderColor: '#D9D3C5' }}>
                         <div className="text-[9px] font-semibold uppercase tracking-wider text-red-600">Bearish</div>
-                        <div className="text-xl font-bold text-red-600">15%</div>
-                        <div className="w-full h-1.5 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-red-500" style={{ width: '15%' }} /></div>
+                        <div className="text-base font-bold text-red-600">15%</div>
+                        <div className="w-full h-1 rounded-full mt-1 overflow-hidden" style={{ backgroundColor: '#E6E1D6' }}><div className="h-full rounded-full bg-red-500" style={{ width: '15%' }} /></div>
                       </div>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-1">
                       {[
                         { u: '@crypto_analyst', msg: 'Strong accumulation pattern. $100K is the new floor for BTC. Next leg up incoming.', t: '2m ago', likes: 234 },
                         { u: '@whale_watcher', msg: '12K BTC just moved off exchanges. Largest daily outflow in 3 months. Bullish signal.', t: '8m ago', likes: 189 },
                         { u: '@tech_trader', msg: 'RSI cooling down after the pump. Healthy consolidation. Watching for the next move above resistance.', t: '15m ago', likes: 156 },
                         { u: '@defi_dad', msg: 'Institutional inflow data looking strong this week. ETFs accumulated 5K BTC yesterday.', t: '28m ago', likes: 98 },
                       ].map((post, i) => (
-                        <div key={i} className="p-3 rounded-lg border" style={{ borderColor: '#D9D3C5' }}>
-                          <div className="flex items-center gap-2 mb-1"><span className="text-[10px] font-semibold">{post.u}</span><span className="text-[9px]" style={{ color: '#6B6760' }}>{post.t}</span></div>
-                          <p className="text-xs leading-relaxed">{post.msg}</p>
-                          <div className="flex items-center gap-3 mt-1.5 text-[10px]" style={{ color: '#6B6760' }}>
-                            <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{post.likes}</span>
+                        <div key={i} className="p-2 rounded-lg border" style={{ borderColor: '#D9D3C5' }}>
+                          <div className="flex items-center gap-1.5 mb-0.5"><span className="text-[10px] font-semibold">{post.u}</span><span className="text-[9px]" style={{ color: '#6B6760' }}>{post.t}</span></div>
+                          <p className="text-sm leading-relaxed">{post.msg}</p>
+                          <div className="flex items-center gap-2 mt-1 text-[9px]" style={{ color: '#6B6760' }}>
+                            <span className="flex items-center gap-1"><Heart className="w-2.5 h-2.5" />{post.likes}</span>
                             <span>Reply</span>
                             <span>Share</span>
                           </div>
@@ -562,19 +562,29 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <Users className="w-3 h-3" style={{ color: '#6B6760' }} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Community</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Community</span>
                 <div className="flex-1" />
-                <span className="text-[9px] text-[#E25A2B]">Live</span>
+                <span className="text-[11px] text-[#E25A2B]">Live</span>
               </div>
               <div className="px-1.5 py-1 space-y-1.5">
                 {[
-                  { u: '@crypto_analyst', msg: 'Strong accumulation pattern. Next leg up incoming.', t: '2m' },
-                  { u: '@whale_watcher', msg: '12K BTC moved off exchanges today.', t: '8m' },
-                  { u: '@tech_trader', msg: 'RSI cooling down. Healthy consolidation.', t: '15m' },
+                  { u: '@crypto_analyst', msg: 'Strong accumulation pattern. Next leg up incoming.', t: '2m', react: '🔥 12', votes: '▲ 8' },
+                  { u: '@whale_watcher', msg: '12K BTC moved off exchanges today.', t: '8m', react: '💬 5', votes: '▲ 3' },
+                  { u: '@tech_trader', msg: 'RSI cooling down. Healthy consolidation.', t: '15m', react: '📈 8', votes: '▲ 6' },
                 ].map((post, i) => (
-                  <div key={i} className="px-2 py-1.5 rounded-md hover:bg-black/[0.02]">
-                    <div className="flex items-center gap-1.5"><span className="text-[9px] font-semibold">{post.u}</span><span className="text-[8px]" style={{ color: '#6B6760' }}>{post.t}</span></div>
-                    <p className="text-[10px] leading-relaxed">{post.msg}</p>
+                  <div key={i} className="group px-2 py-1.5 rounded-md hover:bg-black/[0.02]">
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={e => { e.preventDefault(); }} className="text-[8px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#6B6760' }}>▲</button>
+                      <span className="text-[10px] font-semibold">{post.u}</span>
+                      <span className="text-[11px]" style={{ color: '#6B6760' }}>{post.t}</span>
+                      <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: '#16a34a' }} />
+                    </div>
+                    <p className="text-xs leading-relaxed">{post.msg}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[11px]">{post.react}</span>
+                      <span className="text-[11px]" style={{ color: '#6B6760' }}>{post.votes}</span>
+                      <button onClick={e => { e.preventDefault(); }} className="text-[11px] hover:text-[#E25A2B] transition-colors" style={{ color: '#6B6760' }}>Reply</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -584,13 +594,17 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <TrendingUp className="w-3 h-3" style={{ color: '#6B6760' }} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Trending</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Trending</span>
               </div>
               <div className="px-1.5 py-1 space-y-0.5">
-                {[{ s: `${coin.symbol}`, d: '$104K support holding' }, { s: 'SOL', d: 'Solana ecosystem growth' }, { s: 'AVAX', d: 'Avalanche subnet activity' }, { s: 'ETH', d: 'ETF flow analysis' }, { s: 'DOGE', d: 'Whale distribution' }].map((item, i) => (
-                  <Link key={item.s} href={`/markets/${item.s.toLowerCase()}`} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-black/[0.02] transition-colors">
-                    <span className="text-[9px] font-mono" style={{ color: '#6B6760' }}>{i + 1}</span>
-                    <div className="flex-1"><div className="text-[11px] font-medium">{item.s}</div><div className="text-[9px]" style={{ color: '#6B6760' }}>{item.d}</div></div>
+                {[{ s: `${coin.symbol}`, d: '$104K support holding', v: '▲ 12' }, { s: 'SOL', d: 'Solana ecosystem growth', v: '▲ 8' }, { s: 'AVAX', d: 'Avalanche subnet activity', v: '▲ 6' }, { s: 'ETH', d: 'ETF flow analysis', v: '▲ 5' }, { s: 'DOGE', d: 'Whale distribution', v: '▼ 2' }].map((item, i) => (
+                  <Link key={item.s} href={`/markets/${item.s.toLowerCase()}`} className="group flex items-center gap-1.5 px-2 py-1.5 rounded-md hover:bg-black/[0.02] transition-colors">
+                    <span className="text-[11px] font-mono" style={{ color: '#6B6760' }}>{i + 1}</span>
+                    <button onClick={e => { e.preventDefault(); }} className="flex flex-col items-center leading-none opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[7px]" style={{ color: '#6B6760' }}>▲</span>
+                    </button>
+                    <div className="flex-1"><div className="text-[11px] font-medium">{item.s}</div><div className="text-[10px]" style={{ color: '#6B6760' }}>{item.d}</div></div>
+                    <span className="text-[9px]" style={{ color: '#6B6760' }}>{item.v}</span>
                   </Link>
                 ))}
               </div>
@@ -600,7 +614,7 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <Clock className="w-3 h-3" style={{ color: '#6B6760' }} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Recent News</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Recent News</span>
               </div>
               <div className="px-1.5 py-1 space-y-1">
                 {[
@@ -609,7 +623,7 @@ export default function CoinDetailPage() {
                   { h: 'Regulatory clarity expected soon', tag: 'Bullish', tc: '#16a34a' },
                 ].map((item, i) => (
                   <div key={i} className="px-2 py-1.5 rounded-md hover:bg-black/[0.02] cursor-pointer">
-                    <div className="flex items-center gap-1.5"><span className="text-[10px] leading-tight">{item.h}</span><span className="text-[8px] font-bold px-1 py-0.5 rounded shrink-0" style={{ backgroundColor: `${item.tc}15`, color: item.tc }}>{item.tag}</span></div>
+                    <div className="flex items-center gap-1.5"><span className="text-[10px] leading-tight">{item.h}</span>                      <span className="text-[10px] font-bold px-1 py-0.5 rounded shrink-0" style={{ backgroundColor: `${item.tc}15`, color: item.tc }}>{item.tag}</span></div>
                   </div>
                 ))}
               </div>
@@ -619,13 +633,16 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <Bookmark className="w-3 h-3" style={{ color: '#6B6760' }} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Watchlist</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Watchlist</span>
               </div>
               <div className="px-1.5 py-1 space-y-0.5">
-                {[{ s: 'BTC', p: '+2.35%', c: '#16a34a' }, { s: 'ETH', p: '+1.82%', c: '#16a34a' }, { s: 'SOL', p: '+6.71%', c: '#16a34a' }, { s: 'AVAX', p: '+8.92%', c: '#16a34a' }].map(item => (
+                {[{ s: 'BTC', p: '+2.35%', c: '#16a34a', r: '🔥 24' }, { s: 'ETH', p: '+1.82%', c: '#16a34a', r: '💬 18' }, { s: 'SOL', p: '+6.71%', c: '#16a34a', r: '📈 12' }, { s: 'AVAX', p: '+8.92%', c: '#16a34a', r: '⭐ 9' }].map(item => (
                   <Link key={item.s} href={`/markets/${item.s.toLowerCase()}`} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-black/[0.02]">
-                    <span className="text-[11px] font-medium">{item.s}</span>
-                    <span className="text-[10px] font-medium" style={{ color: item.c }}>{item.p}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium">{item.s}</span>
+                      <span className="text-[10px]" style={{ color: '#6B6760' }}>{item.r}</span>
+                    </div>
+                    <span className="text-[11px] font-medium" style={{ color: item.c }}>{item.p}</span>
                   </Link>
                 ))}
               </div>
@@ -635,7 +652,7 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <MessageCircle className="w-3 h-3" style={{ color: '#6B6760' }} />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Social Sentiment</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Social Sentiment</span>
               </div>
               <div className="p-2">
                 <div className="flex items-center justify-between mb-1.5">
@@ -653,13 +670,13 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <Activity className="w-3 h-3 text-blue-500" />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Whale Alerts</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Whale Alerts</span>
               </div>
               <div className="px-1.5 py-1 space-y-0.5">
                 {[{ a: '12,500 BTC moved', t: '12m ago' }, { a: '85,000 ETH accumulated', t: '34m ago' }, { a: '2.1M SOL staked', t: '1h ago' }].map((item, i) => (
                   <div key={i} className="flex items-center justify-between px-2 py-1.5 rounded-md">
                     <span className="text-[10px]">{item.a}</span>
-                    <span className="text-[9px]" style={{ color: '#6B6760' }}>{item.t}</span>
+                    <span className="text-[11px]" style={{ color: '#6B6760' }}>{item.t}</span>
                   </div>
                 ))}
               </div>
@@ -669,15 +686,15 @@ export default function CoinDetailPage() {
             <div className="rounded-lg border overflow-hidden" style={{ borderColor: '#D9D3C5' }}>
               <div className="flex items-center gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: '#D9D3C5' }}>
                 <Zap className="w-3 h-3 text-[#E25A2B]" />
-                <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Recent Signals</span>
+                <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B6760' }}>Recent Signals</span>
               </div>
               <div className="px-1.5 py-1 space-y-0.5">
                 {[{ s: 'BTC', sig: 'BUY', conf: 87 }, { s: 'SOL', sig: 'BUY', conf: 84 }, { s: 'AVAX', sig: 'BUY', conf: 91 }, { s: 'DOGE', sig: 'SELL', conf: 72 }].map(item => (
                   <Link key={item.s} href={`/markets/${item.s.toLowerCase()}`} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-black/[0.02]">
                     <span className="text-[11px] font-medium">{item.s}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${signalColors[item.sig as Signal]}15`, color: signalColors[item.sig as Signal] }}>{item.sig}</span>
-                      <span className="text-[9px] font-mono" style={{ color: '#6B6760' }}>{item.conf}%</span>
+                      <span className="text-[11px] font-bold px-1 py-0.5 rounded" style={{ backgroundColor: `${signalColors[item.sig as Signal]}15`, color: signalColors[item.sig as Signal] }}>{item.sig}</span>
+                      <span className="text-[11px] font-mono" style={{ color: '#6B6760' }}>{item.conf}%</span>
                     </div>
                   </Link>
                 ))}
@@ -708,7 +725,7 @@ export default function CoinDetailPage() {
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {[...COINS].sort((a, b) => b.change24h - a.change24h).slice(0, 8).map(c => (
               <Link key={c.symbol} href={`/markets/${c.symbol.toLowerCase()}`} className="flex items-center gap-2 px-3 py-2 rounded-lg border shrink-0 transition-colors hover:bg-black/[0.02]" style={{ borderColor: '#D9D3C5' }}>
-                <span className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: '#E6E1D6' }}>{c.icon}</span>
+                <CryptoIcon symbol={c.symbol} size={20} />
                 <div><div className="text-[11px] font-medium">{c.symbol}</div><div className="text-[9px] font-medium" style={{ color: pctColor(c.change24h) }}>+{c.change24h.toFixed(2)}%</div></div>
               </Link>
             ))}

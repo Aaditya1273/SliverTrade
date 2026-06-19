@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { COINS, type Signal } from '@/lib/market-data'
+import CryptoIcon from '@/components/CryptoIcon'
 import { formatCompact, formatPrice, pctColor } from '@/lib/market-utils'
 import {
   Search, TrendingUp, Sparkles, AlertTriangle, BarChart3,
@@ -149,7 +150,7 @@ export default function TradePage() {
         <div className="w-full px-3 lg:px-4" style={{ maxWidth: 1800, margin: '0 auto' }}>
           <div className="flex items-center gap-4 h-11 overflow-x-auto">
             <Link href={`/markets/${coin.symbol.toLowerCase()}`} className="flex items-center gap-2 shrink-0">
-              <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0" style={{ backgroundColor: '#E6E1D6' }}>{coin.icon}</span>
+              <CryptoIcon symbol={coin.symbol} size={24} />
               <span className="text-sm font-bold">{coin.symbol}/USDT</span>
             </Link>
             <div className="text-right shrink-0">
@@ -222,7 +223,7 @@ export default function TradePage() {
                 <Link key={c.symbol} href={`/markets/${c.symbol.toLowerCase()}/trade`}
                   className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors hover:bg-black/[0.03]">
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: '#E6E1D6' }}>{c.icon}</span>
+                    <CryptoIcon symbol={c.symbol} size={16} />
                     <span className="font-medium">{c.symbol}</span>
                   </div>
                   <div className="text-right">
@@ -249,7 +250,7 @@ export default function TradePage() {
                     className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs transition-colors hover:bg-black/[0.03]">
                     <div className="flex items-center gap-2">
                       <span className="text-[9px] font-mono" style={{ color: '#6B6760' }}>{i + 1}</span>
-                      <span className="w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: '#E6E1D6' }}>{c.icon}</span>
+                      <CryptoIcon symbol={c.symbol} size={16} />
                       <span className="font-medium">{item.sym}</span>
                     </div>
                     <span className="font-medium text-[11px]" style={{ color: pctColor(item.pct) }}>
