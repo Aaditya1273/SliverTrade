@@ -60,8 +60,8 @@ export default function MissedProfitsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Missed Opportunities</h1>
@@ -224,6 +224,6 @@ export default function MissedProfitsPage() {
           </ul>
         </Card>
       </div>
-    </main>
+    </div>
   )
 }

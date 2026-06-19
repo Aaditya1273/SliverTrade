@@ -55,8 +55,8 @@ export default function ChatHistoryPage() {
 
   if (!apiKey) {
     return (
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="p-4 md:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto">
           <Card className="p-12 border-border text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
               <History className="w-8 h-8 text-accent" />
@@ -74,13 +74,13 @@ export default function ChatHistoryPage() {
             </Link>
           </Card>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -227,6 +227,6 @@ export default function ChatHistoryPage() {
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }

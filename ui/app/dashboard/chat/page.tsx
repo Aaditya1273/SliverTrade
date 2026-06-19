@@ -372,8 +372,8 @@ export default function ChatPage() {
 
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col h-screen">
+    <div className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto flex flex-col" style={{ minHeight: 'calc(100vh - 8rem)' }}>
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-2">
@@ -485,6 +485,6 @@ export default function ChatPage() {
           isPending={executeOrderMutation.isPending}
         />
       )}
-    </main>
+    </div>
   )
 }
