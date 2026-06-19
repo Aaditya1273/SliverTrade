@@ -160,7 +160,7 @@ export default function HeroSection() {
           {/* Pill CTA */}
           <a
             ref={pillRef}
-            href="/signup"
+            href="/markets"
             className="opacity-0 mb-8 inline-flex items-center gap-2 border rounded-full px-5 py-2 text-[13px] font-medium transition-all duration-200"
             style={{
               borderColor: 'var(--border)',
