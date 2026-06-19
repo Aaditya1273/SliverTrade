@@ -7,14 +7,16 @@ export type ServiceStatus = 'healthy' | 'degraded' | 'down'
 interface SystemHealth {
   platform: ServiceStatus
   strategy: ServiceStatus
+  data: ServiceStatus
   lastUpdated: string
 }
 
-import { PLATFORM, STRATEGY } from '@/lib/api-config'
+import { PLATFORM, STRATEGY, DATA } from '@/lib/api-config'
 
 // Platform uses /health/* endpoints, not /api/v1/health
 const PLATFORM_HEALTH_URL = PLATFORM('/health/status')
 const STRATEGY_HEALTH_URL = STRATEGY('/api/v1/health')
+const DATA_HEALTH_URL = DATA('/health')
 
 async function checkService(url: string, timeoutMs = 5000): Promise<ServiceStatus> {
   const controller = new AbortController()
@@ -43,18 +45,21 @@ export function useSystemHealth() {
   const [health, setHealth] = useState<SystemHealth>({
     platform: 'down',
     strategy: 'down',
+    data: 'down',
     lastUpdated: 'Checking...',
   })
 
   const check = useCallback(async () => {
-    const [platform, strategy] = await Promise.all([
+    const [platform, strategy, data] = await Promise.all([
       checkService(PLATFORM_HEALTH_URL),
       checkService(STRATEGY_HEALTH_URL),
+      checkService(DATA_HEALTH_URL),
     ])
 
     setHealth({
       platform,
       strategy,
+      data,
       lastUpdated: new Date().toLocaleTimeString(),
     })
   }, [])
