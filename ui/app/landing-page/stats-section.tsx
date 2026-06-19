@@ -26,8 +26,8 @@ export default function StatsSection() {
     stats.forEach((stat, i) => {
       const trigger = ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: () => `top ${100 - (i * 25)}%`,
-        end: () => `top ${100 - ((i + 1) * 25)}%`,
+        start: () => `${(i / stats.length) * 100}% top`,
+        end: () => `${((i + 1) / stats.length) * 100}% top`,
         onEnter: () => setActiveIndex(i),
         onEnterBack: () => setActiveIndex(i),
         onUpdate: (self) => {
