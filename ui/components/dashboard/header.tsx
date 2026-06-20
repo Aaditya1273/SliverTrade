@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Bell, Settings, EyeOff, Eye, Activity, Loader2, AlertTriangle, AlertCircle, Wifi, ArrowRight } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Bell, Settings, EyeOff, Eye, Activity, Loader2, AlertTriangle, AlertCircle, Wifi, ArrowRight, Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -12,15 +13,25 @@ import { toast } from 'sonner'
 interface DashboardHeaderProps {
   hideBalances: boolean
   setHideBalances: (hide: boolean) => void
+  onMenuClick?: () => void
 }
 
-export function DashboardHeader({ hideBalances, setHideBalances }: DashboardHeaderProps) {
+export function DashboardHeader({ hideBalances, setHideBalances, onMenuClick }: DashboardHeaderProps) {
   const { data: settings } = useSettings()
   const { authenticated, apiKey, loading: authLoading } = useAuth()
   const queryClient = useQueryClient()
 
   const autoExecuteActive = settings?.auto_execute === true
   const needsBroker = authenticated && !apiKey && !authLoading
+
+  const [lastUpdated, setLastUpdated] = useState<string>('Just now')
+
+  // Update timestamp every 30s
+  useEffect(() => {
+    const update = () => setLastUpdated(new Date().toLocaleTimeString())
+    const interval = setInterval(update, 30_000)
+    return () => clearInterval(interval)
+  }, [])
 
   const disableAutoExecuteMutation = useMutation({
     mutationFn: async () => {
@@ -67,10 +78,18 @@ export function DashboardHeader({ hideBalances, setHideBalances }: DashboardHead
         </div>
       )}
 
-      <header className="hidden md:flex border-b border-border px-6 lg:px-8 h-16 items-center justify-between bg-card/30 backdrop-blur-sm sticky top-0 z-30">
+      <header className="flex border-b border-border px-4 lg:px-8 h-16 items-center justify-between bg-card/30 backdrop-blur-sm sticky top-0 z-30">
       <div className="flex items-center gap-4">
+        {/* Mobile menu toggle */}
+        <button
+          onClick={onMenuClick}
+          className="p-1.5 rounded-lg hover:bg-card/50 transition-colors md:hidden"
+          aria-label="Open menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <div className="text-sm text-muted-foreground">
-          Last updated: Just now
+          Last updated: {lastUpdated}
         </div>
         {autoExecuteActive && (
           <TooltipProvider>

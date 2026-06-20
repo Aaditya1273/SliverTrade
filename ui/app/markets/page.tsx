@@ -694,7 +694,7 @@ function TH({ children, align, className, sortKey, activeSort, onSort, info, sty
       onClick={sortKey && onSort ? () => onSort(sortKey) : undefined}>
       <span className="inline-flex items-center gap-1" style={{ justifyContent: align === 'right' ? 'flex-end' : align === 'left' ? 'flex-start' : 'center' }}>
         {children}
-        {info && <Info className="w-3 h-3 opacity-50" title={info} />}
+        {info && <span title={info}><Info className="w-3 h-3 opacity-50" /></span>}
         {sortKey && (
           isActive
             ? (activeSort!.dir === 'asc' ? <ChevronUp className="w-3 h-3" style={{ color: '#E25A2B' }} /> : <ChevronDown className="w-3 h-3" style={{ color: '#E25A2B' }} />)
