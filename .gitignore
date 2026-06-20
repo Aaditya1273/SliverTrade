@@ -30,6 +30,8 @@ yarn-error.log*
 .env
 .env.local
 .env.production
+.env.backup*
+.env.supabase*
 *.key
 secrets*
 .venv
