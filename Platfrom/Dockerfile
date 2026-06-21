@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir uv && \
     rm -rf /root/.cache
 
 # ------------------------------ Frontend Builder Stage --------------------- #
-FROM node:20-bullseye-slim AS frontend-builder
+FROM node:26-bullseye-slim AS frontend-builder
 WORKDIR /app
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
