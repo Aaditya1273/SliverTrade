@@ -212,7 +212,7 @@ class BrokerSymbolCache:
                     instrumenttype=sym.instrumenttype,
                     tick_size=sym.tick_size,
                     underlying=underlying,
-                    contract_value=getattr(sym, 'contract_value', None),
+                    contract_value=getattr(sym, "contract_value", None),
                 )
 
                 # Store in primary dict
@@ -230,7 +230,9 @@ class BrokerSymbolCache:
                     self.expiries_by_exchange[sym.exchange].add(sym.expiry)
                     # Use extracted underlying for index (more reliable than broker's name field)
                     if underlying:
-                        self.expiries_by_exchange_underlying[(sym.exchange, underlying)].add(sym.expiry)
+                        self.expiries_by_exchange_underlying[(sym.exchange, underlying)].add(
+                            sym.expiry
+                        )
                 # Use extracted underlying for underlyings index.
                 # Only track underlyings that have options (CE/PE) — perpetuals, futures,
                 # spreads, etc. should not appear in the option-chain/IV-chart dropdown.
@@ -607,7 +609,9 @@ class BrokerSymbolCache:
 
             # Priority 2: Underlying starts with search term (e.g., "NIFTY" before "BANKNIFTY")
             underlying_starts = (
-                0 if (primary_term and s.underlying and s.underlying.startswith(primary_term)) else 1
+                0
+                if (primary_term and s.underlying and s.underlying.startswith(primary_term))
+                else 1
             )
 
             # Priority 3: Symbol starts with search term
@@ -1074,7 +1078,9 @@ def get_distinct_expiries_cached(
 
         if exchange and underlying_upper:
             # Use the combined index for exchange + underlying
-            expiries = cache.expiries_by_exchange_underlying.get((exchange, underlying_upper), set())
+            expiries = cache.expiries_by_exchange_underlying.get(
+                (exchange, underlying_upper), set()
+            )
         elif exchange:
             # Use the exchange-only index
             expiries = cache.expiries_by_exchange.get(exchange, set())

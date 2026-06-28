@@ -89,14 +89,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -129,7 +129,6 @@ def _invalidate_position_cache(auth):
     """Invalidate the position cache so the next queued order fetches fresh data."""
     with _position_cache_lock:
         _position_cache.pop(auth, None)
-
 
 
 def get_open_position(tradingsymbol, exchange, producttype, auth):
@@ -203,8 +202,11 @@ def place_order_api(data, auth):
     payload = json.dumps(transformed_data)
     logger.info(f"Place order payload: {payload}")
 
-    response = request_with_circuit_breaker("POST", 
-        "https://api.mstock.trade/openapi/typeb/orders/regular", headers=headers, content=payload
+    response = request_with_circuit_breaker(
+        "POST",
+        "https://api.mstock.trade/openapi/typeb/orders/regular",
+        headers=headers,
+        content=payload,
     )
 
     # Add status attribute for compatibility
@@ -632,8 +634,8 @@ def cancel_all_orders_api(data, auth):
     logger.info("Calling mStock Type B cancelall endpoint")
 
     # POST request to cancel all orders at once
-    response = request_with_circuit_breaker("POST", 
-        "https://api.mstock.trade/openapi/typeb/orders/cancelall", headers=headers
+    response = request_with_circuit_breaker(
+        "POST", "https://api.mstock.trade/openapi/typeb/orders/cancelall", headers=headers
     )
 
     # Add status attribute for compatibility

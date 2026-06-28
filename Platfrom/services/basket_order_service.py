@@ -22,7 +22,6 @@ from utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-
 def emit_analyzer_error(request_data: dict[str, Any], error_message: str) -> dict[str, Any]:
     """
     Helper function to emit analyzer error events via the event bus.
@@ -42,14 +41,16 @@ def emit_analyzer_error(request_data: dict[str, Any], error_message: str) -> dic
         del analyzer_request["apikey"]
     analyzer_request["api_type"] = "basketorder"
 
-    bus.publish(AnalyzerErrorEvent(
-        mode="analyze",
-        api_type="basketorder",
-        request_data=analyzer_request,
-        response_data=error_response,
-        error_message=error_message,
-        api_key=request_data.get("apikey", ""),
-    ))
+    bus.publish(
+        AnalyzerErrorEvent(
+            mode="analyze",
+            api_type="basketorder",
+            request_data=analyzer_request,
+            response_data=error_response,
+            error_message=error_message,
+            api_key=request_data.get("apikey", ""),
+        )
+    )
 
     return error_response
 
@@ -206,16 +207,13 @@ def process_basket_order_with_auth(
             from services.quotes_service import get_multiquotes
 
             unique_symbols = {
-                (o.get("symbol"), o.get("exchange")) for o in sorted_orders
+                (o.get("symbol"), o.get("exchange"))
+                for o in sorted_orders
                 if o.get("symbol") and o.get("exchange")
             }
             if unique_symbols:
-                symbols_list = [
-                    {"symbol": s, "exchange": e} for s, e in unique_symbols
-                ]
-                success_mq, mq_response, _ = get_multiquotes(
-                    symbols=symbols_list, api_key=api_key
-                )
+                symbols_list = [{"symbol": s, "exchange": e} for s, e in unique_symbols]
+                success_mq, mq_response, _ = get_multiquotes(symbols=symbols_list, api_key=api_key)
                 if success_mq and "results" in mq_response:
                     for result in mq_response["results"]:
                         sym = result.get("symbol")
@@ -223,9 +221,7 @@ def process_basket_order_with_auth(
                         data = result.get("data")
                         if sym and exch and data:
                             quote_cache[(sym, exch)] = data
-                    logger.info(
-                        f"Pre-fetched {len(quote_cache)} quotes for sandbox basket order"
-                    )
+                    logger.info(f"Pre-fetched {len(quote_cache)} quotes for sandbox basket order")
         except Exception as e:
             logger.debug(f"Multiquotes pre-fetch failed, falling back to per-order fetch: {e}")
 
@@ -248,13 +244,13 @@ def process_basket_order_with_auth(
                 continue
 
             # Look up pre-fetched quote for this symbol
-            prefetched = quote_cache.get(
-                (order.get("symbol"), order.get("exchange"))
-            )
+            prefetched = quote_cache.get((order.get("symbol"), order.get("exchange")))
 
             # Place order in sandbox with pre-fetched quote
             success, response, status_code = sandbox_place_order(
-                order_with_auth, api_key, {"apikey": api_key, "order_type": "basket"},
+                order_with_auth,
+                api_key,
+                {"apikey": api_key, "order_type": "basket"},
                 prefetched_quote=prefetched,
             )
 
@@ -284,17 +280,19 @@ def process_basket_order_with_auth(
         analyzer_request["api_type"] = "basketorder"
 
         successful_orders = sum(1 for r in analyze_results if r.get("status") == "success")
-        bus.publish(BasketCompletedEvent(
-            mode="analyze",
-            api_type="basketorder",
-            strategy=basket_data.get("strategy", ""),
-            results=analyze_results,
-            successful=successful_orders,
-            total=total_orders,
-            request_data=analyzer_request,
-            response_data=response_data,
-            api_key=basket_data.get("apikey", ""),
-        ))
+        bus.publish(
+            BasketCompletedEvent(
+                mode="analyze",
+                api_type="basketorder",
+                strategy=basket_data.get("strategy", ""),
+                results=analyze_results,
+                successful=successful_orders,
+                total=total_orders,
+                request_data=analyzer_request,
+                response_data=response_data,
+                api_key=basket_data.get("apikey", ""),
+            )
+        )
 
         return True, response_data, 200
 
@@ -302,14 +300,16 @@ def process_basket_order_with_auth(
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}
-        bus.publish(OrderFailedEvent(
-            mode="live",
-            api_type="basketorder",
-            request_data=basket_request_data,
-            response_data=error_response,
-            error_message="Broker-specific module not found",
-            api_key=basket_data.get("apikey", ""),
-        ))
+        bus.publish(
+            OrderFailedEvent(
+                mode="live",
+                api_type="basketorder",
+                request_data=basket_request_data,
+                response_data=error_response,
+                error_message="Broker-specific module not found",
+                api_key=basket_data.get("apikey", ""),
+            )
+        )
         return False, error_response, 404
 
     # Sort orders to prioritize BUY orders before SELL orders
@@ -325,8 +325,7 @@ def process_basket_order_with_auth(
 
     # Prepare all orders with auth fields (BUY first, then SELL)
     orders_with_auth = [
-        {**order, "apikey": api_key, "strategy": basket_data["strategy"]}
-        for order in sorted_orders
+        {**order, "apikey": api_key, "strategy": basket_data["strategy"]} for order in sorted_orders
     ]
 
     # Place orders concurrently in batches of 10 with 1s delay between batches
@@ -343,7 +342,12 @@ def process_basket_order_with_auth(
         with ThreadPoolExecutor(max_workers=len(batch)) as executor:
             future_to_order = {
                 executor.submit(
-                    place_single_order, order_data, broker_module, auth_token, total_orders, batch_start + idx
+                    place_single_order,
+                    order_data,
+                    broker_module,
+                    auth_token,
+                    total_orders,
+                    batch_start + idx,
                 ): order_data
                 for idx, order_data in enumerate(batch)
             }
@@ -354,10 +358,12 @@ def process_basket_order_with_auth(
                     results.append(result)
                     # Track successful orders for potential reversal
                     if result.get("status") == "success" and result.get("orderid"):
-                        successful_order_ids.append({
-                            "orderid": result["orderid"],
-                            "symbol": result.get("symbol", "unknown"),
-                        })
+                        successful_order_ids.append(
+                            {
+                                "orderid": result["orderid"],
+                                "symbol": result.get("symbol", "unknown"),
+                            }
+                        )
 
     # If ALL orders failed, return error (no need to reverse)
     # If SOME orders failed, we have partial success — report it as-is
@@ -368,17 +374,19 @@ def process_basket_order_with_auth(
     response_data = {"status": "success", "results": results}
 
     successful_orders = sum(1 for r in results if r.get("status") == "success")
-    bus.publish(BasketCompletedEvent(
-        mode="live",
-        api_type="basketorder",
-        strategy=basket_data.get("strategy", ""),
-        results=results,
-        successful=successful_orders,
-        total=len(results),
-        request_data=basket_request_data,
-        response_data=response_data,
-        api_key=original_data.get("apikey", ""),
-    ))
+    bus.publish(
+        BasketCompletedEvent(
+            mode="live",
+            api_type="basketorder",
+            strategy=basket_data.get("strategy", ""),
+            results=results,
+            successful=successful_orders,
+            total=len(results),
+            request_data=basket_request_data,
+            response_data=response_data,
+            api_key=original_data.get("apikey", ""),
+        )
+    )
 
     return True, response_data, 200
 

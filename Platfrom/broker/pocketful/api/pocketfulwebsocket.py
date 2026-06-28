@@ -202,14 +202,18 @@ class PocketfulSocket:
         """Make GET request using shared httpx client"""
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = request_with_circuit_breaker("GET", f"{self.base_url}{url}", params=params, headers=headers)
+        res = request_with_circuit_breaker(
+            "GET", f"{self.base_url}{url}", params=params, headers=headers
+        )
         return res.json()
 
     def post_request(self, url, data):
         """Make POST request using shared httpx client"""
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = request_with_circuit_breaker("POST", f"{self.base_url}{url}", headers=headers, json=data)
+        res = request_with_circuit_breaker(
+            "POST", f"{self.base_url}{url}", headers=headers, json=data
+        )
         logger.info(f"POST Response: {res.status_code}")
         return res.json()
 
@@ -217,7 +221,9 @@ class PocketfulSocket:
         """Make PUT request using shared httpx client"""
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = request_with_circuit_breaker("PUT", f"{self.base_url}{url}", headers=headers, json=data)
+        res = request_with_circuit_breaker(
+            "PUT", f"{self.base_url}{url}", headers=headers, json=data
+        )
         logger.info(f"PUT Response: {res.status_code}")
         return res.json()
 
@@ -225,7 +231,9 @@ class PocketfulSocket:
         """Make DELETE request using shared httpx client"""
         headers = dict(self.headers)
         headers["Authorization"] = f"Bearer {self.access_token}"
-        res = request_with_circuit_breaker("DELETE", f"{self.base_url}{url}", params=params, headers=headers)
+        res = request_with_circuit_breaker(
+            "DELETE", f"{self.base_url}{url}", params=params, headers=headers
+        )
         return res.json()
 
     def run_socket(self):

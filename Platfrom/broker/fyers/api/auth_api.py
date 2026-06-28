@@ -63,7 +63,8 @@ def authenticate_broker(request_token: str) -> tuple[str | None, dict[str, Any] 
         logger.debug(f"Authenticating with FYERS API. Request: {json.dumps(payload, indent=2)}")
 
         # Make the authentication request
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             url,
             headers=headers,
             json=payload,

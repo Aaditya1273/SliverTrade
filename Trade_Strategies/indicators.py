@@ -144,6 +144,64 @@ def bollinger_bands(
     return middle, upper, lower
 
 
+def adx(high: List[float], low: List[float], close: List[float], period: int = 14) -> List[Optional[float]]:
+    """Average Directional Index — measures trend strength.
+
+    ADX > 25: strong trend. ADX < 20: weak/choppy.
+    PlusDI > MinusDI: uptrend. MinusDI > PlusDI: downtrend.
+    """
+    n = len(close)
+    result: List[Optional[float]] = [None] * n
+    if n < period + 1:
+        return result
+
+    tr_values: List[float] = []
+    plus_dm: List[float] = []
+    minus_dm: List[float] = []
+
+    for i in range(1, n):
+        hl = high[i] - low[i]
+        hc = abs(high[i] - close[i - 1])
+        lc = abs(low[i] - close[i - 1])
+        tr_values.append(max(hl, hc, lc))
+
+        up_move = high[i] - high[i - 1]
+        down_move = low[i - 1] - low[i]
+        if up_move > down_move and up_move > 0:
+            plus_dm.append(up_move)
+        else:
+            plus_dm.append(0.0)
+        if down_move > up_move and down_move > 0:
+            minus_dm.append(down_move)
+        else:
+            minus_dm.append(0.0)
+
+    if len(tr_values) < period:
+        return result
+
+    def _smooth(values, p):
+        smoothed = [0.0] * len(values)
+        smoothed[0] = sum(values[:p]) / p
+        for j in range(1, len(values)):
+            smoothed[j] = (smoothed[j - 1] * (p - 1) + values[j]) / p
+        return smoothed
+
+    atr_smooth = _smooth(tr_values, period)
+    plus_smooth = _smooth(plus_dm, period)
+    minus_smooth = _smooth(minus_dm, period)
+
+    for i in range(period - 1, len(tr_values)):
+        if atr_smooth[i] == 0:
+            result[i + 1] = 0.0
+            continue
+        plus_di = 100 * plus_smooth[i] / atr_smooth[i]
+        minus_di = 100 * minus_smooth[i] / atr_smooth[i]
+        dx = abs(plus_di - minus_di) / (plus_di + minus_di) * 100 if (plus_di + minus_di) > 0 else 0
+        result[i + 1] = dx
+
+    return result
+
+
 def atr(high: List[float], low: List[float], close: List[float], period: int = 14) -> List[Optional[float]]:
     """Average True Range."""
     n = len(close)

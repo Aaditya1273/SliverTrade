@@ -331,15 +331,21 @@ class DhanWebSocketAdapter(BaseBrokerWebSocketAdapter):
             if mode == 1:
                 # Standard LTP mode
                 dhan_mode = DhanWebSocket.MODE_LTP
-                self.logger.info(f"Mapped SilverTrade AI mode {mode} (LTP) to Dhan mode '{dhan_mode}'")
+                self.logger.info(
+                    f"Mapped SilverTrade AI mode {mode} (LTP) to Dhan mode '{dhan_mode}'"
+                )
             elif mode == 2:
                 # Standard QUOTE mode
                 dhan_mode = DhanWebSocket.MODE_QUOTE
-                self.logger.info(f"Mapped SilverTrade AI mode {mode} (QUOTE) to Dhan mode '{dhan_mode}'")
+                self.logger.info(
+                    f"Mapped SilverTrade AI mode {mode} (QUOTE) to Dhan mode '{dhan_mode}'"
+                )
             elif mode == 3:
                 # Standard DEPTH mode
                 dhan_mode = DhanWebSocket.MODE_FULL
-                self.logger.info(f"Mapped SilverTrade AI mode {mode} (DEPTH) to Dhan mode '{dhan_mode}'")
+                self.logger.info(
+                    f"Mapped SilverTrade AI mode {mode} (DEPTH) to Dhan mode '{dhan_mode}'"
+                )
             else:
                 # All other modes (4-8) map to FULL/DEPTH
                 dhan_mode = DhanWebSocket.MODE_FULL

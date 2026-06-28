@@ -7,7 +7,7 @@ from database.token_db import get_br_symbol
 def transform_data(data, token):
     """
     Transforms the SilverTrade AI API request structure to Nubra's expected structure.
-    
+
     SilverTrade AI format:
     - action: BUY/SELL
     - product: CNC/MIS/NRML
@@ -15,7 +15,7 @@ def transform_data(data, token):
     - price: float (in rupees)
     - trigger_price: float (in rupees, for stoploss orders)
     - quantity: int
-    
+
     Nubra format:
     - order_side: ORDER_SIDE_BUY/ORDER_SIDE_SELL
     - order_delivery_type: ORDER_DELIVERY_TYPE_CNC/ORDER_DELIVERY_TYPE_IDAY
@@ -28,12 +28,12 @@ def transform_data(data, token):
     # Convert price from rupees to paise (multiply by 100)
     price = float(data.get("price", 0))
     price_in_paise = int(round(price * 100)) if price else 0
-    
+
     trigger_price = float(data.get("trigger_price", 0))
     trigger_price_in_paise = int(round(trigger_price * 100)) if trigger_price else 0
-    
+
     pricetype = data.get("pricetype", "MARKET")
-    
+
     # Determine validity type based on price type
     # MARKET and SL-M orders require IOC (Immediate or Cancel)
     # LIMIT and SL orders use DAY validity
@@ -41,7 +41,7 @@ def transform_data(data, token):
         validity_type = "IOC"
     else:
         validity_type = "DAY"
-    
+
     # Build the transformed data structure for Nubra API
     transformed = {
         "ref_id": int(token),  # Instrument reference ID from token
@@ -54,40 +54,38 @@ def transform_data(data, token):
         "order_price": price_in_paise,
         "tag": data.get("strategy", "silvertrade"),
     }
-    
+
     # Add algo_params for stoploss orders
     if pricetype in ["SL", "SL-M"]:
-        transformed["algo_params"] = {
-            "trigger_price": trigger_price_in_paise
-        }
+        transformed["algo_params"] = {"trigger_price": trigger_price_in_paise}
         # For SL-M orders, Nubra requires order_price >= trigger_price
         # Set order_price = trigger_price to pass validation;
         # actual execution happens at market price since price_type is MARKET
         if pricetype == "SL-M" and not price_in_paise:
             transformed["order_price"] = trigger_price_in_paise
-    
+
     return transformed
 
 
 def transform_modify_order_data(data, token):
     """
     Transforms modify order data from SilverTrade AI format to Nubra's format.
-    
+
     Nubra Modify Order API: POST /orders/v2/modify/{order_id}
-    
+
     Compulsory fields: order_price, order_qty, exchange, order_type
     For ORDER_TYPE_STOPLOSS: also requires trigger_price in algo_params
-    
+
     Note: order_id goes in the URL, not in the payload
     """
     price = float(data.get("price", 0))
     price_in_paise = int(round(price * 100)) if price else 0
-    
+
     trigger_price = float(data.get("trigger_price", 0))
     trigger_price_in_paise = int(round(trigger_price * 100)) if trigger_price else 0
-    
+
     pricetype = data.get("pricetype", "MARKET")
-    
+
     # Build payload per Nubra API requirements
     # order_id is passed in URL, not in payload
     transformed = {
@@ -96,13 +94,11 @@ def transform_modify_order_data(data, token):
         "exchange": data["exchange"],  # Compulsory field
         "order_type": map_order_type(pricetype),
     }
-    
+
     # Add algo_params for stoploss orders (trigger_price is compulsory for stoploss)
     if pricetype in ["SL", "SL-M"]:
-        transformed["algo_params"] = {
-            "trigger_price": trigger_price_in_paise
-        }
-    
+        transformed["algo_params"] = {"trigger_price": trigger_price_in_paise}
+
     return transformed
 
 
@@ -154,8 +150,8 @@ def map_price_type(pricetype):
     price_type_mapping = {
         "MARKET": "MARKET",
         "LIMIT": "LIMIT",
-        "SL": "LIMIT",      # Stoploss Limit
-        "SL-M": "LIMIT",    # Nubra doesn't support stoploss+market; use LIMIT with price=trigger
+        "SL": "LIMIT",  # Stoploss Limit
+        "SL-M": "LIMIT",  # Nubra doesn't support stoploss+market; use LIMIT with price=trigger
     }
     return price_type_mapping.get(pricetype.upper(), "MARKET")
 

@@ -15,7 +15,9 @@ def get_host_lookup():
             "version": "interactive_1.0.1",
         }
         headers = {"Content-Type": "application/json"}
-        response = request_with_circuit_breaker("POST", HOSTLOOKUP_URL, json=payload, headers=headers)
+        response = request_with_circuit_breaker(
+            "POST", HOSTLOOKUP_URL, json=payload, headers=headers
+        )
 
         if response.status_code == 200:
             result = response.json()
@@ -68,7 +70,9 @@ def get_feed_token():
         feed_headers = {"Content-Type": "application/json"}
 
         feed_url = f"{MARKET_DATA_URL}/auth/login"
-        feed_response = request_with_circuit_breaker("POST", feed_url, json=feed_payload, headers=feed_headers)
+        feed_response = request_with_circuit_breaker(
+            "POST", feed_url, json=feed_payload, headers=feed_headers
+        )
 
         feed_token = None
         user_id = None

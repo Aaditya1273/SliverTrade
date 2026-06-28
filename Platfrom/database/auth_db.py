@@ -179,6 +179,7 @@ class ApiKeys(Base):
 
 class ActiveSession(Base):
     """Tracks active login sessions across devices for a user."""
+
     __tablename__ = "active_sessions"
     id = Column(Integer, primary_key=True)
     username = Column(String(255), nullable=False, index=True)
@@ -189,13 +190,12 @@ class ActiveSession(Base):
     login_time = Column(DateTime(timezone=True), default=func.now())
     last_seen = Column(DateTime(timezone=True), default=func.now())
 
-    __table_args__ = (
-        Index("idx_active_sessions_username", "username"),
-    )
+    __table_args__ = (Index("idx_active_sessions_username", "username"),)
 
 
 class LoginAttempt(Base):
     """Records all login attempts (successful and failed) for security auditing."""
+
     __tablename__ = "login_attempts"
     id = Column(Integer, primary_key=True)
     username = Column(String(255), nullable=False)
@@ -218,11 +218,19 @@ def _now_ist():
     """Get current time in IST."""
     from datetime import datetime
     import pytz
+
     return datetime.now(pytz.timezone("Asia/Kolkata"))
 
 
-def log_login_attempt(username, ip_address=None, device_info=None, status="failed",
-                      login_type="password", broker=None, failure_reason=None):
+def log_login_attempt(
+    username,
+    ip_address=None,
+    device_info=None,
+    status="failed",
+    login_type="password",
+    broker=None,
+    failure_reason=None,
+):
     """Record a login attempt for audit purposes. All records are retained permanently."""
     try:
         attempt = LoginAttempt(
@@ -293,9 +301,11 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
         # Enforce per-user session cap — remove oldest if at limit
         current_count = ActiveSession.query.filter_by(username=username).count()
         if current_count >= MAX_SESSIONS_PER_USER:
-            oldest = ActiveSession.query.filter_by(username=username).order_by(
-                ActiveSession.login_time.asc()
-            ).first()
+            oldest = (
+                ActiveSession.query.filter_by(username=username)
+                .order_by(ActiveSession.login_time.asc())
+                .first()
+            )
             if oldest:
                 db_session.delete(oldest)
 
@@ -331,9 +341,11 @@ def remove_session(session_id):
 def get_active_sessions(username):
     """Get all active sessions for a user."""
     try:
-        sessions = ActiveSession.query.filter_by(username=username).order_by(
-            ActiveSession.last_seen.desc()
-        ).all()
+        sessions = (
+            ActiveSession.query.filter_by(username=username)
+            .order_by(ActiveSession.last_seen.desc())
+            .all()
+        )
         return [
             {
                 "session_id": s.session_id,
@@ -463,6 +475,7 @@ def upsert_auth(name, auth_token, broker, feed_token=None, user_id=None, revoke=
     # This notifies WebSocket proxy and other processes to clear their stale caches
     try:
         from database.cache_invalidation import publish_all_cache_invalidation
+
         publish_all_cache_invalidation(name)
         logger.debug(f"Published cache invalidation for user: {name}")
     except Exception as e:
@@ -900,7 +913,9 @@ def get_auth_token_broker(provided_api_key, include_feed_token=False):
                 # (e.g., orphaned users with revoked sessions polled by background services)
                 negative_result = (None, None, None) if include_feed_token else (None, None)
                 auth_cache[cache_key] = negative_result
-                logger.warning(f"No valid auth token or broker found for user_id '{user_id}'. Cached negative result.")
+                logger.warning(
+                    f"No valid auth token or broker found for user_id '{user_id}'. Cached negative result."
+                )
                 return negative_result
         except Exception as e:
             logger.exception(f"Error while querying the database for auth token and broker: {e}")

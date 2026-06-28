@@ -78,8 +78,12 @@ def get_margin_data(auth_token):
 
     try:
         result = get_api_response(
-            "/v5/account/wallet-balance", api_key, api_secret,
-            method="GET", signed=True, params={"accountType": "UNIFIED"}
+            "/v5/account/wallet-balance",
+            api_key,
+            api_secret,
+            method="GET",
+            signed=True,
+            params={"accountType": "UNIFIED"},
         )
 
         if not result.get("success"):
@@ -130,8 +134,10 @@ def get_margin_data(auth_token):
             "utiliseddebits": f"{total_locked:.2f}",
         }
 
-        logger.debug(f"[Bybit] Wallet: available={result_data['availablecash']} "
-                     f"locked={result_data['utiliseddebits']}")
+        logger.debug(
+            f"[Bybit] Wallet: available={result_data['availablecash']} "
+            f"locked={result_data['utiliseddebits']}"
+        )
         return result_data
 
     except Exception as e:

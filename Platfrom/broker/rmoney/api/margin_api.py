@@ -57,7 +57,8 @@ def calculate_margin_api(positions, auth):
     logger.info(f"RMoney Margin Request: {json.dumps(margin_request, indent=2)}")
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{INTERACTIVE_URL}/orders/margindetails",
             headers=headers,
             content=json.dumps(margin_request),

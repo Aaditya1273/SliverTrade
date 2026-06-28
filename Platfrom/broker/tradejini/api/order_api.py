@@ -60,14 +60,15 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
 
         # Make API request
         if method == "GET":
-            response = request_with_circuit_breaker("GET", 
+            response = request_with_circuit_breaker(
+                "GET",
                 f"https://api.tradejini.com/v2{endpoint}",
                 headers=headers,
                 params=params if params else data,
             )
         elif method == "DELETE":
-            response = request_with_circuit_breaker("DELETE", 
-                f"https://api.tradejini.com/v2{endpoint}", headers=headers, params=params
+            response = request_with_circuit_breaker(
+                "DELETE", f"https://api.tradejini.com/v2{endpoint}", headers=headers, params=params
             )
         else:  # POST/PUT
             # Convert data to x-www-form-urlencoded format
@@ -75,7 +76,8 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
                 data_str = "&".join([f"{k}={v}" for k, v in data.items()])
                 logger.debug(f"get_api_response - Sending data: {data_str}")
 
-            response = request_with_circuit_breaker("PUT", 
+            response = request_with_circuit_breaker(
+                "PUT",
                 f"https://api.tradejini.com/v2{endpoint}",
                 headers=headers,
                 data=data_str if data else None,
@@ -89,17 +91,19 @@ def get_api_response(endpoint, auth, method="GET", data=None, params=None):
         if response.status_code == 404:
             logger.warning("get_api_response - API endpoint not found. Trying without /v2 prefix")
             if method == "GET":
-                response = request_with_circuit_breaker("GET", 
+                response = request_with_circuit_breaker(
+                    "GET",
                     f"https://api.tradejini.com{endpoint}",
                     headers=headers,
                     params=params if params else data,
                 )
             elif method == "DELETE":
-                response = request_with_circuit_breaker("DELETE", 
-                    f"https://api.tradejini.com{endpoint}", headers=headers, params=params
+                response = request_with_circuit_breaker(
+                    "DELETE", f"https://api.tradejini.com{endpoint}", headers=headers, params=params
                 )
             else:
-                response = request_with_circuit_breaker("PUT", 
+                response = request_with_circuit_breaker(
+                    "PUT",
                     f"https://api.tradejini.com{endpoint}",
                     headers=headers,
                     data=data_str if data else None,
@@ -146,7 +150,8 @@ def get_order_book(auth):
         # print(f"[DEBUG] get_order_book - Query params: {{'symDetails': 'true'}}")
 
         # Make API request
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             "https://api.tradejini.com/v2/api/oms/orders",
             headers=headers,
             params={"symDetails": "true"},
@@ -244,7 +249,8 @@ def get_trade_book(auth):
 
         # Make API request
         logger.info("get_trade_book - Making request to TradeJini API")
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             "https://api.tradejini.com/v2/api/oms/trades",
             headers=headers,
             params={"symDetails": "true"},
@@ -370,7 +376,8 @@ def get_positions(auth):
         headers = {"Authorization": f"Bearer {auth_header}", "Content-Type": "application/json"}
 
         # Make API request directly - not using any helper functions
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             "https://api.tradejini.com/v2/api/oms/positions",
             headers=headers,
             params={"symDetails": "true"},
@@ -646,14 +653,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -926,7 +933,8 @@ def place_order_api(data, auth):
             logger.info(f"place_order_api - Sending request to {url}")
             logger.debug(f"place_order_api - Headers: {headers}")
 
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 url,
                 headers=headers,
                 data=payload,
@@ -1084,7 +1092,9 @@ def place_smartorder_api(data, auth):
                     original_qty = int(float(data.get("quantity", "0")))
                     if original_qty != 0:
                         original_action = data.get("action", "").upper()
-                        logger.info(f"place_smartorder_api - No position, pos_size=0: {original_action} {original_qty}")
+                        logger.info(
+                            f"place_smartorder_api - No position, pos_size=0: {original_action} {original_qty}"
+                        )
                         final_action = original_action
                         final_quantity = original_qty
                     else:
@@ -1167,7 +1177,9 @@ def place_smartorder_api(data, auth):
                     and orderid
                 ):
                     wrapped_response = {"status": "success", "orderid": str(orderid)}
-                    logger.info(f"place_smartorder_api - Order placed successfully: {wrapped_response}")
+                    logger.info(
+                        f"place_smartorder_api - Order placed successfully: {wrapped_response}"
+                    )
                     return res, wrapped_response, orderid
                 else:
                     error_msg = "Unknown error in order placement"

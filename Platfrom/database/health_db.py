@@ -32,9 +32,7 @@ from database.db_config import get_db_engine
 
 health_engine = get_db_engine("HEALTH_DATABASE_URL", "sqlite:///db/health.db")
 
-health_session = scoped_session(
-    sessionmaker(autocommit=False, autoflush=False, bind=health_engine)
-)
+health_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=health_engine))
 HealthBase = declarative_base()
 HealthBase.query = health_session.query_property()
 
@@ -178,9 +176,7 @@ class HealthMetric(HealthBase):
     def get_recent_metrics(limit=100):
         """Get recent metrics ordered by timestamp"""
         try:
-            return (
-                HealthMetric.query.order_by(HealthMetric.timestamp.desc()).limit(limit).all()
-            )
+            return HealthMetric.query.order_by(HealthMetric.timestamp.desc()).limit(limit).all()
         except Exception as e:
             logger.exception(f"Error getting recent metrics: {str(e)}")
             return []

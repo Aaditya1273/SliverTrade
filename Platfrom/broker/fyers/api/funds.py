@@ -77,7 +77,9 @@ def get_margin_data(auth_token: str) -> dict[str, str]:
 
     try:
         # Get the funds data
-        response = request_with_circuit_breaker("GET", "https://api-t1.fyers.in/api/v3/funds", headers=headers, timeout=30.0)
+        response = request_with_circuit_breaker(
+            "GET", "https://api-t1.fyers.in/api/v3/funds", headers=headers, timeout=30.0
+        )
         response.raise_for_status()
 
         funds_data = response.json()
@@ -177,8 +179,7 @@ def get_margin_data(auth_token: str) -> dict[str, str]:
                     "backoff_seconds": backoff,
                 }
             logger.warning(
-                f"Fyers API rate limited (429). Backing off for {backoff}s. "
-                f"Serving cached data."
+                f"Fyers API rate limited (429). Backing off for {backoff}s. Serving cached data."
             )
             return user_cache["data"] if user_cache["data"] else default_response
         logger.error(f"HTTP error {e.response.status_code} fetching Fyers funds: {e.response.text}")

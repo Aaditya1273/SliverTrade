@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { API_CONFIG } from '@/lib/api-config'
 
 const PLATFORM_URL = API_CONFIG.PLATFORM_BASE
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -234,5 +234,20 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center">
+          <div className="w-8 h-8 border-2 border-muted-foreground/30 border-t-accent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground text-sm">Loading login...</p>
+        </div>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }

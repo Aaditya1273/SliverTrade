@@ -580,8 +580,6 @@ class ShoonyaWebSocket:
             "actid": self.actid,
             "ws_url": self.WS_URL,
             "last_message_time": self._get_last_message_time(),
-            "heartbeat_thread_alive": heartbeat_thread.is_alive()
-            if heartbeat_thread
-            else False,
+            "heartbeat_thread_alive": heartbeat_thread.is_alive() if heartbeat_thread else False,
             "ws_thread_alive": ws_thread.is_alive() if ws_thread else False,
         }

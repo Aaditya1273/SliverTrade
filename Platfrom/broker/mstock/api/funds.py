@@ -31,8 +31,11 @@ def get_margin_data(auth_token):
     }
 
     try:
-        response = request_with_circuit_breaker("GET", 
-            "https://api.mstock.trade/openapi/typeb/user/fundsummary", headers=headers, timeout=10.0
+        response = request_with_circuit_breaker(
+            "GET",
+            "https://api.mstock.trade/openapi/typeb/user/fundsummary",
+            headers=headers,
+            timeout=10.0,
         )
         logger.info(f"Fund summary API response status: {response.status_code}")
 

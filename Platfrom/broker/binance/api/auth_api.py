@@ -63,8 +63,10 @@ def authenticate_broker(code=None):
                 logger.info("Binance authentication successful — account is enabled for trading")
                 return api_key, None
             else:
-                msg = ("Binance account exists but trading is not enabled. "
-                       "Check your account permissions in the Binance dashboard.")
+                msg = (
+                    "Binance account exists but trading is not enabled. "
+                    "Check your account permissions in the Binance dashboard."
+                )
                 logger.error(msg)
                 return None, msg
 
@@ -73,12 +75,13 @@ def authenticate_broker(code=None):
         err_msg = error.get("message", "Unknown error")
 
         if err_code == -2015:
-            msg = ("Invalid API key, secret, or signature format. "
-                   "Verify BROKER_API_KEY and BROKER_API_SECRET in your .env file. "
-                   "Ensure the API key has trading permissions enabled.")
+            msg = (
+                "Invalid API key, secret, or signature format. "
+                "Verify BROKER_API_KEY and BROKER_API_SECRET in your .env file. "
+                "Ensure the API key has trading permissions enabled."
+            )
         elif err_code == -2014:
-            msg = ("API key format is invalid. "
-                   "Check that BROKER_API_KEY is a valid Binance API key.")
+            msg = "API key format is invalid. Check that BROKER_API_KEY is a valid Binance API key."
         else:
             msg = f"Binance API error (code={err_code}): {err_msg}"
 

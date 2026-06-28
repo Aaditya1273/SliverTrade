@@ -120,13 +120,9 @@ class api:
             disclosed_quantity=disclosed_quantity,
         )
 
-    def basketorder(
-        self, strategy: str, orders: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def basketorder(self, strategy: str, orders: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Place a basket of orders."""
-        return self._post(
-            "basketorder", strategy=strategy, orders=orders
-        )
+        return self._post("basketorder", strategy=strategy, orders=orders)
 
     def splitorder(
         self,
@@ -240,13 +236,9 @@ class api:
             disclosed_quantity=disclosed_quantity,
         )
 
-    def cancelorder(
-        self, order_id: str, strategy: str
-    ) -> Dict[str, Any]:
+    def cancelorder(self, order_id: str, strategy: str) -> Dict[str, Any]:
         """Cancel a specific order."""
-        return self._post(
-            "cancelorder", order_id=order_id, strategy=strategy
-        )
+        return self._post("cancelorder", order_id=order_id, strategy=strategy)
 
     def cancelallorder(self, strategy: str) -> Dict[str, Any]:
         """Cancel all open orders."""
@@ -280,13 +272,9 @@ class api:
     # Order Status & Tracking
     # ------------------------------------------------------------------ #
 
-    def orderstatus(
-        self, order_id: str, strategy: str
-    ) -> Dict[str, Any]:
+    def orderstatus(self, order_id: str, strategy: str) -> Dict[str, Any]:
         """Get status of a specific order."""
-        return self._post(
-            "orderstatus", order_id=order_id, strategy=strategy
-        )
+        return self._post("orderstatus", order_id=order_id, strategy=strategy)
 
     def orderbook(self) -> Dict[str, Any]:
         """Get all orders from the order book."""
@@ -308,9 +296,7 @@ class api:
         """Get account funds and margin information."""
         return self._post("funds")
 
-    def margin(
-        self, positions: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def margin(self, positions: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Calculate margin requirements for positions."""
         return self._post("margin", positions=positions)
 
@@ -318,21 +304,15 @@ class api:
     # Market Data
     # ------------------------------------------------------------------ #
 
-    def quotes(
-        self, symbol: str, exchange: str
-    ) -> Dict[str, Any]:
+    def quotes(self, symbol: str, exchange: str) -> Dict[str, Any]:
         """Get current quote for a symbol."""
         return self._post("quotes", symbol=symbol, exchange=exchange)
 
-    def multiquotes(
-        self, symbols: List[Dict[str, str]]
-    ) -> Dict[str, Any]:
+    def multiquotes(self, symbols: List[Dict[str, str]]) -> Dict[str, Any]:
         """Get quotes for multiple symbols."""
         return self._post("multiquotes", symbols=symbols)
 
-    def depth(
-        self, symbol: str, exchange: str
-    ) -> Dict[str, Any]:
+    def depth(self, symbol: str, exchange: str) -> Dict[str, Any]:
         """Get market depth for a symbol."""
         return self._post("depth", symbol=symbol, exchange=exchange)
 
@@ -376,23 +356,17 @@ class api:
     # Instruments & Search
     # ------------------------------------------------------------------ #
 
-    def search(
-        self, query: str, exchange: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def search(self, query: str, exchange: Optional[str] = None) -> Dict[str, Any]:
         """Search for instruments."""
         if exchange:
             return self._post("search", query=query, exchange=exchange)
         return self._post("search", query=query)
 
-    def symbol(
-        self, symbol: str, exchange: str
-    ) -> Dict[str, Any]:
+    def symbol(self, symbol: str, exchange: str) -> Dict[str, Any]:
         """Get symbol information."""
         return self._post("symbol", symbol=symbol, exchange=exchange)
 
-    def instruments(
-        self, exchange: Optional[str] = None
-    ) -> Union[Dict[str, Any], pd.DataFrame]:
+    def instruments(self, exchange: Optional[str] = None) -> Union[Dict[str, Any], pd.DataFrame]:
         """Get instrument master."""
         if exchange:
             result = self._post("instruments", exchange=exchange)

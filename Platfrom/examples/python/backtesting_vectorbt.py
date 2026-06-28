@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import vectorbt as vbt
-from silvertrade_sdk import api; from silvertrade_sdk import ta
+from silvertrade_sdk import api
+from silvertrade_sdk import ta
 from plotly.subplots import make_subplots
 
 # ───────────────────────── CONFIG ─────────────────────────
@@ -53,7 +54,7 @@ def fetch_historical_data():
         interval=INTERVAL,
         start_date=START_DATE,
         end_date=END_DATE,
-        source = "db"
+        source="db",
     )
 
     # Print the raw response info

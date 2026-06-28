@@ -41,9 +41,13 @@ def get_api_response(endpoint, auth, method="GET", payload="", params=None):
         if method == "GET":
             response = request_with_circuit_breaker("GET", url, headers=headers, params=params)
         elif method == "POST":
-            response = request_with_circuit_breaker("POST", url, headers=headers, content=payload, params=params)
+            response = request_with_circuit_breaker(
+                "POST", url, headers=headers, content=payload, params=params
+            )
         else:
-            response = request_with_circuit_breaker(method, url, headers=headers, content=payload, params=params)
+            response = request_with_circuit_breaker(
+                method, url, headers=headers, content=payload, params=params
+            )
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code
@@ -266,14 +270,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -306,7 +310,6 @@ def _invalidate_position_cache(auth):
     """Invalidate the position cache so the next queued order fetches fresh data."""
     with _position_cache_lock:
         _position_cache.pop(auth, None)
-
 
 
 def get_open_position(tradingsymbol, exchange, product, auth):

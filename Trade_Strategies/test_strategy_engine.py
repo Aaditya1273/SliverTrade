@@ -175,7 +175,7 @@ class TestRuleScore:
             "volume_ratio": 1.0, "atr": 5,
         }
         d, c, signals = engine._rule_score(ind)
-        assert any("Golden cross" in s for s in signals)
+        assert any("golden cross" in s for s in signals)
 
     def test_death_cross_adds_signal(self, engine):
         """SMA 20 < SMA 50 should add death cross signal."""
@@ -187,7 +187,7 @@ class TestRuleScore:
             "volume_ratio": 1.0, "atr": 5,
         }
         d, c, signals = engine._rule_score(ind)
-        assert any("Death cross" in s for s in signals)
+        assert any("death cross" in s for s in signals)
 
     def test_high_volume_adds_signal(self, engine):
         """Volume > 1.5x average should add a volume signal."""
@@ -323,31 +323,31 @@ class TestEnsemble:
 
 class TestTemplateReasoning:
     def test_buy_reasoning_includes_indicators(self, engine):
-        text = engine._template_reasoning("BUY", {
+        text = engine._template_reasoning("BUY", 75, {
             "rsi": 28, "ema_fast": 100, "ema_slow": 90,
             "volume_ratio": 2.0,
         })
         assert "BUY" in text
         assert "RSI" in text
-        assert "Bullish" in text
+        assert "bullish" in text
         assert "volume" in text
 
     def test_sell_reasoning_includes_indicators(self, engine):
-        text = engine._template_reasoning("SELL", {
+        text = engine._template_reasoning("SELL", 75, {
             "rsi": 75, "ema_fast": 90, "ema_slow": 100,
             "volume_ratio": 1.0,
         })
         assert "SELL" in text
         assert "RSI" in text
-        assert "Bearish" in text
+        assert "bearish" in text
 
     def test_hold_reasoning(self, engine):
-        text = engine._template_reasoning("HOLD", {"rsi": 50})
+        text = engine._template_reasoning("HOLD", 30, {"rsi": 50})
         assert "Mixed" in text or "HOLD" in text or "no clear" in text
 
     def test_buy_fallback_without_signals(self, engine):
-        text = engine._template_reasoning("BUY", {"rsi": 50, "volume_ratio": 1.0})
-        assert "favourable" in text
+        text = engine._template_reasoning("BUY", 55, {"rsi": 50, "volume_ratio": 1.0})
+        assert "favours" in text or "upside" in text
 
 
 # ── Full Analysis Pipeline ───────────────────────────────────────────

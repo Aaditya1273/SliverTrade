@@ -61,7 +61,7 @@ class User(Base):
     is_email_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime)
-    plan = Column(String, default='free')  # free | pro | enterprise
+    plan = Column(String, default="free")  # free | pro | enterprise
     plan_expires_at = Column(DateTime)
     stripe_customer_id = Column(String)
     # Usage limits
@@ -88,6 +88,7 @@ class User(Base):
         plaintext).
         """
         from database.auth_db import safe_decrypt_token
+
         return safe_decrypt_token(self.totp_secret) or self.totp_secret
 
     def set_password(self, password):
@@ -130,28 +131,28 @@ def init_db():
     from database.db_init_helper import init_db_with_logging
 
     init_db_with_logging(Base, engine, "User DB", logger)
-    
+
     # Phase 8: Add new columns if they don't exist (for existing installations)
     from sqlalchemy import inspect
+
     inspector = inspect(engine)
-    columns = [col['name'] for col in inspector.get_columns('users')]
+    columns = [col["name"] for col in inspector.get_columns("users")]
     with engine.connect() as conn:
-        
         new_columns = [
-            ('is_active', 'BOOLEAN DEFAULT TRUE'),
-            ('is_email_verified', 'BOOLEAN DEFAULT FALSE'),
-            ('created_at', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP'),
-            ('last_login', 'TIMESTAMP'),
-            ('plan', 'VARCHAR DEFAULT "free"'),
-            ('plan_expires_at', 'TIMESTAMP'),
-            ('stripe_customer_id', 'VARCHAR'),
-            ('signals_used_this_month', 'INTEGER DEFAULT 0'),
-            ('signals_limit', 'INTEGER DEFAULT 50'),
-            ('last_signal_reset_at', 'TIMESTAMP'),
-            ('failed_login_attempts', 'INTEGER DEFAULT 0'),
-            ('locked_until', 'TIMESTAMP'),
+            ("is_active", "BOOLEAN DEFAULT TRUE"),
+            ("is_email_verified", "BOOLEAN DEFAULT FALSE"),
+            ("created_at", "TIMESTAMP DEFAULT CURRENT_TIMESTAMP"),
+            ("last_login", "TIMESTAMP"),
+            ("plan", 'VARCHAR DEFAULT "free"'),
+            ("plan_expires_at", "TIMESTAMP"),
+            ("stripe_customer_id", "VARCHAR"),
+            ("signals_used_this_month", "INTEGER DEFAULT 0"),
+            ("signals_limit", "INTEGER DEFAULT 50"),
+            ("last_signal_reset_at", "TIMESTAMP"),
+            ("failed_login_attempts", "INTEGER DEFAULT 0"),
+            ("locked_until", "TIMESTAMP"),
         ]
-        
+
         for col_name, col_def in new_columns:
             if col_name not in columns:
                 try:
@@ -184,6 +185,7 @@ def add_user(username, email, password, is_admin=False):
         # auth_db Fernet (same pattern used for broker tokens, API keys).
         # See _totp_plaintext() for the read path.
         from database.auth_db import encrypt_token
+
         totp_secret = pyotp.random_base32()
         user = User(
             username=username,

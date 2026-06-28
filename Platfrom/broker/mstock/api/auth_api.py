@@ -35,7 +35,6 @@ def authenticate_with_totp(password, totp_code):
     logger.info(f"Using clientcode: {clientcode}")
 
     try:
-
         # Login with clientcode, password, and TOTP to get token directly
         headers = {
             "X-Mirae-Version": "1",
@@ -50,8 +49,11 @@ def authenticate_with_totp(password, totp_code):
 
         logger.info(f"Sending login request with TOTP (length: {len(totp_code)})")
 
-        login_response = request_with_circuit_breaker("POST", 
-            "https://api.mstock.trade/openapi/typeb/connect/login", headers=headers, json=login_data
+        login_response = request_with_circuit_breaker(
+            "POST",
+            "https://api.mstock.trade/openapi/typeb/connect/login",
+            headers=headers,
+            json=login_data,
         )
 
         login_response.raise_for_status()
@@ -89,7 +91,8 @@ def authenticate_with_totp(password, totp_code):
 
         logger.info("Calling verifytotp endpoint to get final authentication token")
 
-        verify_response = request_with_circuit_breaker("POST", 
+        verify_response = request_with_circuit_breaker(
+            "POST",
             "https://api.mstock.trade/openapi/typeb/session/verifytotp",
             headers=verify_headers,
             json=verify_data,
@@ -160,7 +163,6 @@ def send_otp(password):
     logger.debug(f"Using clientcode: {clientcode}")
 
     try:
-
         # Step 1: Login with clientcode and password to get refreshToken
         headers = {
             "X-Mirae-Version": "1",
@@ -168,8 +170,11 @@ def send_otp(password):
         }
         login_data = {"clientcode": clientcode, "password": password, "totp": "", "state": ""}
 
-        login_response = request_with_circuit_breaker("POST", 
-            "https://api.mstock.trade/openapi/typeb/connect/login", headers=headers, json=login_data
+        login_response = request_with_circuit_breaker(
+            "POST",
+            "https://api.mstock.trade/openapi/typeb/connect/login",
+            headers=headers,
+            json=login_data,
         )
 
         login_response.raise_for_status()
@@ -242,7 +247,6 @@ def verify_otp(otp_code, refresh_token):
         return None, None, "Refresh token is required."
 
     try:
-
         # Step 2: Verify OTP with refreshToken to get final jwtToken
         token_headers = {
             "X-Mirae-Version": "1",
@@ -258,7 +262,8 @@ def verify_otp(otp_code, refresh_token):
         logger.debug(f"Request headers: {token_headers}")
         logger.debug(f"Request body: refreshToken=[{refresh_token[:20]}...], otp={otp_code}")
 
-        token_response = request_with_circuit_breaker("POST", 
+        token_response = request_with_circuit_breaker(
+            "POST",
             "https://api.mstock.trade/openapi/typeb/session/token",
             headers=token_headers,
             json=token_data,

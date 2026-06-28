@@ -191,7 +191,9 @@ class BinanceWebSocket:
         if isinstance(msg, dict) and "stream" in msg and "data" in msg:
             self.on_message(wsapp, msg)
         else:
-            logger.debug(f"BinanceWS unexpected message format: {list(msg.keys()) if isinstance(msg, dict) else type(msg)}")
+            logger.debug(
+                f"BinanceWS unexpected message format: {list(msg.keys()) if isinstance(msg, dict) else type(msg)}"
+            )
 
     def _ws_on_error(self, wsapp, error) -> None:
         logger.error(f"BinanceWS error: {error}")

@@ -411,7 +411,8 @@ def _create_postgres_engine(
                 conn.exec_driver_sql("SELECT 1")
             logger.info(
                 "PostgreSQL engine created (attempt %d/%d): %s",
-                attempt, max_retries,
+                attempt,
+                max_retries,
                 db_url.split("@")[-1] if "@" in db_url else db_url[:50],
             )
             return engine
@@ -419,16 +420,19 @@ def _create_postgres_engine(
             last_exception = exc
             if attempt < max_retries:
                 logger.warning(
-                    "PostgreSQL connection attempt %d/%d failed: %s. "
-                    "Retrying in %.1fs...",
-                    attempt, max_retries, exc, retry_delay,
+                    "PostgreSQL connection attempt %d/%d failed: %s. Retrying in %.1fs...",
+                    attempt,
+                    max_retries,
+                    exc,
+                    retry_delay,
                 )
                 time.sleep(retry_delay)
 
     # All retries exhausted — raise the last exception
     logger.error(
         "PostgreSQL connection failed after %d attempts: %s",
-        max_retries, last_exception,
+        max_retries,
+        last_exception,
     )
     raise last_exception
 

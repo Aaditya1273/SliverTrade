@@ -219,9 +219,7 @@ def broker_callback(broker, para=None):
 
             except json.JSONDecodeError:
                 logger.exception(f"Invalid JSON in compositedge callback")
-                return jsonify(
-                    {"error": "Invalid session data format"}
-                ), 400
+                return jsonify({"error": "Invalid session data format"}), 400
 
             # Extract access token
             access_token = session_json.get("accessToken")
@@ -561,7 +559,9 @@ def broker_callback(broker, para=None):
                     forward_url="broker.html",
                 )
             client_id = parts[1]  # OAuth client_id
-            shoonya_login_url = f"https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id={client_id}"
+            shoonya_login_url = (
+                f"https://api.shoonya.com/OAuthlogin/authorize/oauth?client_id={client_id}"
+            )
             return redirect(shoonya_login_url)
 
     elif broker == "firstock":
@@ -799,7 +799,9 @@ def broker_callback(broker, para=None):
                 user_id = session_json.get("userID")
 
                 if not auth_token:
-                    logger.error(f"RMoney callback - No token in session. Keys: {list(session_json.keys())}")
+                    logger.error(
+                        f"RMoney callback - No token in session. Keys: {list(session_json.keys())}"
+                    )
                     return jsonify({"error": "No token found in session data"}), 400
 
                 logger.info(f"RMoney OAuth authentication successful for user: {user_id}")
@@ -821,9 +823,7 @@ def broker_callback(broker, para=None):
                 from broker.rmoney.baseurl import INTERACTIVE_URL as RMONEY_INTERACTIVE_URL
 
                 BROKER_API_KEY_LOCAL = os.getenv("BROKER_API_KEY")
-                callback_url = url_for(
-                    "brlogin.broker_callback", broker="rmoney", _external=True
-                )
+                callback_url = url_for("brlogin.broker_callback", broker="rmoney", _external=True)
                 oauth_url = f"{RMONEY_INTERACTIVE_URL}/thirdparty?appKey={BROKER_API_KEY_LOCAL}&returnURL={callback_url}"
                 return redirect(oauth_url)
 
@@ -850,7 +850,15 @@ def broker_callback(broker, para=None):
             auth_token = f"{auth_token}"
 
         # For brokers that have user_id and feed_token from authenticate_broker
-        if broker in ["angel", "compositedge", "pocketful", "definedge", "dhan", "rmoney", "iiflcapital"]:
+        if broker in [
+            "angel",
+            "compositedge",
+            "pocketful",
+            "definedge",
+            "dhan",
+            "rmoney",
+            "iiflcapital",
+        ]:
             # For OAuth brokers, handle missing session user
             if broker in ("compositedge", "rmoney", "iiflcapital") and "user" not in session:
                 # Get the admin user from the database
@@ -1002,10 +1010,12 @@ def samco_generate_secret():
     if error:
         return jsonify({"status": "error", "message": error}), 400
 
-    return jsonify({
-        "status": "success",
-        "message": data.get("statusMessage", "Secret key sent to your email"),
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "message": data.get("statusMessage", "Secret key sent to your email"),
+        }
+    )
 
 
 @brlogin_bp.route("/samco/save-secret", methods=["POST"])
@@ -1020,7 +1030,9 @@ def samco_save_secret():
     from database.auth_db import samco_save_secret_key as save_secret_key
 
     uid = get_client_id()
-    secret_key = request.json.get("secretApiKey") if request.is_json else request.form.get("secretApiKey")
+    secret_key = (
+        request.json.get("secretApiKey") if request.is_json else request.form.get("secretApiKey")
+    )
 
     if not secret_key:
         return jsonify({"status": "error", "message": "Secret API key is required"}), 400
@@ -1040,7 +1052,10 @@ def samco_ip_status():
         return jsonify({"status": "error", "message": "Not logged in"}), 401
 
     from broker.samco.api.auth_api import get_client_id
-    from database.auth_db import samco_get_ip_status as get_ip_status, samco_has_secret_key as has_secret_key
+    from database.auth_db import (
+        samco_get_ip_status as get_ip_status,
+        samco_has_secret_key as has_secret_key,
+    )
 
     uid = get_client_id()
     ip_status = get_ip_status(uid)
@@ -1059,13 +1074,19 @@ def samco_update_ip():
         return jsonify({"status": "error", "message": "Not logged in"}), 401
 
     from broker.samco.api.auth_api import get_client_id, get_password, register_ip, update_ip
-    from database.auth_db import samco_get_ip_status as get_ip_status, samco_has_registered_ip as has_registered_ip, samco_save_ip_info as save_ip_info
+    from database.auth_db import (
+        samco_get_ip_status as get_ip_status,
+        samco_has_registered_ip as has_registered_ip,
+        samco_save_ip_info as save_ip_info,
+    )
 
     uid = get_client_id()
     password = get_password()
 
     primary_ip = request.json.get("primaryIp") if request.is_json else request.form.get("primaryIp")
-    secondary_ip = request.json.get("secondaryIp") if request.is_json else request.form.get("secondaryIp")
+    secondary_ip = (
+        request.json.get("secondaryIp") if request.is_json else request.form.get("secondaryIp")
+    )
 
     if not primary_ip:
         return jsonify({"status": "error", "message": "Primary IP is required"}), 400
@@ -1074,10 +1095,12 @@ def samco_update_ip():
     status = get_ip_status(uid)
     secondary_missing = status["primary_ip"] and not status["secondary_ip"]
     if not status["editable"] and has_registered_ip(uid) and not secondary_missing:
-        return jsonify({
-            "status": "error",
-            "message": f"IP can only be updated once per calendar week. Next edit: {status['next_editable_date']}",
-        }), 400
+        return jsonify(
+            {
+                "status": "error",
+                "message": f"IP can only be updated once per calendar week. Next edit: {status['next_editable_date']}",
+            }
+        ), 400
 
     # Use register for first time, update for subsequent
     if has_registered_ip(uid):
@@ -1103,7 +1126,9 @@ def samco_update_ip():
     # Save to DB
     save_ip_info(uid, primary_ip, secondary_ip, ip_updated_at)
 
-    return jsonify({
-        "status": "success",
-        "message": data.get("statusMessage", "IP updated successfully"),
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "message": data.get("statusMessage", "IP updated successfully"),
+        }
+    )

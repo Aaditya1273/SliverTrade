@@ -39,7 +39,8 @@ def get_margin_data(auth_token):
     }
 
     # Motilal Oswal Margin Detail API endpoint (more comprehensive than summary)
-    response = request_with_circuit_breaker("POST", 
+    response = request_with_circuit_breaker(
+        "POST",
         "https://openapi.motilaloswal.com/rest/report/v1/getreportmargindetail",
         headers=headers,
         json={},

@@ -65,7 +65,10 @@ from blueprints.orders import orders_bp
 from blueprints.platforms import platforms_bp
 from blueprints.playground import playground_bp  # Import the API playground blueprint
 from blueprints.pnltracker import pnltracker_bp  # Import the pnl tracker blueprint
-from blueprints.python_strategy import python_strategy_bp, initialize_with_app_context as init_python_strategy  # Import the python strategy blueprint
+from blueprints.python_strategy import (
+    python_strategy_bp,
+    initialize_with_app_context as init_python_strategy,
+)  # Import the python strategy blueprint
 from blueprints.react_app import (  # Import React frontend blueprint
     is_react_frontend_available,
     react_bp,
@@ -146,8 +149,13 @@ def create_app():
 
     # Detect database type and initialize PostgreSQL schemas if needed
     # Iterate over all known DB URL keys to create schemas on each PG connection
-    _db_url_keys = ["DATABASE_URL", "LOGS_DATABASE_URL", "LATENCY_DATABASE_URL",
-                    "HEALTH_DATABASE_URL", "SANDBOX_DATABASE_URL"]
+    _db_url_keys = [
+        "DATABASE_URL",
+        "LOGS_DATABASE_URL",
+        "LATENCY_DATABASE_URL",
+        "HEALTH_DATABASE_URL",
+        "SANDBOX_DATABASE_URL",
+    ]
     _schemas_initialized = 0
     for _key in _db_url_keys:
         _url = os.getenv(_key, "")
@@ -179,6 +187,7 @@ def create_app():
     # Sync IP bans from SQLite to Redis (so bans survive Redis restarts)
     try:
         from database.traffic_db import _sync_bans_to_redis
+
         synced = _sync_bans_to_redis()
         if synced > 0:
             logger.info(f"Synced {synced} IP bans to Redis cache")
@@ -382,7 +391,6 @@ def create_app():
         # NOTE: Telegram bot auto-start moved to background init thread
         # (after DB tables are created) to avoid "no such table" on fresh install
 
-
     return app
 
 
@@ -436,10 +444,10 @@ def setup_environment(app):
                 ("Market Calendar DB", ensure_market_calendar_tables_exists),
                 ("Qty Freeze DB", ensure_qty_freeze_tables_exists),
                 ("Historify DB", ensure_historify_tables_exists),
-            ("Flow DB", ensure_flow_tables_exists),
-            ("Leverage DB", ensure_leverage_tables_exists),
-            ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
-            ("Signal Usage History DB", ensure_signal_usage_history_tables_exists),
+                ("Flow DB", ensure_flow_tables_exists),
+                ("Leverage DB", ensure_leverage_tables_exists),
+                ("Strategy Portfolio DB", ensure_strategy_portfolio_tables_exists),
+                ("Signal Usage History DB", ensure_signal_usage_history_tables_exists),
             ]
 
             db_init_start = time.time()
@@ -513,6 +521,7 @@ def setup_environment(app):
 
                     def run_catchup():
                         from sandbox.position_manager import catchup_missed_settlements
+
                         catchup_missed_settlements()
                         return ("catchup_settlement", True, "Completed")
 
@@ -527,14 +536,22 @@ def setup_environment(app):
                                 service_name, success, message = future.result()
                                 if service_name == "execution_engine":
                                     if success:
-                                        logger.debug("Execution engine auto-started (Analyzer mode is ON)")
+                                        logger.debug(
+                                            "Execution engine auto-started (Analyzer mode is ON)"
+                                        )
                                     else:
-                                        logger.warning(f"Failed to auto-start execution engine: {message}")
+                                        logger.warning(
+                                            f"Failed to auto-start execution engine: {message}"
+                                        )
                                 elif service_name == "squareoff_scheduler":
                                     if success:
-                                        logger.debug("Square-off scheduler auto-started (Analyzer mode is ON)")
+                                        logger.debug(
+                                            "Square-off scheduler auto-started (Analyzer mode is ON)"
+                                        )
                                     else:
-                                        logger.warning(f"Failed to auto-start square-off scheduler: {message}")
+                                        logger.warning(
+                                            f"Failed to auto-start square-off scheduler: {message}"
+                                        )
                                 elif service_name == "catchup_settlement":
                                     logger.debug("Catch-up settlement check completed on startup")
                             except Exception as e:
@@ -580,7 +597,9 @@ def setup_environment(app):
                             if success:
                                 success, message = telegram_bot_service.start_bot()
                                 if success:
-                                    logger.debug(f"Telegram bot auto-started successfully: {message}")
+                                    logger.debug(
+                                        f"Telegram bot auto-started successfully: {message}"
+                                    )
                                 else:
                                     logger.error(f"Failed to auto-start Telegram bot: {message}")
                             else:
@@ -601,6 +620,7 @@ setup_environment(app)
 # Restore caches from database in background (not needed until first trade/lookup)
 import threading
 
+
 def _restore_caches_background():
     # Wait for DB tables to be created before querying
     app.db_ready.wait()
@@ -614,9 +634,12 @@ def _restore_caches_background():
                 symbol_count = cache_result["symbol_cache"].get("symbols_loaded", 0)
                 auth_count = cache_result["auth_cache"].get("tokens_loaded", 0)
                 if symbol_count > 0 or auth_count > 0:
-                    logger.debug(f"Cache restoration: {symbol_count} symbols, {auth_count} auth tokens")
+                    logger.debug(
+                        f"Cache restoration: {symbol_count} symbols, {auth_count} auth tokens"
+                    )
         except Exception as e:
             logger.debug(f"Cache restoration skipped: {e}")
+
 
 threading.Thread(target=_restore_caches_background, daemon=True).start()
 
@@ -666,18 +689,22 @@ def reject_requests_during_shutdown():
     """Reject new requests during graceful shutdown."""
     if hasattr(app, "_shutting_down") and app._shutting_down:
         from flask import jsonify
-        return jsonify({
-            "status": "error",
-            "message": "Server is shutting down. Please retry your request.",
-            "retry_after": 30,
-        }), 503
+
+        return jsonify(
+            {
+                "status": "error",
+                "message": "Server is shutting down. Please retry your request.",
+                "retry_after": 30,
+            }
+        ), 503
 
 
 @app.before_request
 def wait_for_db_ready():
     """Block requests until background database initialization completes."""
     from flask import request
-    if (request.path.startswith("/static/") or request.path.startswith("/assets/")):
+
+    if request.path.startswith("/static/") or request.path.startswith("/assets/"):
         return
     if hasattr(app, "db_ready") and not app.db_ready.is_set():
         app.db_ready.wait(timeout=30)
@@ -690,9 +717,19 @@ def check_session_expiry():
     from utils.session import is_session_valid, revoke_user_tokens
 
     skip_prefixes = ("/static/", "/api/", "/assets/", "/auth/broker/", "/_reload-ws")
-    skip_exact = {"/", "/auth/login", "/auth/reset-password", "/auth/csrf-token",
-                  "/auth/broker-config", "/auth/session-status", "/auth/check-setup",
-                  "/setup", "/download", "/faq", "/login"}
+    skip_exact = {
+        "/",
+        "/auth/login",
+        "/auth/reset-password",
+        "/auth/csrf-token",
+        "/auth/broker-config",
+        "/auth/session-status",
+        "/auth/check-setup",
+        "/setup",
+        "/download",
+        "/faq",
+        "/login",
+    }
     if any(request.path.startswith(p) for p in skip_prefixes) or request.path in skip_exact:
         return
 
@@ -706,12 +743,17 @@ def check_session_expiry():
 def csrf_error(error):
     """Custom handler for CSRF errors (400 Bad Request)"""
     from flask import flash, jsonify, redirect, request, url_for
+
     error_description = str(error)
     logger.warning(f"CSRF Error on {request.path}: {error_description}")
     if "CSRF" in error_description or "csrf" in error_description.lower():
         if request.is_json or request.path.startswith("/api"):
-            return jsonify({"error": "CSRF validation failed",
-                            "message": "Security token expired or invalid. Please refresh the page and try again."}), 400
+            return jsonify(
+                {
+                    "error": "CSRF validation failed",
+                    "message": "Security token expired or invalid. Please refresh the page and try again.",
+                }
+            ), 400
         flash("Security token expired. Please try again.", "error")
         return redirect(request.referrer or url_for("auth.login"))
     return str(error), 400
@@ -726,9 +768,17 @@ def not_found_error(error):
     client_ip = get_real_ip()
     path = request.path
     is_authenticated = session.get("logged_in", False)
-    safe_prefixes = ("/favicon", "/robots.txt", "/sitemap", "/manifest",
-                     "/sw.js", "/.well-known", "/apple-touch-icon",
-                     "/service-worker", "/workbox")
+    safe_prefixes = (
+        "/favicon",
+        "/robots.txt",
+        "/sitemap",
+        "/manifest",
+        "/sw.js",
+        "/.well-known",
+        "/apple-touch-icon",
+        "/service-worker",
+        "/workbox",
+    )
     if not is_authenticated and not path.startswith(safe_prefixes):
         Error404Tracker.track_404(client_ip, path)
     if path.startswith("/api/"):
@@ -740,6 +790,7 @@ def not_found_error(error):
 def internal_server_error(e):
     """Custom handler for 500 Internal Server Error"""
     from flask import redirect
+
     logger.error(f"Server Error: {e}")
     return redirect("/error")
 
@@ -748,10 +799,14 @@ def internal_server_error(e):
 def rate_limit_exceeded(e):
     """Custom handler for 429 Too Many Requests"""
     from flask import redirect, request
+
     logger.warning(f"Rate limit exceeded for {request.remote_addr}: {request.path}")
     if request.path.startswith("/api/"):
-        return {"status": "error", "message": "Rate limit exceeded. Please slow down your requests.",
-                "retry_after": 60}, 429
+        return {
+            "status": "error",
+            "message": "Rate limit exceeded. Please slow down your requests.",
+            "retry_after": 60,
+        }, 429
     return redirect("/rate-limited")
 
 
@@ -764,8 +819,11 @@ def inject_version():
 def get_host_config():
     """Return the HOST_SERVER configuration for frontend webhook URL generation"""
     from flask import jsonify
+
     host_server = os.getenv("HOST_SERVER", "http://127.0.0.1:5000")
-    is_localhost = any(local in host_server.lower()                                       for local in ["localhost", "127.0.0.1", "0.0.0.0"])  # nosec B104 — checking for all-interfaces detection, not binding
+    is_localhost = any(
+        local in host_server.lower() for local in ["localhost", "127.0.0.1", "0.0.0.0"]
+    )  # nosec B104 — checking for all-interfaces detection, not binding
     return jsonify({"host_server": host_server, "is_localhost": is_localhost})
 
 
@@ -805,6 +863,7 @@ def shutdown_database_sessions(exception=None):
     for module_name, session_attr in _sessions:
         try:
             import importlib
+
             mod = importlib.import_module(module_name)
             session = getattr(mod, session_attr, None)
             if session is not None:
@@ -830,6 +889,7 @@ def shutdown_database_sessions(exception=None):
 import signal as _signal
 import threading as _threading
 
+
 def _graceful_shutdown_handler(signum, frame):
     """
     Graceful shutdown handler for SIGTERM and SIGINT.
@@ -854,6 +914,7 @@ def _graceful_shutdown_handler(signum, frame):
     # drain so that order-placed events get written to the DB before exit.
     try:
         from utils.event_bus import bus as _bus
+
         _bus.shutdown(timeout=30)
         logger.warning("Event bus executor drained successfully")
     except Exception as e:
@@ -873,6 +934,7 @@ def _graceful_shutdown_handler(signum, frame):
     for mod_name, attr_name in _sessions_to_flush:
         try:
             import importlib as _il
+
             mod = _il.import_module(mod_name)
             sess = getattr(mod, attr_name, None)
             if sess is not None:
@@ -882,6 +944,7 @@ def _graceful_shutdown_handler(signum, frame):
 
     logger.warning("Graceful shutdown complete. Exiting.")
     import sys as _sys
+
     _sys.exit(0)
 
 
@@ -920,7 +983,9 @@ if __name__ == "__main__":
     # FLASK_DEBUG_ALLOW_EXTERNAL=true to opt out of this guard.
     _LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1", ""}
     _allow_external_debug = os.getenv("FLASK_DEBUG_ALLOW_EXTERNAL", "False").lower() in (
-        "true", "1", "t"
+        "true",
+        "1",
+        "t",
     )
     if debug and host_ip not in _LOOPBACK_HOSTS and not _allow_external_debug:
         sys.stderr.write(
@@ -962,16 +1027,19 @@ if __name__ == "__main__":
     }
     # Suppress Flask/Werkzeug's default startup banner — our banner replaces it
     import flask.cli
+
     flask.cli.show_server_banner = lambda *_: None
 
     # Print startup banner NOW — right before the server starts accepting connections.
     # When the user sees this banner, the portal is ready to load.
     if not debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         from utils.version import get_version as _get_ver
+
         _ver = _get_ver()
         _dip = host_ip
         if host_ip == "0.0.0.0":  # nosec B104 — resolving display IP, not binding
             import socket as _sk
+
             try:
                 _s = _sk.socket(_sk.AF_INET, _sk.SOCK_DGRAM)
                 _s.connect(("8.8.8.8", 80))
@@ -982,12 +1050,31 @@ if __name__ == "__main__":
         _wu = f"http://{_dip}:{port}"
         _wsu = f"ws://{_dip}:{os.getenv('WEBSOCKET_PORT', 8765)}"
         _du = "https://docs.silvertrade.ai"
-        G, C, M, W, Y, R, BD, DM = "\033[92m", "\033[96m", "\033[95m", "\033[97m", "\033[93m", "\033[0m", "\033[1m", "\033[2m"
+        G, C, M, W, Y, R, BD, DM = (
+            "\033[92m",
+            "\033[96m",
+            "\033[95m",
+            "\033[97m",
+            "\033[93m",
+            "\033[0m",
+            "\033[1m",
+            "\033[2m",
+        )
         _ae = re.compile(r"\x1B\[[0-9;]*m")
-        def _vl(t): return len(_ae.sub("", t))
+
+        def _vl(t):
+            return len(_ae.sub("", t))
+
         _t = f" SilverTrade AI v1.0.0 "
         _sl = "The Billion Dollar Decision Engine"
-        _samps = ["", _sl, f"{W}{BD}Endpoints{R}", f"{W}Web App{R}    {C}{_wu}{R}", f"{W}WebSocket{R}  {M}{_wsu}{R}", f"{W}Status{R}     {G}{BD}Ready{R}"]
+        _samps = [
+            "",
+            _sl,
+            f"{W}{BD}Endpoints{R}",
+            f"{W}Web App{R}    {C}{_wu}{R}",
+            f"{W}WebSocket{R}  {M}{_wsu}{R}",
+            f"{W}Status{R}     {G}{BD}Ready{R}",
+        ]
         _iw = max(50, max((_vl(s) for s in _samps), default=0))
         _W = max(_iw + 4, len(_t) + 5)
         _enc = getattr(sys.stdout, "encoding", None) or "utf-8"
@@ -996,22 +1083,34 @@ if __name__ == "__main__":
             TL, TR, BL, BR, H, V = "\u256d", "\u256e", "\u2570", "\u256f", "\u2500", "\u2502"
         except Exception:
             TL, TR, BL, BR, H, V = "+", "+", "+", "+", "-", "|"
+
         def _ml(t=""):
             p = max(_W - 4 - _vl(t), 0)
-            return f"{C}{V}{R} {t}{' '*p} {C}{V}{R}"
+            return f"{C}{V}{R} {t}{' ' * p} {C}{V}{R}"
+
         _slp = max((_W - 4 - _vl(_sl)) // 2, 0)
         _srp = max(_W - 4 - _vl(_sl) - _slp, 0)
         _td = max(0, _W - 5 - len(_t))
-        print("\n".join(["",
-            f"{C}{TL}{H*3}{G}{BD}{_t}{R}{C}{H*_td}{TR}{R}",
-            _ml(), f"{C}{V}{R} {' '*_slp}{DM}{_sl}{R}{' '*_srp} {C}{V}{R}", _ml(),
-            _ml(f"{W}{BD}Endpoints{R}"),
-            _ml(f"{W}Web App{R}    {C}{_wu}{R}"),
-            _ml(f"{W}WebSocket{R}  {M}{_wsu}{R}"), _ml(),
-            _ml(f"{W}Status{R}     {G}{BD}Ready{R}"), _ml(),
-
-            f"{C}{BL}{H*(_W-2)}{BR}{R}", "",
-        ]), flush=True)
+        print(
+            "\n".join(
+                [
+                    "",
+                    f"{C}{TL}{H * 3}{G}{BD}{_t}{R}{C}{H * _td}{TR}{R}",
+                    _ml(),
+                    f"{C}{V}{R} {' ' * _slp}{DM}{_sl}{R}{' ' * _srp} {C}{V}{R}",
+                    _ml(),
+                    _ml(f"{W}{BD}Endpoints{R}"),
+                    _ml(f"{W}Web App{R}    {C}{_wu}{R}"),
+                    _ml(f"{W}WebSocket{R}  {M}{_wsu}{R}"),
+                    _ml(),
+                    _ml(f"{W}Status{R}     {G}{BD}Ready{R}"),
+                    _ml(),
+                    f"{C}{BL}{H * (_W - 2)}{BR}{R}",
+                    "",
+                ]
+            ),
+            flush=True,
+        )
 
     # nosec B104 — Docker/K8s requires binding to all interfaces
     socketio.run(
@@ -1020,5 +1119,5 @@ if __name__ == "__main__":
         port=port,
         debug=debug,
         reloader_options=reloader_options,
-        allow_unsafe_werkzeug=True
+        allow_unsafe_werkzeug=True,
     )

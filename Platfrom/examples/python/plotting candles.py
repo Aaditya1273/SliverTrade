@@ -11,7 +11,8 @@ from datetime import datetime
 
 import pandas as pd
 import plotly.graph_objects as go
-from silvertrade_sdk import api; from silvertrade_sdk import ta
+from silvertrade_sdk import api
+from silvertrade_sdk import ta
 from plotly.subplots import make_subplots
 
 # ───────────────────────── CONFIG ─────────────────────────

@@ -15,8 +15,8 @@ logger = logging.getLogger("dhan_sandbox_websocket")
 class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
     """
     Mock WebSocket adapter for Dhan Sandbox.
-    Since Dhan Sandbox does not provide a real WebSocket endpoint, 
-    this adapter simulates real-time market data by generating 
+    Since Dhan Sandbox does not provide a real WebSocket endpoint,
+    this adapter simulates real-time market data by generating
     synthetic but contract-driven ticks for subscribed symbols.
     """
 
@@ -27,7 +27,7 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
         self.running = False
         self._mock_thread = None
         self.lock = threading.Lock()
-        
+
         # State to keep track of current mock LTP for each symbol
         # so it fluctuates naturally instead of jumping wildly
         self._current_prices = {}
@@ -106,7 +106,11 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
         if parsed:
             underlying, strike, option_type = parsed
             base_spot = self._estimate_spot_from_contracts(underlying) or strike
-            intrinsic = max(0.0, base_spot - strike) if option_type == "CE" else max(0.0, strike - base_spot)
+            intrinsic = (
+                max(0.0, base_spot - strike)
+                if option_type == "CE"
+                else max(0.0, strike - base_spot)
+            )
             dist_pct = abs(base_spot - strike) / max(base_spot, 1.0)
             time_value = max(0.5, (base_spot * 0.006) * max(0.08, 1.0 - (dist_pct * 8.0)))
             premium = intrinsic + time_value
@@ -139,15 +143,13 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
             self.running = True
             self.connected = True
-            
+
             # Start background thread to push mock market data
             self._mock_thread = threading.Thread(
-                target=self._mock_streaming_loop, 
-                daemon=True,
-                name="DhanSandboxMockWS"
+                target=self._mock_streaming_loop, daemon=True, name="DhanSandboxMockWS"
             )
             self._mock_thread.start()
-            
+
             logger.info("Mock WebSocket connected and streaming thread started")
 
     def disconnect(self) -> None:
@@ -157,41 +159,43 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
         with self.lock:
             self.running = False
             self.connected = False
-            
-            # Note: The background daemon thread will naturally exit 
+
+            # Note: The background daemon thread will naturally exit
             # when self.running becomes False without needing join()
             self._mock_thread = None
             logger.info("Mock WebSocket disconnected")
-            
-    def subscribe(self, symbol: str, exchange: str, mode: int = 2, depth_level: int = 5) -> Dict[str, Any]:
+
+    def subscribe(
+        self, symbol: str, exchange: str, mode: int = 2, depth_level: int = 5
+    ) -> Dict[str, Any]:
         """
         Subscribe to market data for a symbol.
         """
         with self.lock:
             sub_key = f"{exchange}_{symbol}"
-            
+
             # Store subscription info (mimicking base behavior)
             self.subscriptions[sub_key] = {
                 "symbol": symbol,
                 "exchange": exchange,
                 "mode": mode,
-                "depth_level": depth_level
+                "depth_level": depth_level,
             }
-            
+
             # Initialize a starting price if we haven't seen this symbol yet
             if sub_key not in self._current_prices:
                 self._current_prices[sub_key] = self._derive_reference_price(symbol)
-                
+
             logger.info(f"Mock Subscribed to {symbol} (Exchange: {exchange}, Mode: {mode})")
-            
+
             # Standard response format
             return {
                 "status": "success",
                 "message": f"Subscribed to {symbol}",
                 "broker": self.broker_name,
                 "exchange": exchange,
-                "supported_depth": 5, 
-                "fallback_depth": 5
+                "supported_depth": 5,
+                "fallback_depth": 5,
             }
 
     def unsubscribe(self, symbol: str, exchange: str, mode: int = None) -> Dict[str, Any]:
@@ -200,19 +204,16 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
         """
         with self.lock:
             sub_key = f"{exchange}_{symbol}"
-            
+
             if sub_key in self.subscriptions:
                 del self.subscriptions[sub_key]
                 logger.info(f"Mock Unsubscribed from {symbol} ({exchange})")
-                
-            return {
-                "status": "success",
-                "message": f"Unsubscribed from {symbol}"
-            }
+
+            return {"status": "success", "message": f"Unsubscribed from {symbol}"}
 
     def _mock_streaming_loop(self):
         """
-        Background thread that generates and publishes mock market data 
+        Background thread that generates and publishes mock market data
         for all subscribed symbols every second.
         """
         while self.running:
@@ -220,9 +221,9 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 # Iterate over a copy to avoid dictionary changed size during iteration
                 with self.lock:
                     subs = list(self.subscriptions.values())
-                
+
                 now_ms = int(time.time() * 1000)
-                
+
                 for sub in subs:
                     symbol = sub["symbol"]
                     exchange = sub["exchange"]
@@ -238,7 +239,11 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
                     if parsed:
                         underlying, strike, option_type = parsed
                         base_spot = self._estimate_spot_from_contracts(underlying) or strike
-                        intrinsic = max(0.0, base_spot - strike) if option_type == "CE" else max(0.0, strike - base_spot)
+                        intrinsic = (
+                            max(0.0, base_spot - strike)
+                            if option_type == "CE"
+                            else max(0.0, strike - base_spot)
+                        )
                         dist_pct = abs(base_spot - strike) / max(base_spot, 1.0)
                         fair_time_value = max(
                             0.5,
@@ -257,9 +262,9 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
                             max(current_price * 0.0025, 0.05),
                         )
                         new_price = max(0.05, current_price + step)
-                        
+
                     self._current_prices[sub_key] = new_price
-                    
+
                     # Create mock data object matching SilverTrade AI normalized format
                     market_data = {
                         "symbol": symbol,
@@ -269,42 +274,56 @@ class Dhan_sandboxWebSocketAdapter(BaseBrokerWebSocketAdapter):
                         "ltp": round(new_price, 2),
                         "ltt": now_ms,
                     }
-                    
+
                     # Add extra fields for quote/depth modes
                     if mode >= 2:
-                        market_data.update({
-                            "volume": random.randint(1000, 50000),
-                            "oi": random.randint(10000, 500000),
-                            "open": round(new_price * 0.95, 2),
-                            "high": round(new_price * 1.05, 2),
-                            "low": round(new_price * 0.90, 2),
-                            "close": round(new_price * 0.98, 2),
-                            "last_trade_quantity": random.randint(1, 100),
-                            "average_price": round(new_price, 2),
-                            "total_buy_quantity": random.randint(5000, 100000),
-                            "total_sell_quantity": random.randint(5000, 100000)
-                        })
-                    
+                        market_data.update(
+                            {
+                                "volume": random.randint(1000, 50000),
+                                "oi": random.randint(10000, 500000),
+                                "open": round(new_price * 0.95, 2),
+                                "high": round(new_price * 1.05, 2),
+                                "low": round(new_price * 0.90, 2),
+                                "close": round(new_price * 0.98, 2),
+                                "last_trade_quantity": random.randint(1, 100),
+                                "average_price": round(new_price, 2),
+                                "total_buy_quantity": random.randint(5000, 100000),
+                                "total_sell_quantity": random.randint(5000, 100000),
+                            }
+                        )
+
                     # Add depth for depth mode
                     if mode >= 3:
                         market_data["depth"] = {
                             "buy": [
-                                {"price": round(new_price - (0.05 * i), 2), "quantity": random.randint(10, 500), "orders": random.randint(1, 10)} for i in range(1, 6)
+                                {
+                                    "price": round(new_price - (0.05 * i), 2),
+                                    "quantity": random.randint(10, 500),
+                                    "orders": random.randint(1, 10),
+                                }
+                                for i in range(1, 6)
                             ],
                             "sell": [
-                                {"price": round(new_price + (0.05 * i), 2), "quantity": random.randint(10, 500), "orders": random.randint(1, 10)} for i in range(1, 6)
-                            ]
+                                {
+                                    "price": round(new_price + (0.05 * i), 2),
+                                    "quantity": random.randint(10, 500),
+                                    "orders": random.randint(1, 10),
+                                }
+                                for i in range(1, 6)
+                            ],
                         }
-                    
+
                     # Generate topic matching broker format
-                    mode_str = {1: "LTP", 2: "QUOTE", 3: "DEPTH", 4: "DEPTH", 5: "DEPTH"}.get(mode, "QUOTE")
+                    mode_str = {1: "LTP", 2: "QUOTE", 3: "DEPTH", 4: "DEPTH", 5: "DEPTH"}.get(
+                        mode, "QUOTE"
+                    )
                     topic = f"{exchange}_{symbol}_{mode_str}"
-                    
+
                     # Publish data using BaseBrokerWebSocketAdapter method
                     self.publish_market_data(topic, market_data)
-                    
+
             except Exception as e:
                 logger.error(f"Error in mock streaming loop: {e}", exc_info=True)
-                
+
             # Sleep 1 second before generating next tick
             time.sleep(1.0)

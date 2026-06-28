@@ -93,11 +93,14 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     try:
         from sqlalchemy import inspect as sa_inspect
+
         insp = sa_inspect(engine)
         existing_cols = {c["name"] for c in insp.get_columns("symtoken")}
         if "contract_value" not in existing_cols:
             with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE symtoken ADD COLUMN contract_value REAL DEFAULT 1.0"))
+                conn.execute(
+                    text("ALTER TABLE symtoken ADD COLUMN contract_value REAL DEFAULT 1.0")
+                )
                 conn.commit()
                 logger.info("Migrated symtoken table: added contract_value column")
     except Exception as e:
@@ -119,6 +122,7 @@ def copy_from_dataframe(df):
     # Determine which columns exist in the DB
     try:
         from sqlalchemy import inspect as sa_inspect
+
         _db_cols = {c["name"] for c in sa_inspect(engine).get_columns("symtoken")}
     except Exception:
         _db_cols = None
@@ -148,7 +152,9 @@ def copy_from_dataframe(df):
                     if (i // chunk_size + 1) % 20 == 0:
                         logger.debug(f"Processed {total_inserted} records so far...")
                 except Exception as chunk_error:
-                    logger.warning(f"Error inserting chunk {i // chunk_size + 1}, retrying: {chunk_error}")
+                    logger.warning(
+                        f"Error inserting chunk {i // chunk_size + 1}, retrying: {chunk_error}"
+                    )
                     db_session.rollback()
                     try:
                         time.sleep(0.1)
@@ -260,20 +266,24 @@ def process_binance_symbols(symbols):
         except (ValueError, TypeError):
             tick_size_f = 0.01
 
-        rows.append({
-            "token": symbol,
-            "symbol": base_asset,
-            "brsymbol": symbol,
-            "name": f"{base_asset}/{quote_asset}",
-            "exchange": "CRYPTO",
-            "brexchange": "BINANCE",
-            "expiry": "",
-            "strike": 0.0,
-            "lotsize": int(lotsize) if isinstance(lotsize, float) and lotsize.is_integer() else lotsize,
-            "instrumenttype": "SPOT",
-            "tick_size": tick_size_f,
-            "contract_value": 1.0,
-        })
+        rows.append(
+            {
+                "token": symbol,
+                "symbol": base_asset,
+                "brsymbol": symbol,
+                "name": f"{base_asset}/{quote_asset}",
+                "exchange": "CRYPTO",
+                "brexchange": "BINANCE",
+                "expiry": "",
+                "strike": 0.0,
+                "lotsize": int(lotsize)
+                if isinstance(lotsize, float) and lotsize.is_integer()
+                else lotsize,
+                "instrumenttype": "SPOT",
+                "tick_size": tick_size_f,
+                "contract_value": 1.0,
+            }
+        )
 
     if not rows:
         logger.error("No TRADING spot symbols found in Binance exchangeInfo")
@@ -303,7 +313,10 @@ def master_contract_download():
         if not fetch_success:
             return socketio.emit(
                 "master_contract_download",
-                {"status": "error", "message": "Failed to fetch symbols from Binance. Existing master contract preserved."},
+                {
+                    "status": "error",
+                    "message": "Failed to fetch symbols from Binance. Existing master contract preserved.",
+                },
             )
 
         token_df = process_binance_symbols(symbols)

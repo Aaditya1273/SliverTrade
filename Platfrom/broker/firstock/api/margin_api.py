@@ -57,7 +57,8 @@ def calculate_margin_api(positions, auth):
     headers = {"Content-Type": "application/json"}
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://api.firstock.in/V1/basketMargin",
             headers=headers,
             json=margin_data,

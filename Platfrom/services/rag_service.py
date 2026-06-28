@@ -163,10 +163,12 @@ class RagService:
 
             for i, chunk in enumerate(KNOWLEDGE_CHUNKS):
                 documents.append(chunk["text"])
-                metadatas.append({
-                    "category": chunk.get("category", "general"),
-                    "tags": ",".join(chunk.get("tags", [])),
-                })
+                metadatas.append(
+                    {
+                        "category": chunk.get("category", "general"),
+                        "tags": ",".join(chunk.get("tags", [])),
+                    }
+                )
                 ids.append(f"kb_{i:03d}")
 
             # Add in batches of 10 to avoid overwhelming the embedding API

@@ -16,9 +16,9 @@ class DeltaExchangeMapper:
     # SilverTrade AI exchange code → Delta Exchange exchange code
     EXCHANGE_SEGMENTS = {
         "CRYPTO": "CRYPTO",
-        "NSE":    "CRYPTO",   # safety alias if misconfigured
-        "BSE":    "CRYPTO",
-        "MCX":    "CRYPTO",
+        "NSE": "CRYPTO",  # safety alias if misconfigured
+        "BSE": "CRYPTO",
+        "MCX": "CRYPTO",
     }
 
     @staticmethod
@@ -36,9 +36,9 @@ class DeltaModeMapper:
 
     # SilverTrade AI mode → Delta WS channel name
     MODE_CHANNELS = {
-        1: "v2/ticker",    # LTP mode
-        2: "v2/ticker",    # Quote mode (also uses ticker; provides bid/ask/OI)
-        3: "l2_orderbook", # Depth mode
+        1: "v2/ticker",  # LTP mode
+        2: "v2/ticker",  # Quote mode (also uses ticker; provides bid/ask/OI)
+        3: "l2_orderbook",  # Depth mode
     }
 
     @staticmethod

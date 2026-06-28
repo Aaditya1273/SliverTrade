@@ -53,6 +53,7 @@ def get_workflow_api_key(workflow):
     if not workflow or not workflow.api_key:
         return None
     from database.auth_db import safe_decrypt_token
+
     return safe_decrypt_token(workflow.api_key)
 
 
@@ -61,6 +62,7 @@ def _encrypt_api_key(api_key):
     if not api_key:
         return None
     from database.auth_db import encrypt_token
+
     return encrypt_token(api_key)
 
 

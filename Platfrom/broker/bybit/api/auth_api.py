@@ -60,7 +60,9 @@ def authenticate_broker(code=None):
                 logger.info(f"Bybit authentication successful — account type: {account_type}")
                 return api_key, None
             else:
-                logger.warning("Bybit auth succeeded but no accountType returned — treating as success")
+                logger.warning(
+                    "Bybit auth succeeded but no accountType returned — treating as success"
+                )
                 return api_key, None
 
         error = result.get("error", {})
@@ -68,14 +70,20 @@ def authenticate_broker(code=None):
         err_msg = error.get("message", "Unknown error")
 
         if err_code == 10003:
-            msg = ("Invalid API key or signature. "
-                   "Verify BROKER_API_KEY and BROKER_API_SECRET in your .env file.")
+            msg = (
+                "Invalid API key or signature. "
+                "Verify BROKER_API_KEY and BROKER_API_SECRET in your .env file."
+            )
         elif err_code == 10004:
-            msg = ("API key does not have required permissions. "
-                   "Enable trading permissions in the Bybit dashboard.")
+            msg = (
+                "API key does not have required permissions. "
+                "Enable trading permissions in the Bybit dashboard."
+            )
         elif err_code == 10002:
-            msg = ("Request timestamp is outside the recv_window. "
-                   "Check that your system clock is synchronized (NTP).")
+            msg = (
+                "Request timestamp is outside the recv_window. "
+                "Check that your system clock is synchronized (NTP)."
+            )
         else:
             msg = f"Bybit API error (code={err_code}): {err_msg}"
 

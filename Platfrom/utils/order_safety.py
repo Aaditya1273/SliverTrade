@@ -44,8 +44,7 @@ def _emergency_alert(message: str, order_ref: str, api_key: str = "") -> None:
     fires an HTTP POST to that endpoint so on-call engineers get paged.
     """
     full_msg = (
-        f"🚨 EMERGENCY: ORPHANED ORDER — {message} "
-        f"[ref={order_ref}, api_key={api_key[:8]}...]"
+        f"🚨 EMERGENCY: ORPHANED ORDER — {message} [ref={order_ref}, api_key={api_key[:8]}...]"
     )
     logger.critical(full_msg)
 

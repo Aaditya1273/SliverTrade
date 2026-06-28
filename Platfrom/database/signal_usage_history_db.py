@@ -53,8 +53,9 @@ class SignalUsageHistory(Base):
     )
 
 
-def archive_user_signal_usage(user_id: int, signals_used: int, signals_limit: int | None,
-                              plan: str | None, recorded_at) -> SignalUsageHistory | None:
+def archive_user_signal_usage(
+    user_id: int, signals_used: int, signals_limit: int | None, plan: str | None, recorded_at
+) -> SignalUsageHistory | None:
     """Insert a single usage history snapshot for a user.
 
     Uses an upsert-style insert that silently skips if a record for the
@@ -72,11 +73,9 @@ def archive_user_signal_usage(user_id: int, signals_used: int, signals_limit: in
         month_year = recorded_at.strftime("%Y-%m")
 
         # Check for existing entry to avoid duplicates on retry
-        existing = (
-            SignalUsageHistory.query
-            .filter_by(user_id=user_id, month_year=month_year)
-            .first()
-        )
+        existing = SignalUsageHistory.query.filter_by(
+            user_id=user_id, month_year=month_year
+        ).first()
         if existing:
             logger.debug(
                 f"[SignalUsageHistory] Record for user {user_id}/{month_year} "
@@ -107,8 +106,7 @@ def get_usage_history_for_user(user_id: int, limit: int = 12) -> list[SignalUsag
     """Return the most recent usage snapshots for a given user, newest first."""
     try:
         return (
-            SignalUsageHistory.query
-            .filter_by(user_id=user_id)
+            SignalUsageHistory.query.filter_by(user_id=user_id)
             .order_by(SignalUsageHistory.recorded_at.desc())
             .limit(limit)
             .all()

@@ -129,7 +129,10 @@ def detailed_health_check():
         cached_status = get_cached_health_status()
         db_check = cached_status.get("database", {"status": "pass"})
         if isinstance(db_check, dict) and "databases" not in db_check:
-            db_check = {"status": db_check.get("status", "pass"), "databases": {"all": db_check.get("status", "pass")}}
+            db_check = {
+                "status": db_check.get("status", "pass"),
+                "databases": {"all": db_check.get("status", "pass")},
+            }
 
         # Get current metrics from cache
         current_metric = HealthMetric.get_current_metrics()
@@ -363,22 +366,24 @@ def get_bulkheads():
                 "queue_used": active,  # Active tasks sit in the queue while waiting for a worker
             }
 
-        return jsonify({
-            "pools": pools,
-            "dead_letter_queue": [
-                {
-                    "category": entry.category.value,
-                    "task_name": entry.task_name,
-                    "error": entry.error,
-                    "submitted_at": entry.submitted_at,
-                }
-                for entry in dead_letters
-            ],
-            "summaries": {
-                "total_rejected": total_rejected,
-                "dead_letter_count": len(dead_letters),
-            },
-        })
+        return jsonify(
+            {
+                "pools": pools,
+                "dead_letter_queue": [
+                    {
+                        "category": entry.category.value,
+                        "task_name": entry.task_name,
+                        "error": entry.error,
+                        "submitted_at": entry.submitted_at,
+                    }
+                    for entry in dead_letters
+                ],
+                "summaries": {
+                    "total_rejected": total_rejected,
+                    "dead_letter_count": len(dead_letters),
+                },
+            }
+        )
     except Exception as e:
         logger.exception(f"Error fetching bulkhead stats: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -437,16 +442,18 @@ def get_broker_health():
                 if health.get("is_healthy", True):
                     healthy_brokers += 1
 
-        return jsonify({
-            "enabled": fm._enabled,
-            "users": users,
-            "summary": {
-                "total_users": len(users),
-                "total_brokers": total_brokers,
-                "healthy_brokers": healthy_brokers,
-                "unhealthy_brokers": total_brokers - healthy_brokers,
-            },
-        })
+        return jsonify(
+            {
+                "enabled": fm._enabled,
+                "users": users,
+                "summary": {
+                    "total_users": len(users),
+                    "total_brokers": total_brokers,
+                    "healthy_brokers": healthy_brokers,
+                    "unhealthy_brokers": total_brokers - healthy_brokers,
+                },
+            }
+        )
     except Exception as e:
         logger.exception(f"Error fetching broker health: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -499,15 +506,17 @@ def get_circuit_breakers():
         open_ = sum(1 for s in stats.values() if s["state"] == "OPEN")
         half_open = sum(1 for s in stats.values() if s["state"] == "HALF_OPEN")
 
-        return jsonify({
-            "breakers": stats,
-            "summary": {
-                "total": len(stats),
-                "closed": closed,
-                "open": open_,
-                "half_open": half_open,
-            },
-        })
+        return jsonify(
+            {
+                "breakers": stats,
+                "summary": {
+                    "total": len(stats),
+                    "closed": closed,
+                    "open": open_,
+                    "half_open": half_open,
+                },
+            }
+        )
     except Exception as e:
         logger.exception(f"Error fetching circuit breaker stats: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -529,7 +538,9 @@ def get_current_metrics():
                 "fd": {
                     "count": metric.fd_count or 0,
                     "limit": metric.fd_limit,
-                    "usage_percent": metric.fd_usage_percent if metric.fd_usage_percent is not None else 0.0,
+                    "usage_percent": metric.fd_usage_percent
+                    if metric.fd_usage_percent is not None
+                    else 0.0,
                     "status": metric.fd_status or "unknown",
                 },
                 "memory": {

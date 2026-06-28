@@ -52,7 +52,8 @@ def get_margin_data(auth_token: str) -> dict[str, Any]:
     }
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/V4/Margin",
             json=json_data,
             headers=headers,

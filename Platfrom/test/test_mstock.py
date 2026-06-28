@@ -14,7 +14,8 @@ class TestMstockBroker(unittest.TestCase):
         # The test assumes that the SilverTrade AI server is running and
         # the user is already logged into the mstock broker.
         self.api_key = os.getenv(
-            "SILVERTRADE_API_KEY", "3bb8d260915ff680a7258108c0483b9eb7675ced31309a36f5846366943ee9fa"
+            "SILVERTRADE_API_KEY",
+            "3bb8d260915ff680a7258108c0483b9eb7675ced31309a36f5846366943ee9fa",
         )
         self.client = OAClient(api_key=self.api_key, host="http://127.0.0.1:5000")
 

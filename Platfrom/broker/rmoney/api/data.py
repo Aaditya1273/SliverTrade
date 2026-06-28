@@ -464,10 +464,14 @@ class BrokerData:
                             logger.info("Multiquotes retry with refreshed token succeeded")
                         else:
                             retry_error = (
-                                response.get("description", "Unknown error") if response else "No response"
+                                response.get("description", "Unknown error")
+                                if response
+                                else "No response"
                             )
                             logger.error(f"Multiquotes retry also failed: {retry_error}")
-                            raise Exception(f"Error from RMoney API after token refresh: {retry_error}")
+                            raise Exception(
+                                f"Error from RMoney API after token refresh: {retry_error}"
+                            )
                     else:
                         logger.error("Failed to refresh feed token for multiquotes")
                         raise Exception(f"Error from RMoney API: {error_msg}")
@@ -672,7 +676,9 @@ class BrokerData:
                 )
 
                 if not response or response.get("type") != "success":
-                    error_msg = response.get("description", "Unknown error") if response else "No response"
+                    error_msg = (
+                        response.get("description", "Unknown error") if response else "No response"
+                    )
                     logger.error(f"API Response: {response}")
 
                     # Check if token expired and retry with refreshed token
@@ -691,7 +697,9 @@ class BrokerData:
                                 logger.info("History retry with refreshed token succeeded")
                             else:
                                 retry_error = (
-                                    response.get("description", "Unknown error") if response else "No response"
+                                    response.get("description", "Unknown error")
+                                    if response
+                                    else "No response"
                                 )
                                 logger.error(f"History retry also failed: {retry_error}")
                                 raise Exception(

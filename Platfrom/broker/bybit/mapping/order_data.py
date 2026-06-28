@@ -114,9 +114,13 @@ def calculate_order_statistics(order_data):
     """Calculate statistics from order data."""
     try:
         if not order_data or not isinstance(order_data, list):
-            return {"total_buy_orders": 0, "total_sell_orders": 0,
-                    "total_completed_orders": 0, "total_open_orders": 0,
-                    "total_rejected_orders": 0}
+            return {
+                "total_buy_orders": 0,
+                "total_sell_orders": 0,
+                "total_completed_orders": 0,
+                "total_open_orders": 0,
+                "total_rejected_orders": 0,
+            }
 
         total_buy = total_sell = total_completed = total_open = total_rejected = 0
 
@@ -135,14 +139,23 @@ def calculate_order_statistics(order_data):
             elif status == "rejected":
                 total_rejected += 1
 
-        return {"total_buy_orders": total_buy, "total_sell_orders": total_sell,
-                "total_completed_orders": total_completed, "total_open_orders": total_open,
-                "total_rejected_orders": total_rejected}
+        return {
+            "total_buy_orders": total_buy,
+            "total_sell_orders": total_sell,
+            "total_completed_orders": total_completed,
+            "total_open_orders": total_open,
+            "total_rejected_orders": total_rejected,
+        }
 
     except Exception as e:
         logger.error(f"Exception in calculate_order_statistics: {e}")
-        return {"total_buy_orders": 0, "total_sell_orders": 0,
-                "total_completed_orders": 0, "total_open_orders": 0, "total_rejected_orders": 0}
+        return {
+            "total_buy_orders": 0,
+            "total_sell_orders": 0,
+            "total_completed_orders": 0,
+            "total_open_orders": 0,
+            "total_rejected_orders": 0,
+        }
 
 
 def transform_order_data(orders):
@@ -172,20 +185,22 @@ def transform_order_data(orders):
             filled = float(order.get("filledQuantity", 0))
             remaining = qty - filled
 
-            transformed.append({
-                "symbol": order.get("tradingSymbol", ""),
-                "exchange": order.get("exchangeSegment", ""),
-                "action": order.get("transactionType", ""),
-                "quantity": remaining,
-                "filled_quantity": filled,
-                "price": float(order.get("price", 0.0)),
-                "trigger_price": float(order.get("triggerPrice", 0.0)),
-                "pricetype": pricetype,
-                "product": order.get("productType", "CNC"),
-                "orderid": order.get("orderId", ""),
-                "order_status": order.get("orderStatus", ""),
-                "timestamp": str(order.get("updateTime", "")),
-            })
+            transformed.append(
+                {
+                    "symbol": order.get("tradingSymbol", ""),
+                    "exchange": order.get("exchangeSegment", ""),
+                    "action": order.get("transactionType", ""),
+                    "quantity": remaining,
+                    "filled_quantity": filled,
+                    "price": float(order.get("price", 0.0)),
+                    "trigger_price": float(order.get("triggerPrice", 0.0)),
+                    "pricetype": pricetype,
+                    "product": order.get("productType", "CNC"),
+                    "orderid": order.get("orderId", ""),
+                    "order_status": order.get("orderStatus", ""),
+                    "timestamp": str(order.get("updateTime", "")),
+                }
+            )
 
         return transformed
 
@@ -243,17 +258,19 @@ def transform_tradebook_data(tradebook_data):
             qty = float(trade.get("tradedQuantity", 0))
             price = float(trade.get("tradedPrice", 0))
 
-            transformed.append({
-                "symbol": trade.get("tradingSymbol", ""),
-                "exchange": trade.get("exchangeSegment", ""),
-                "product": trade.get("productType", ""),
-                "action": trade.get("transactionType", ""),
-                "quantity": qty,
-                "average_price": price,
-                "trade_value": qty * price,
-                "orderid": trade.get("orderId", ""),
-                "timestamp": str(trade.get("updateTime", "")),
-            })
+            transformed.append(
+                {
+                    "symbol": trade.get("tradingSymbol", ""),
+                    "exchange": trade.get("exchangeSegment", ""),
+                    "product": trade.get("productType", ""),
+                    "action": trade.get("transactionType", ""),
+                    "quantity": qty,
+                    "average_price": price,
+                    "trade_value": qty * price,
+                    "orderid": trade.get("orderId", ""),
+                    "timestamp": str(trade.get("updateTime", "")),
+                }
+            )
 
         return transformed
 
@@ -321,16 +338,18 @@ def transform_positions_data(positions_data):
             if not isinstance(position, dict):
                 continue
 
-            transformed.append({
-                "symbol": position.get("tradingSymbol", ""),
-                "exchange": position.get("exchangeSegment", ""),
-                "product": position.get("productType", ""),
-                "quantity": position.get("netQty", 0),
-                "average_price": float(position.get("avgCostPrice", 0.0)),
-                "ltp": float(position.get("lastTradedPrice", 0.0)),
-                "pnl": float(position.get("pnlAbsolute", 0.0)),
-                "lot_size": float(position.get("lot_size", 1.0)),
-            })
+            transformed.append(
+                {
+                    "symbol": position.get("tradingSymbol", ""),
+                    "exchange": position.get("exchangeSegment", ""),
+                    "product": position.get("productType", ""),
+                    "quantity": position.get("netQty", 0),
+                    "average_price": float(position.get("avgCostPrice", 0.0)),
+                    "ltp": float(position.get("lastTradedPrice", 0.0)),
+                    "pnl": float(position.get("pnlAbsolute", 0.0)),
+                    "lot_size": float(position.get("lot_size", 1.0)),
+                }
+            )
 
         return transformed
 
@@ -349,14 +368,16 @@ def transform_holdings_data(holdings_data):
         for holding in holdings_data:
             if not isinstance(holding, dict):
                 continue
-            transformed.append({
-                "symbol": holding.get("tradingSymbol", holding.get("symbol", "")),
-                "exchange": holding.get("exchangeSegment", "CRYPTO"),
-                "quantity": holding.get("totalQty", holding.get("total_qty", 0)),
-                "product": "CNC",
-                "pnl": holding.get("pnlAbsolute", 0.0),
-                "pnlpercent": holding.get("pnlPercent", 0.0),
-            })
+            transformed.append(
+                {
+                    "symbol": holding.get("tradingSymbol", holding.get("symbol", "")),
+                    "exchange": holding.get("exchangeSegment", "CRYPTO"),
+                    "quantity": holding.get("totalQty", holding.get("total_qty", 0)),
+                    "product": "CNC",
+                    "pnl": holding.get("pnlAbsolute", 0.0),
+                    "pnlpercent": holding.get("pnlPercent", 0.0),
+                }
+            )
 
         return transformed
 
@@ -380,14 +401,26 @@ def calculate_portfolio_statistics(holdings_data):
     """Calculate portfolio statistics from holdings data."""
     try:
         if not holdings_data or not isinstance(holdings_data, list):
-            return {"totalholdingvalue": 0.0, "totalinvvalue": 0.0,
-                    "totalprofitandloss": 0.0, "totalpnlpercentage": 0.0}
+            return {
+                "totalholdingvalue": 0.0,
+                "totalinvvalue": 0.0,
+                "totalprofitandloss": 0.0,
+                "totalpnlpercentage": 0.0,
+            }
 
-        total_value = sum(float(h.get("marketValue", h.get("lastTradedPrice", 0)) * h.get("totalQty", 0))
-                         for h in holdings_data if isinstance(h, dict))
-        total_inv = sum(float(h.get("avgCostPrice", 0)) * h.get("totalQty", 0)
-                       for h in holdings_data if isinstance(h, dict))
-        total_pnl = sum(float(h.get("pnlAbsolute", 0)) for h in holdings_data if isinstance(h, dict))
+        total_value = sum(
+            float(h.get("marketValue", h.get("lastTradedPrice", 0)) * h.get("totalQty", 0))
+            for h in holdings_data
+            if isinstance(h, dict)
+        )
+        total_inv = sum(
+            float(h.get("avgCostPrice", 0)) * h.get("totalQty", 0)
+            for h in holdings_data
+            if isinstance(h, dict)
+        )
+        total_pnl = sum(
+            float(h.get("pnlAbsolute", 0)) for h in holdings_data if isinstance(h, dict)
+        )
 
         return {
             "totalholdingvalue": round(total_value, 2),
@@ -398,5 +431,9 @@ def calculate_portfolio_statistics(holdings_data):
 
     except Exception as e:
         logger.error(f"Exception in calculate_portfolio_statistics: {e}")
-        return {"totalholdingvalue": 0.0, "totalinvvalue": 0.0,
-                "totalprofitandloss": 0.0, "totalpnlpercentage": 0.0}
+        return {
+            "totalholdingvalue": 0.0,
+            "totalinvvalue": 0.0,
+            "totalprofitandloss": 0.0,
+            "totalpnlpercentage": 0.0,
+        }

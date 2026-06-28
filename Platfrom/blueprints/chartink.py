@@ -45,7 +45,13 @@ from database.symbol import enhanced_search_symbols
 from limiter import limiter
 from utils.logging import get_logger
 from utils.session import check_session_validity
-from utils.plan_limits import check_capacity_or_error, check_plan_capacity, check_signal_capacity_for_user, count_user_chartink_strategies, increment_signal_usage
+from utils.plan_limits import (
+    check_capacity_or_error,
+    check_plan_capacity,
+    check_signal_capacity_for_user,
+    count_user_chartink_strategies,
+    increment_signal_usage,
+)
 
 logger = get_logger(__name__)
 
@@ -91,8 +97,9 @@ def process_orders():
 
                 try:
                     response = requests.post(
-                        f"{BASE_URL}/api/v1/placesmartorder", json=smart_order["payload"],
-                        timeout=10
+                        f"{BASE_URL}/api/v1/placesmartorder",
+                        json=smart_order["payload"],
+                        timeout=10,
                     )
                     if response.ok:
                         logger.info(
@@ -128,8 +135,9 @@ def process_orders():
 
                     try:
                         response = requests.post(
-                            f"{BASE_URL}/api/v1/placeorder", json=regular_order["payload"],
-                            timeout=10
+                            f"{BASE_URL}/api/v1/placeorder",
+                            json=regular_order["payload"],
+                            timeout=10,
                         )
                         if response.ok:
                             logger.info(
@@ -311,9 +319,14 @@ def new_strategy():
                 return redirect(url_for("auth.login"))
 
             # Check plan capacity before creating
-            ok, _ = check_capacity_or_error("chartink_strategies", count_user_chartink_strategies(user_id))
+            ok, _ = check_capacity_or_error(
+                "chartink_strategies", count_user_chartink_strategies(user_id)
+            )
             if not ok:
-                flash("You've reached the plan limit for Chartink strategies. Please upgrade to add more.", "error")
+                flash(
+                    "You've reached the plan limit for Chartink strategies. Please upgrade to add more.",
+                    "error",
+                )
                 return redirect(url_for("chartink_bp.new_strategy"))
 
             # Validate strategy name

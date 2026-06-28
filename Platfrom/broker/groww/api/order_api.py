@@ -103,7 +103,9 @@ def direct_get_order_book(auth):
                     )
 
                     # Make the API request
-                    response = request_with_circuit_breaker("GET", GROWW_ORDER_LIST_URL, headers=headers, params=params)
+                    response = request_with_circuit_breaker(
+                        "GET", GROWW_ORDER_LIST_URL, headers=headers, params=params
+                    )
 
                     # Check for HTTP errors
                     response.raise_for_status()
@@ -854,7 +856,9 @@ def get_positions(auth):
         )
 
         # Make the API call for CASH segment
-        response_obj = request_with_circuit_breaker("GET", positions_url, params=params, headers=headers, timeout=30)
+        response_obj = request_with_circuit_breaker(
+            "GET", positions_url, params=params, headers=headers, timeout=30
+        )
 
         # Log the response status
         logger.info("-------- GET POSITIONS RESPONSE --------")
@@ -991,7 +995,9 @@ def get_positions(auth):
                                         )
 
                                         # Format as SilverTrade AI expects: NIFTY29MAY25FUT
-                                        silvertrade_symbol = f"{symbol_name}{day}{month_name}{year}FUT"
+                                        silvertrade_symbol = (
+                                            f"{symbol_name}{day}{month_name}{year}FUT"
+                                        )
                                         logger.info(
                                             f"Pattern: Converted Groww futures symbol: {groww_symbol} -> {silvertrade_symbol}"
                                         )
@@ -1059,7 +1065,9 @@ def get_positions(auth):
                 params["segment"] = "FNO"
                 logger.info(f"Fetching FNO positions with params: {params}")
 
-                fno_response = request_with_circuit_breaker("GET", positions_url, params=params, headers=headers, timeout=30)
+                fno_response = request_with_circuit_breaker(
+                    "GET", positions_url, params=params, headers=headers, timeout=30
+                )
 
                 if fno_response.status_code == 200:
                     fno_data = fno_response.json()
@@ -1302,7 +1310,9 @@ def get_holdings(auth):
         logger.info(f"API URL: {holdings_url}")
 
         # Make the API call
-        response_obj = request_with_circuit_breaker("GET", holdings_url, headers=headers, timeout=30)
+        response_obj = request_with_circuit_breaker(
+            "GET", holdings_url, headers=headers, timeout=30
+        )
 
         # Log the response status
         logger.info("-------- GET HOLDINGS RESPONSE --------")
@@ -1401,14 +1411,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -1485,7 +1495,9 @@ def get_open_position(tradingsymbol, exchange, product, auth):
             "NFO": {"NFO", "NSE_FO", "NSE"},
             "BFO": {"BFO", "BSE_FO", "BSE"},
         }
-        expected_exchanges = exchange_variants.get(exchange, {map_exchange_type(exchange), exchange})
+        expected_exchanges = exchange_variants.get(
+            exchange, {map_exchange_type(exchange), exchange}
+        )
 
         for position in positions_list:
             # Check for matching position - compare with both tradingsymbol and symbol fields
@@ -1942,7 +1954,9 @@ def place_smartorder_api(data, auth):
                 from silvertrade.database.token_db import get_br_symbol
 
             # Get current open position for the symbol
-            position_str = get_open_position(symbol, exchange, map_product_type(product), AUTH_TOKEN)
+            position_str = get_open_position(
+                symbol, exchange, map_product_type(product), AUTH_TOKEN
+            )
             logger.info(
                 f"Raw position from get_open_position: '{position_str}' (type: {type(position_str)})"
             )
@@ -2114,7 +2128,8 @@ def get_holdings(auth):
         import httpx
 
         with httpx.Client() as client:
-            response = request_with_circuit_breaker("GET", 
+            response = request_with_circuit_breaker(
+                "GET",
                 "https://api.groww.in/v1/holdings/user",
                 headers=headers,
                 timeout=10.0,  # 10-second timeout
@@ -2468,8 +2483,8 @@ def cancel_order(orderid, auth, segment=None, symbol=None, exchange=None):
         logger.info(f"Request headers: {json.dumps(safe_headers, indent=2)}")
 
         # Make the API call
-        response_obj = request_with_circuit_breaker("POST", 
-            GROWW_CANCEL_ORDER_URL, headers=headers, json=payload, timeout=30
+        response_obj = request_with_circuit_breaker(
+            "POST", GROWW_CANCEL_ORDER_URL, headers=headers, json=payload, timeout=30
         )
 
         logger.info("-------- CANCEL ORDER RESPONSE --------")
@@ -2606,9 +2621,7 @@ def cancel_order(orderid, auth, segment=None, symbol=None, exchange=None):
             }
 
             # Log the response we're returning for debugging
-            logger.info(
-                f"Returning error response: {json.dumps(response, indent=2)}"
-            )
+            logger.info(f"Returning error response: {json.dumps(response, indent=2)}")
 
         # Return the error response with 200 status code for consistency
         return response, 200

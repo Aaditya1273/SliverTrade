@@ -98,7 +98,9 @@ def map_order_data(order_data):
         if exchange == "NFO" and broker_symbol and " " in broker_symbol:
             try:
                 # Import the conversion function
-                from broker.groww.database.master_contract_db import format_groww_to_silvertrade_symbol
+                from broker.groww.database.master_contract_db import (
+                    format_groww_to_silvertrade_symbol,
+                )
 
                 silvertrade_symbol = format_groww_to_silvertrade_symbol(broker_symbol, exchange)
                 logger.info(f"Transformed display symbol: {broker_symbol} -> {silvertrade_symbol}")
@@ -118,7 +120,9 @@ def map_order_data(order_data):
                 )
                 if db_record and db_record.symbol:
                     silvertrade_symbol = db_record.symbol
-                    logger.info(f"Found symbol in database: {broker_symbol} -> {silvertrade_symbol}")
+                    logger.info(
+                        f"Found symbol in database: {broker_symbol} -> {silvertrade_symbol}"
+                    )
             except Exception as e:
                 logger.error(f"Error looking up symbol in database: {e}")
 
@@ -358,7 +362,9 @@ def transform_order_data(orders):
                 silvertrade_symbol = get_oa_symbol(token, exchange)
                 if silvertrade_symbol:
                     symbol = silvertrade_symbol
-                    logger.info(f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}")
+                    logger.info(
+                        f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}"
+                    )
 
             # If token lookup failed or token wasn't available, try by broker symbol
             elif broker_symbol:
@@ -446,7 +452,9 @@ def transform_order_data(orders):
         if exchange == "NFO" and " " in symbol:
             try:
                 # Import the conversion function
-                from broker.groww.database.master_contract_db import format_groww_to_silvertrade_symbol
+                from broker.groww.database.master_contract_db import (
+                    format_groww_to_silvertrade_symbol,
+                )
 
                 silvertrade_symbol = format_groww_to_silvertrade_symbol(symbol, exchange)
                 if silvertrade_symbol:
@@ -596,7 +604,9 @@ def transform_tradebook_data(tradebook_data):
                 silvertrade_symbol = get_oa_symbol(token, exchange)
                 if silvertrade_symbol:
                     symbol = silvertrade_symbol
-                    logger.info(f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}")
+                    logger.info(
+                        f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}"
+                    )
 
             # If token lookup failed or token wasn't available, try by broker symbol
             elif broker_symbol:
@@ -800,7 +810,9 @@ def transform_positions_data(positions_data):
                 silvertrade_symbol = get_oa_symbol(token, exchange)
                 if silvertrade_symbol:
                     symbol = silvertrade_symbol
-                    logger.info(f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}")
+                    logger.info(
+                        f"Found SilverTrade AI symbol by token: {broker_symbol} -> {symbol}"
+                    )
 
             # If token lookup failed or token wasn't available, try by broker symbol
             elif broker_symbol:

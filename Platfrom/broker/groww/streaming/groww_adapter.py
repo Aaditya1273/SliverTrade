@@ -301,7 +301,9 @@ class GrowwWebSocketAdapter(BaseBrokerWebSocketAdapter):
         groww_exchange, segment = GrowwExchangeMapper.get_exchange_segment(exchange)
 
         if exchange in ["NFO", "BFO"]:
-            self.logger.debug(f"F&O Subscription: {symbol}, exchange={exchange}->{groww_exchange}, segment={segment}, token={token}")
+            self.logger.debug(
+                f"F&O Subscription: {symbol}, exchange={exchange}->{groww_exchange}, segment={segment}, token={token}"
+            )
 
         # Generate unique correlation ID
         correlation_id = f"{symbol}_{exchange}_{mode}"
@@ -353,9 +355,7 @@ class GrowwWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 self.subscription_keys[correlation_id] = sub_key
 
                 mode_name = {1: "LTP", 2: "Quote", 3: "Depth"}.get(mode, str(mode))
-                self.logger.info(
-                    f"Subscribed to {symbol}.{exchange} in {mode_name} mode"
-                )
+                self.logger.info(f"Subscribed to {symbol}.{exchange} in {mode_name} mode")
 
                 if exchange in ["NFO", "BFO"]:
                     self.logger.debug(f"F&O subscription key created: {sub_key}")

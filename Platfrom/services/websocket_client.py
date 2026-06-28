@@ -383,9 +383,7 @@ class WebSocketClient:
                         await asyncio.sleep(wait_time)
 
                 except (OSError, ConnectionError, asyncio.TimeoutError) as e:
-                    logger.warning(
-                        f"Connection failed to {self.ws_url}: {e}"
-                    )
+                    logger.warning(f"Connection failed to {self.ws_url}: {e}")
                     self.connected = False
                     self.authenticated = False
                     self._connect_circuit_breaker.record_failure()
@@ -395,9 +393,7 @@ class WebSocketClient:
                         await asyncio.sleep(min(2**self._reconnect_attempts, 30))
 
             except CircuitBreakerOpenError:
-                logger.warning(
-                    "Circuit breaker rejected connection attempt — cooling down"
-                )
+                logger.warning("Circuit breaker rejected connection attempt — cooling down")
                 await asyncio.sleep(self._connect_circuit_breaker.stats()["recovery_timeout"])
 
             except Exception as e:

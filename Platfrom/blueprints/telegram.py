@@ -284,9 +284,7 @@ def send_test_message():
             telegram_user = all_users[0]  # Use first available user for testing
             message = f"🔔 Test Message from SilverTrade (Admin: {username})\n\nYour Telegram integration is working correctly!"
         elif telegram_user:
-            message = (
-                "🔔 Test Message from SilverTrade\n\nYour Telegram integration is working correctly!"
-            )
+            message = "🔔 Test Message from SilverTrade\n\nYour Telegram integration is working correctly!"
         else:
             return jsonify(
                 {

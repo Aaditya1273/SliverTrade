@@ -46,7 +46,13 @@ from database.symbol import enhanced_search_symbols
 from limiter import limiter
 from utils.logging import get_logger
 from utils.session import check_session_validity, is_session_valid
-from utils.plan_limits import check_capacity_or_error, check_plan_capacity, check_signal_capacity_for_user, count_user_strategies, increment_signal_usage
+from utils.plan_limits import (
+    check_capacity_or_error,
+    check_plan_capacity,
+    check_signal_capacity_for_user,
+    count_user_strategies,
+    increment_signal_usage,
+)
 
 logger = get_logger(__name__)
 
@@ -112,6 +118,7 @@ def process_orders():
 
                 try:
                     from utils.httpx_client import get_httpx_client
+
                     response = get_httpx_client().post(
                         f"{BASE_URL}/api/v1/placesmartorder", json=smart_order["payload"]
                     )
@@ -149,6 +156,7 @@ def process_orders():
 
                     try:
                         from utils.httpx_client import get_httpx_client
+
                         response = get_httpx_client().post(
                             f"{BASE_URL}/api/v1/placeorder", json=regular_order["payload"]
                         )
@@ -371,7 +379,10 @@ def new_strategy():
             # Check plan capacity before creating
             ok, _ = check_capacity_or_error("active_strategies", count_user_strategies(user_id))
             if not ok:
-                flash("You've reached the plan limit for active strategies. Please upgrade to add more.", "error")
+                flash(
+                    "You've reached the plan limit for active strategies. Please upgrade to add more.",
+                    "error",
+                )
                 return redirect(url_for("strategy_bp.new_strategy"))
 
             # Get form data

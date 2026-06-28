@@ -18,7 +18,9 @@ def get_margin_data(auth_token):
 
     headers = {"authorization": auth_token, "Content-Type": "application/json"}
     logger.debug("Fetching funds with headers")
-    response = request_with_circuit_breaker("GET", f"{INTERACTIVE_URL}/user/balance", headers=headers)
+    response = request_with_circuit_breaker(
+        "GET", f"{INTERACTIVE_URL}/user/balance", headers=headers
+    )
 
     margin_data = response.json()
 

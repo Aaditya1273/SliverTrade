@@ -1,7 +1,11 @@
 # Mapping SilverTrade AI API Request https://silvertrade.ai/docs
 # RMoney XTS Margin Calculator API mappings
 
-from broker.rmoney.mapping.transform_data import map_exchange_numeric, map_order_type, map_product_type
+from broker.rmoney.mapping.transform_data import (
+    map_exchange_numeric,
+    map_order_type,
+    map_product_type,
+)
 from database.token_db import get_token
 from utils.logging import get_logger
 
@@ -130,9 +134,7 @@ def parse_margin_response(response_data):
 
     margin_required = _safe_float(brokerage_details.get("MarginRequired", 0), "MarginRequired")
     margin_available = _safe_float(brokerage_details.get("MarginAvailable", 0), "MarginAvailable")
-    margin_shortfall = _safe_float(
-        brokerage_details.get("MarginShortfall", 0), "MarginShortfall"
-    )
+    margin_shortfall = _safe_float(brokerage_details.get("MarginShortfall", 0), "MarginShortfall")
     is_valid = brokerage_details.get("IsValid", False)
     error_message = brokerage_details.get("ErrorMessage", "")
 

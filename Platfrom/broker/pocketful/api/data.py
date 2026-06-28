@@ -331,8 +331,8 @@ class BrokerData:
                     "Content-Type": "application/json",
                 }
 
-                response = request_with_circuit_breaker("GET", 
-                    "https://trade.pocketful.in/api/v1/user/trading_info", headers=headers
+                response = request_with_circuit_breaker(
+                    "GET", "https://trade.pocketful.in/api/v1/user/trading_info", headers=headers
                 )
                 info_response = response.json()
 

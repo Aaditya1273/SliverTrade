@@ -17,7 +17,6 @@ from .data_schemas import TickerSchema
 from types import ModuleType
 
 
-
 API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "10 per second")
 api = Namespace("ticker", description="Stock Ticker Data API")
 

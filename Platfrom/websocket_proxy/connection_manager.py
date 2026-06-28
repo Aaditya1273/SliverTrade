@@ -344,7 +344,11 @@ class ConnectionPool:
         }
 
     def initialize(
-        self, broker_name: str = None, user_id: str = None, auth_data: dict = None, force: bool = False
+        self,
+        broker_name: str = None,
+        user_id: str = None,
+        auth_data: dict = None,
+        force: bool = False,
     ) -> dict:
         """
         Initialize the connection pool with the first adapter.
@@ -365,7 +369,9 @@ class ConnectionPool:
         with self.lock:
             # If forcing re-initialization, clean up existing adapters first (inside lock to prevent race conditions)
             if force and self.initialized:
-                self.logger.info(f"Force re-initializing pool for {self.broker_name} with fresh credentials")
+                self.logger.info(
+                    f"Force re-initializing pool for {self.broker_name} with fresh credentials"
+                )
                 # Disconnect existing adapters
                 for adapter in self.adapters:
                     try:
@@ -392,9 +398,8 @@ class ConnectionPool:
                 # Handle both response formats from adapters:
                 # - {"success": False, "error": "..."} (ConnectionPool format)
                 # - {"status": "error", "code": "...", "message": "..."} (Adapter format)
-                is_error = (
-                    (result and result.get("success") == False) or
-                    (result and result.get("status") == "error")
+                is_error = (result and result.get("success") == False) or (
+                    result and result.get("status") == "error"
                 )
                 if is_error:
                     error_msg = result.get("message", result.get("error", "Initialization failed"))
@@ -433,9 +438,8 @@ class ConnectionPool:
                     # Handle both response formats from adapters:
                     # - {"success": False, "error": "..."} (ConnectionPool format)
                     # - {"status": "error", "code": "...", "message": "..."} (Adapter format)
-                    is_error = (
-                        (result and result.get("success") == False) or
-                        (result and result.get("status") == "error")
+                    is_error = (result and result.get("success") == False) or (
+                        result and result.get("status") == "error"
                     )
                     if is_error:
                         # Convert to consistent format and return error

@@ -68,8 +68,8 @@ def calculate_margin_api(positions, auth):
 
     try:
         # Make the request using the Groww margin API
-        response = request_with_circuit_breaker("POST", 
-            GROWW_MARGIN_URL, headers=headers, params=params, json=transformed_positions
+        response = request_with_circuit_breaker(
+            "POST", GROWW_MARGIN_URL, headers=headers, params=params, json=transformed_positions
         )
 
         # Add status attribute for compatibility with the existing codebase

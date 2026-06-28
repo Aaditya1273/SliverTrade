@@ -167,6 +167,8 @@ exclude = [
     "node_modules",
     "__pycache__",
     "*.pyc",
+    "*_pb2.py",
+    "*_pb2_grpc.py",
     "db",
     "log",
     "strategies",

@@ -70,8 +70,8 @@ def get_trade_book(auth):
 def get_positions(auth):
     """Get positions from Samco."""
     headers = {"Accept": "application/json", "x-session-token": auth}
-    response = request_with_circuit_breaker("GET", 
-        f"{BASE_URL}/position/getPositions", headers=headers, params={"positionType": "DAY"}
+    response = request_with_circuit_breaker(
+        "GET", f"{BASE_URL}/position/getPositions", headers=headers, params={"positionType": "DAY"}
     )
     response_data = response.json() if response.text else {}
     logger.info(f"Samco positions response: {response_data}")
@@ -88,14 +88,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -128,7 +128,6 @@ def _invalidate_position_cache(auth):
     """Invalidate the position cache so the next queued order fetches fresh data."""
     with _position_cache_lock:
         _position_cache.pop(auth, None)
-
 
 
 def get_open_position(tradingsymbol, exchange, producttype, auth):
@@ -214,7 +213,9 @@ def place_order_api(data, auth):
 
     logger.info(f"Samco place order payload: {payload}")
 
-    response = request_with_circuit_breaker("POST", f"{BASE_URL}/order/placeOrder", headers=headers, json=payload)
+    response = request_with_circuit_breaker(
+        "POST", f"{BASE_URL}/order/placeOrder", headers=headers, json=payload
+    )
 
     response.status = response.status_code
 
@@ -369,8 +370,8 @@ def cancel_order(orderid, auth):
 
     logger.info(f"Samco cancel order request for orderid: {orderid}")
 
-    response = request_with_circuit_breaker("DELETE", 
-        f"{BASE_URL}/order/cancelOrder", headers=headers, params={"orderNumber": orderid}
+    response = request_with_circuit_breaker(
+        "DELETE", f"{BASE_URL}/order/cancelOrder", headers=headers, params={"orderNumber": orderid}
     )
 
     response.status = response.status_code
@@ -403,8 +404,8 @@ def modify_order(data, auth):
 
     logger.info(f"Samco modify order payload: {transformed_data}")
 
-    response = request_with_circuit_breaker("PUT", 
-        f"{BASE_URL}/order/modifyOrder/{orderid}", headers=headers, json=transformed_data
+    response = request_with_circuit_breaker(
+        "PUT", f"{BASE_URL}/order/modifyOrder/{orderid}", headers=headers, json=transformed_data
     )
 
     response.status = response.status_code

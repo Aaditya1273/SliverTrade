@@ -68,7 +68,8 @@ def get_positions(auth_token):
     }
 
     try:
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             "https://api.mstock.trade/openapi/typeb/portfolio/positions",
             headers=headers,
         )
@@ -91,7 +92,8 @@ def get_holdings(auth_token):
     }
 
     try:
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             "https://api.mstock.trade/openapi/typeb/portfolio/holdings",
             headers=headers,
         )

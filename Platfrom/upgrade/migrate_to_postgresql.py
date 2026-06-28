@@ -94,35 +94,39 @@ def get_table_list_sqlite(conn):
 
 def get_table_schema_sqlite(conn, table_name):
     """Get column definitions for a SQLite table."""
-    cursor = conn.execute(f"PRAGMA table_info(\"{table_name}\")")
+    cursor = conn.execute(f'PRAGMA table_info("{table_name}")')
     columns = []
     for row in cursor.fetchall():
-        columns.append({
-            "cid": row[0],
-            "name": row[1],
-            "type": row[2],
-            "notnull": bool(row[3]),
-            "dflt_value": row[4],
-            "pk": bool(row[5]),
-        })
+        columns.append(
+            {
+                "cid": row[0],
+                "name": row[1],
+                "type": row[2],
+                "notnull": bool(row[3]),
+                "dflt_value": row[4],
+                "pk": bool(row[5]),
+            }
+        )
     return columns
 
 
 def get_table_indexes_sqlite(conn, table_name):
     """Get index definitions for a SQLite table."""
-    cursor = conn.execute(f"PRAGMA index_list(\"{table_name}\")")
+    cursor = conn.execute(f'PRAGMA index_list("{table_name}")')
     indexes = []
     for row in cursor.fetchall():
         idx_name = row[1]
         unique = bool(row[2])
         # Get index columns
-        col_cursor = conn.execute(f"PRAGMA index_info(\"{idx_name}\")")
+        col_cursor = conn.execute(f'PRAGMA index_info("{idx_name}")')
         columns = [col_row[2] for col_row in col_cursor.fetchall()]
-        indexes.append({
-            "name": idx_name,
-            "unique": unique,
-            "columns": columns,
-        })
+        indexes.append(
+            {
+                "name": idx_name,
+                "unique": unique,
+                "columns": columns,
+            }
+        )
     return indexes
 
 
@@ -249,7 +253,7 @@ def migrate_database(config, dry_run=False, force=False):
 
     # SQLite path supports a fallback via "alt_sqlite_relative"
     sqlite_path = PROJECT_ROOT / config["sqlite_relative"]
-    
+
     # If the primary SQLite path doesn't exist, try the alternate
     alt_sqlite_relative = config.get("alt_sqlite_relative")
     if not sqlite_path.exists() and alt_sqlite_relative:
@@ -270,17 +274,18 @@ def migrate_database(config, dry_run=False, force=False):
     # Normalize URL for psycopg2 (strip driver suffix, preserve already-encoded password)
     pg_url = normalize_pg_url(pg_url)
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  📦 {name}")
     print(f"  📄 SQLite:    {sqlite_path}")
     print(f"  🐘 PostgreSQL: {config['pg_url_key']}")
     print(f"  📋 Schema:    {config['schema']}")
     print(f"  📝 Tables:    {config['description']}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     # ── Connect to SQLite ──────────────────────────────────────
     try:
         import sqlite3
+
         sqlite_conn = sqlite3.connect(str(sqlite_path))
         sqlite_conn.row_factory = sqlite3.Row
     except Exception as e:
@@ -296,7 +301,7 @@ def migrate_database(config, dry_run=False, force=False):
         sqlite_conn.close()
         # Return a special status so the caller knows to create tables but skip data migration
         return {"status": "corrupted", "error": str(e), "schema": config["schema"]}
-    
+
     if not tables:
         print(f"  ⏭️  No tables found in SQLite database")
         sqlite_conn.close()
@@ -308,6 +313,7 @@ def migrate_database(config, dry_run=False, force=False):
     if not dry_run:
         try:
             import psycopg2
+
             pg_conn = psycopg2.connect(pg_url)
             pg_conn.autocommit = False
             pg_cur = pg_conn.cursor()
@@ -339,7 +345,9 @@ def migrate_database(config, dry_run=False, force=False):
             indexes = get_table_indexes_sqlite(sqlite_conn, table_name)
 
             # Generate CREATE TABLE SQL
-            qualified_name = f"{config['schema']}.{table_name}" if config["schema"] != "public" else table_name
+            qualified_name = (
+                f"{config['schema']}.{table_name}" if config["schema"] != "public" else table_name
+            )
             create_sql = generate_create_table_sql(qualified_name, columns, indexes)
             create_sql = fix_sqlite_defaults_for_pg(create_sql, table_name, columns)
 
@@ -356,7 +364,9 @@ def migrate_database(config, dry_run=False, force=False):
                 pg_conn.commit()
             except Exception as e:
                 if "already exists" in str(e).lower() and not force:
-                    print(f"     ⚠️  Table {table_name} already exists, skipping (use --force to recreate)")
+                    print(
+                        f"     ⚠️  Table {table_name} already exists, skipping (use --force to recreate)"
+                    )
                     errors.append(f"{table_name}: already exists")
                     continue
                 elif "already exists" in str(e).lower() and force:
@@ -382,13 +392,13 @@ def migrate_database(config, dry_run=False, force=False):
             # ── Insert into PostgreSQL ─────────────────────────
             placeholders = ", ".join(["%s"] * len(col_names))
             columns_str = ", ".join(col_names)
-            insert_sql = f'INSERT INTO {qualified_name} ({columns_str}) VALUES ({placeholders})'
+            insert_sql = f"INSERT INTO {qualified_name} ({columns_str}) VALUES ({placeholders})"
 
             # Batch insert for performance
             batch_size = 500
             inserted = 0
             for i in range(0, len(rows), batch_size):
-                batch = rows[i:i + batch_size]
+                batch = rows[i : i + batch_size]
                 batch_values = []
                 for row in batch:
                     values = []
@@ -439,7 +449,7 @@ def migrate_database(config, dry_run=False, force=False):
 
                 idx_columns = ", ".join(idx["columns"])
                 unique_clause = "UNIQUE " if idx["unique"] else ""
-                idx_sql = f'CREATE {unique_clause}INDEX IF NOT EXISTS {idx_name} ON {qualified_name} ({idx_columns})'
+                idx_sql = f"CREATE {unique_clause}INDEX IF NOT EXISTS {idx_name} ON {qualified_name} ({idx_columns})"
 
                 try:
                     pg_cur.execute(idx_sql)
@@ -566,7 +576,9 @@ def main():
 """)
             sys.exit(1)
 
-        print("   ✅ DATABASE_URL is set. Please also set LOGS_DATABASE_URL, LATENCY_DATABASE_URL, etc.")
+        print(
+            "   ✅ DATABASE_URL is set. Please also set LOGS_DATABASE_URL, LATENCY_DATABASE_URL, etc."
+        )
         if not args.dry_run:
             return
 
@@ -581,9 +593,9 @@ def main():
     elapsed = time.time() - start_time
 
     # ── Final Report ───────────────────────────────────────────
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print("  📊 MIGRATION SUMMARY")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     total_tables = 0
     total_rows = 0
@@ -633,7 +645,9 @@ def main():
         print(f"\n  🔍 Dry run complete. Run without --dry-run to perform migration.")
     else:
         print(f"\n  📋 Next steps:")
-        print(f"     1. Verify data: ./Platfrom/.venv/bin/python3 -c \"import psycopg2; c = psycopg2.connect(os.environ['DATABASE_URL']); c.cursor().execute('SELECT count(*) FROM auth'); print(c.fetchone())\"")
+        print(
+            f"     1. Verify data: ./Platfrom/.venv/bin/python3 -c \"import psycopg2; c = psycopg2.connect(os.environ['DATABASE_URL']); c.cursor().execute('SELECT count(*) FROM auth'); print(c.fetchone())\""
+        )
         print(f"     2. Update .env to use PostgreSQL URLs")
         print(f"     3. Start the application: uv run python app.py")
         print(f"     4. Monitor logs for any database errors")

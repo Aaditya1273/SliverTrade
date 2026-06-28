@@ -116,8 +116,9 @@ def check_signal_capacity_for_user(user_id: str):
             f"You've reached the {plan.title()} plan limit of {max_signals} signals this month. "
             f"Please upgrade for higher limits."
         )
-        logger.info("Signal limit hit: %d/%d for user %s on plan %s",
-                     used, max_signals, user_id, plan)
+        logger.info(
+            "Signal limit hit: %d/%d for user %s on plan %s", used, max_signals, user_id, plan
+        )
         return False, (jsonify({"status": "error", "error": msg}), 429)
 
     return True, None
@@ -129,6 +130,7 @@ def increment_signal_usage(user_id: str, amount: int = 1):
     Safe to call after successfully processing a webhook signal.
     """
     from app import db
+
     user = User.query.get(user_id)
     if not user:
         return
@@ -140,27 +142,28 @@ def increment_signal_usage(user_id: str, amount: int = 1):
 def count_user_strategies(user_id: str) -> int:
     """Return the number of webhook strategies owned by this user."""
     from database.strategy_db import get_user_strategies
+
     return len(get_user_strategies(user_id))
 
 
 def count_user_chartink_strategies(user_id: str) -> int:
     """Return the number of Chartink strategies owned by this user."""
     from database.chartink_db import get_user_strategies
+
     return len(get_user_strategies(user_id))
 
 
 def count_user_python_strategies(user_id: str) -> int:
     """Return the number of Python strategy configs owned by this user."""
     from blueprints.python_strategy import STRATEGY_CONFIGS
-    return sum(
-        1 for cfg in STRATEGY_CONFIGS.values()
-        if cfg.get("user_id") == user_id
-    )
+
+    return sum(1 for cfg in STRATEGY_CONFIGS.values() if cfg.get("user_id") == user_id)
 
 
 def count_user_workflows(_user_id: str) -> int:
     """Return total workflows (user-agnostic — FlowWorkflow has no user_id column)."""
     from database.flow_db import get_all_workflows
+
     return len(get_all_workflows())
 
 
@@ -205,8 +208,7 @@ def check_capacity_or_error(
             f"This feature is not available on the {plan.title()} plan. "
             f"Please upgrade to access it."
         )
-        logger.info("Plan limit hit: %s (limit=0) for user %s on plan %s",
-                     limit_key, user_id, plan)
+        logger.info("Plan limit hit: %s (limit=0) for user %s on plan %s", limit_key, user_id, plan)
         return False, (jsonify({"status": "error", "message": msg}), 403)
 
     # Numeric cap
@@ -216,8 +218,14 @@ def check_capacity_or_error(
             f"You've reached the {plan.title()} plan limit of {max_items} {label}. "
             f"Please upgrade to add more."
         )
-        logger.info("Plan limit hit: %s (%d/%d) for user %s on plan %s",
-                     limit_key, current_count, max_items, user_id, plan)
+        logger.info(
+            "Plan limit hit: %s (%d/%d) for user %s on plan %s",
+            limit_key,
+            current_count,
+            max_items,
+            user_id,
+            plan,
+        )
         return False, (jsonify({"status": "error", "message": msg}), 403)
 
     return True, None
@@ -235,6 +243,7 @@ def check_plan_capacity(limit_key: str, count_fn):
         count_fn:   Callable that accepts ``(user_id: str)`` and returns
                     the current count of the resource.
     """
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -253,5 +262,7 @@ def check_plan_capacity(limit_key: str, count_fn):
                 return error_response
 
             return f(*args, **kwargs)
+
         return wrapper
+
     return decorator

@@ -49,7 +49,7 @@ BASE_URL = os.getenv("BYBIT_BASE_URL", "https://api.bybit.com")
 
 # Trade type constants.
 TRADE_TYPE_SPOT = "spot"
-TRADE_TYPE_LINEAR = "linear"    # USDT perpetual futures
+TRADE_TYPE_LINEAR = "linear"  # USDT perpetual futures
 
 
 def generate_signature(api_secret: str, payload: str) -> str:
@@ -169,8 +169,13 @@ def get_api_response(
 
     if signed:
         if not resolved_key or not resolved_secret:
-            return {"success": False, "error": {"code": "auth_error",
-                    "message": "BROKER_API_KEY / BROKER_API_SECRET not configured"}}
+            return {
+                "success": False,
+                "error": {
+                    "code": "auth_error",
+                    "message": "BROKER_API_KEY / BROKER_API_SECRET not configured",
+                },
+            }
 
         timestamp = str(int(time.time() * 1000))
         recv_window = "5000"
@@ -213,8 +218,10 @@ def get_api_response(
     logger.debug(f"[Bybit] HTTP {response.status_code} from {endpoint}")
 
     if not response.text.strip():
-        return {"success": False, "error": {"code": "empty_response",
-                "message": f"Empty response from {endpoint}"}}
+        return {
+            "success": False,
+            "error": {"code": "empty_response", "message": f"Empty response from {endpoint}"},
+        }
 
     try:
         data = response.json()

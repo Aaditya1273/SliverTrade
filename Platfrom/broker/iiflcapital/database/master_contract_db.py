@@ -344,19 +344,13 @@ def _process_derivatives_csv(path, segment, exchange):
     # Options CE: {underlying}{DDMMMYY}{strike}{CE}
     ce_mask = df["_instrumenttype"] == "CE"
     df.loc[ce_mask, "_symbol"] = (
-        underlying
-        + df["_compact_expiry"]
-        + df.loc[ce_mask, "_strike"].apply(format_strike)
-        + "CE"
+        underlying + df["_compact_expiry"] + df.loc[ce_mask, "_strike"].apply(format_strike) + "CE"
     )
 
     # Options PE: {underlying}{DDMMMYY}{strike}{PE}
     pe_mask = df["_instrumenttype"] == "PE"
     df.loc[pe_mask, "_symbol"] = (
-        underlying
-        + df["_compact_expiry"]
-        + df.loc[pe_mask, "_strike"].apply(format_strike)
-        + "PE"
+        underlying + df["_compact_expiry"] + df.loc[pe_mask, "_strike"].apply(format_strike) + "PE"
     )
 
     token_df = pd.DataFrame()
@@ -397,12 +391,7 @@ def process_iiflcapital_indices_csv(path):
     df["_exchange"] = csv_exchange.map({"NSEEQ": "NSE_INDEX", "BSEEQ": "BSE_INDEX"})
 
     # Normalize symbol: uppercase, remove spaces
-    df["_symbol"] = (
-        df[COL_NAME]
-        .str.strip()
-        .str.upper()
-        .str.replace(" ", "", regex=False)
-    )
+    df["_symbol"] = df[COL_NAME].str.strip().str.upper().str.replace(" ", "", regex=False)
 
     # Apply NSE index name mappings
     nse_mask = df["_exchange"] == "NSE_INDEX"
@@ -475,9 +464,7 @@ def master_contract_download():
 
     except Exception as e:
         logger.error(f"Error in master contract download: {e}")
-        return socketio.emit(
-            "master_contract_download", {"status": "error", "message": str(e)}
-        )
+        return socketio.emit("master_contract_download", {"status": "error", "message": str(e)})
 
 
 def search_symbols(symbol, exchange):

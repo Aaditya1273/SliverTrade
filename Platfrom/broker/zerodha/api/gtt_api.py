@@ -132,10 +132,12 @@ def place_gtt_order(data, auth):
     if not data.get("last_price"):
         ltp = _fetch_last_price(data["symbol"], data["exchange"], auth)
         if not ltp:
+
             class _FakeResponse:
                 status_code = 502
                 status = 502
                 text = ""
+
             return (
                 _FakeResponse(),
                 {"status": "error", "message": "Failed to fetch last_price from Zerodha quotes"},
@@ -179,7 +181,10 @@ def modify_gtt_order(data, auth):
     if not data.get("last_price"):
         ltp = _fetch_last_price(data["symbol"], data["exchange"], auth)
         if not ltp:
-            return {"status": "error", "message": "Failed to fetch last_price from Zerodha quotes"}, 502
+            return {
+                "status": "error",
+                "message": "Failed to fetch last_price from Zerodha quotes",
+            }, 502
         data["last_price"] = ltp
 
     _apply_mpp_if_market(data, data.get("last_price"))
@@ -196,7 +201,10 @@ def modify_gtt_order(data, auth):
     try:
         response_data = response.json()
     except Exception:
-        return {"status": "error", "message": response.text or "Invalid response"}, response.status_code
+        return {
+            "status": "error",
+            "message": response.text or "Invalid response",
+        }, response.status_code
 
     if response_data.get("status") == "success":
         returned_id = response_data.get("data", {}).get("trigger_id", trigger_id)
@@ -221,7 +229,10 @@ def cancel_gtt_order(trigger_id, auth):
     try:
         response_data = response.json()
     except Exception:
-        return {"status": "error", "message": response.text or "Invalid response"}, response.status_code
+        return {
+            "status": "error",
+            "message": response.text or "Invalid response",
+        }, response.status_code
 
     if response_data.get("status") == "success":
         returned_id = response_data.get("data", {}).get("trigger_id", trigger_id)
@@ -239,15 +250,16 @@ def get_gtt_book(auth):
     The returned dict has ``status`` and ``data`` where ``data`` is a list of
     SilverTrade-normalised GTT objects (see ``map_gtt_book``).
     """
-    response = request_with_circuit_breaker(
-        "GET", f"{_BASE}/gtt/triggers", headers=_headers(auth)
-    )
+    response = request_with_circuit_breaker("GET", f"{_BASE}/gtt/triggers", headers=_headers(auth))
     logger.info(f"Zerodha gtt_book raw: status={response.status_code}")
 
     try:
         raw = response.json()
     except Exception:
-        return {"status": "error", "message": response.text or "Invalid response"}, response.status_code
+        return {
+            "status": "error",
+            "message": response.text or "Invalid response",
+        }, response.status_code
 
     if raw.get("status") != "success":
         return {

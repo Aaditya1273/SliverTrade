@@ -29,7 +29,15 @@ class Ping(Resource):
             # For GET requests, parameters are in request.args
             api_key = request.args.get("apikey")
             if not api_key:
-                return make_response(jsonify({"status": "error", "message": {"apikey": ["Missing data for required field."]}}), 400)
+                return make_response(
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": {"apikey": ["Missing data for required field."]},
+                        }
+                    ),
+                    400,
+                )
 
             # Call the service function to get ping response with API key
             success, response_data, status_code = get_ping(api_key=api_key)

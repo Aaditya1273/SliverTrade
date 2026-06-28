@@ -111,10 +111,12 @@ class BybitWebSocket:
             hashlib.sha256,
         ).hexdigest()
 
-        return json.dumps({
-            "op": "auth",
-            "args": [self.api_key, expires, signature],
-        })
+        return json.dumps(
+            {
+                "op": "auth",
+                "args": [self.api_key, expires, signature],
+            }
+        )
 
     def subscribe(self, topics: list[str]) -> None:
         """
@@ -265,7 +267,9 @@ class BybitWebSocket:
         elif "topic" in msg and "data" in msg:
             self.on_message(wsapp, msg)
         else:
-            logger.debug(f"BybitWS unhandled message: {list(msg.keys()) if isinstance(msg, dict) else type(msg)}")
+            logger.debug(
+                f"BybitWS unhandled message: {list(msg.keys()) if isinstance(msg, dict) else type(msg)}"
+            )
 
     def _ws_on_error(self, wsapp, error) -> None:
         logger.error(f"BybitWS error: {error}")

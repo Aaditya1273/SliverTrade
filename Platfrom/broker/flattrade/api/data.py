@@ -13,14 +13,17 @@ from database.token_db import get_br_symbol, get_oa_symbol, get_token
 from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
+
 # Auto-detect eventlet environment (Docker/standalone uses gunicorn+eventlet)
 # asyncio.run() cannot be called under eventlet's monkey-patched event loop
 def _is_eventlet_patched():
     try:
         import eventlet.patcher
+
         return eventlet.patcher.is_monkey_patched("socket")
     except (ImportError, AttributeError):
         return False
+
 
 USE_ASYNC = not _is_eventlet_patched()
 
@@ -240,7 +243,9 @@ class BrokerData:
             url = "https://piconnect.flattrade.in/PiConnectAPI/GetQuotes"
 
             # Use async httpx client
-            http_response = await request_with_circuit_breaker("POST", url, content=payload_str, headers=headers)
+            http_response = await request_with_circuit_breaker(
+                "POST", url, content=payload_str, headers=headers
+            )
             response = http_response.json()
 
             if response.get("stat") != "Ok":

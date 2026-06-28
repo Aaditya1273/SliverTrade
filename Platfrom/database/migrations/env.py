@@ -94,18 +94,14 @@ DB_CONFIGS = {
 }
 
 if DB_ALIAS not in DB_CONFIGS:
-    raise ValueError(
-        f"Unknown ALEMBIC_DB: {DB_ALIAS!r}. "
-        f"Options: {', '.join(DB_CONFIGS.keys())}"
-    )
+    raise ValueError(f"Unknown ALEMBIC_DB: {DB_ALIAS!r}. Options: {', '.join(DB_CONFIGS.keys())}")
 
 db_config = DB_CONFIGS[DB_ALIAS]
 db_url = os.getenv(db_config["url_key"])
 
 if not db_url:
     raise ValueError(
-        f"{db_config['url_key']} is not set. "
-        f"Cannot run migrations for '{DB_ALIAS}' database."
+        f"{db_config['url_key']} is not set. Cannot run migrations for '{DB_ALIAS}' database."
     )
 
 print(f"🐘 Alembic: Migrating '{DB_ALIAS}' database via {db_config['url_key']}")
@@ -119,10 +115,13 @@ for module_name in db_config["models_module"]:
     try:
         __import__(module_name, fromlist=["Base"])
     except ImportError as e:
-        print(f"   ⚠️  Could not import {module_name}: {e}")    # Get the declarative base for this database
+        print(
+            f"   ⚠️  Could not import {module_name}: {e}"
+        )  # Get the declarative base for this database
     # Suppress logging during import — model modules may try to init DBs/start
     # background threads at import time, which is wasteful during migration
     import logging as _logging
+
     _logging.disable(_logging.CRITICAL)
     try:
         base_module_path, base_class_name = db_config["base_class"].rsplit(".", 1)
@@ -134,12 +133,15 @@ for module_name in db_config["models_module"]:
         print(f"   ⚠️  Could not load base class: {e}")
         print(f"   Falling back to empty metadata")
         from sqlalchemy import MetaData
+
         target_metadata = MetaData()
     finally:
         _logging.disable(_logging.NOTSET)
 
     # Safety guard: autogenerate with empty metadata would drop ALL existing tables
-    if target_metadata is None or (hasattr(target_metadata, 'tables') and len(target_metadata.tables) == 0):
+    if target_metadata is None or (
+        hasattr(target_metadata, "tables") and len(target_metadata.tables) == 0
+    ):
         print("""
    ⚠️  WARNING: No tables in metadata!
    ➡️  Using --autogenerate will DROP ALL EXISTING TABLES in this schema!

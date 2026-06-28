@@ -119,10 +119,12 @@ def api_signal_reset():
         from services.signal_reset_service import trigger_manual_reset
 
         trigger_manual_reset()
-        return jsonify({
-            "status": "success",
-            "message": "Signal counters reset completed. Usage was archived before reset.",
-        })
+        return jsonify(
+            {
+                "status": "success",
+                "message": "Signal counters reset completed. Usage was archived before reset.",
+            }
+        )
     except Exception as e:
         logger.exception(f"Error in manual signal reset: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -185,6 +187,7 @@ def api_stats():
         # Database health
         try:
             from database.db_config import check_all_databases
+
             db_health = check_all_databases()
             for db_name, db_info in db_health.get("databases", {}).items():
                 services[f"db:{db_name}"] = {
@@ -197,6 +200,7 @@ def api_stats():
         # WebSocket proxy health (best-effort)
         try:
             from websocket_proxy import get_resource_health
+
             ws_health = get_resource_health()
             ws_pools = ws_health.get("active_pools", {})
             pool_count = ws_pools.get("count", 0) if isinstance(ws_pools, dict) else 0
@@ -212,6 +216,7 @@ def api_stats():
         # Redis cache health
         try:
             from utils.redis_cache import get_redis_cache
+
             redis = get_redis_cache()
             redis_health = redis.health()
             services["redis"] = {
@@ -224,6 +229,7 @@ def api_stats():
         try:
             # Ping the strategy engine process via its health endpoint
             import requests
+
             strategy_host = os.getenv("STRATEGY_HOST", "http://localhost:8001")
             resp = requests.get(f"{strategy_host}/api/v1/health", timeout=3)
             services["strategy_engine"] = {
@@ -534,7 +540,10 @@ def api_holiday_add():
         # Validate special session has open exchanges with timings
         if holiday_type == "SPECIAL_SESSION" and not open_exchanges:
             return jsonify(
-                {"status": "error", "message": "Special session requires at least one exchange with timings"}
+                {
+                    "status": "error",
+                    "message": "Special session requires at least one exchange with timings",
+                }
             ), 400
 
         holiday_date = datetime.strptime(date_str, "%Y-%m-%d").date()

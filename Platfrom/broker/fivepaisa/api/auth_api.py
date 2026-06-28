@@ -51,7 +51,8 @@ def authenticate_broker(
 
         # Get the shared httpx client
 
-        totp_response = request_with_circuit_breaker("POST", 
+        totp_response = request_with_circuit_breaker(
+            "POST",
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/TOTPLogin",
             json=totp_login_data,
             headers=headers,
@@ -78,7 +79,8 @@ def authenticate_broker(
 
         logger.debug(f"The Access Token request is :{json.dumps(access_token_data)}")
 
-        token_response = request_with_circuit_breaker("POST", 
+        token_response = request_with_circuit_breaker(
+            "POST",
             "https://Openapi.5paisa.com/VendorsAPI/Service1.svc/GetAccessToken",
             json=access_token_data,
             headers=headers,

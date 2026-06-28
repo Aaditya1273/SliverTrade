@@ -106,8 +106,8 @@ def init_signal_reset_scheduler():
                 daemon=True,
                 timezone=IST,
                 job_defaults={
-                    "coalesce": True,          # Only fire once if multiple missed
-                    "max_instances": 1,         # Never overlap
+                    "coalesce": True,  # Only fire once if multiple missed
+                    "max_instances": 1,  # Never overlap
                     "misfire_grace_time": 86400,  # Catch up within 24 hours
                 },
             )
@@ -123,9 +123,7 @@ def init_signal_reset_scheduler():
 
             _scheduler.start()
             _initialized = True
-            logger.info(
-                "[SignalReset] Monthly cron scheduled: 1st of each month at 00:01 IST"
-            )
+            logger.info("[SignalReset] Monthly cron scheduled: 1st of each month at 00:01 IST")
         except Exception as e:
             logger.exception(f"[SignalReset] Failed to initialise scheduler: {e}")
             raise

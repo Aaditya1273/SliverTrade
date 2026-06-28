@@ -55,7 +55,8 @@ def calculate_margin_api(positions, auth):
 
     try:
         # Make the request using the shared client
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://api.mstock.trade/openapi/typeb/margins/orders",
             headers=headers,
             content=payload,

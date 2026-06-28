@@ -80,7 +80,8 @@ def generate_access_token_with_totp(dhan_client_id, pin, totp):
         return None, "dhan_client_id, pin and totp are required"
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{AUTH_BASE_URL}/app/generateAccessToken",
             params={"dhanClientId": dhan_client_id, "pin": pin, "totp": totp},
         )
@@ -109,7 +110,8 @@ def renew_token(access_token, dhan_client_id):
         return None, "access_token and dhan_client_id are required"
 
     try:
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             f"{API_BASE_URL}/v2/RenewToken",
             headers={"access-token": access_token, "dhanClientId": dhan_client_id},
         )
@@ -146,7 +148,8 @@ def generate_consent(dhan_client_id=None):
         if not dhan_client_id:
             return None, "Dhan Client ID is required for generate-consent"
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{AUTH_BASE_URL}/app/generate-consent",
             params={"client_id": dhan_client_id},
             headers={"app_id": app_id, "app_secret": app_secret},
@@ -189,7 +192,8 @@ def consume_consent(token_id):
         if not app_id or not app_secret:
             return None, "BROKER_API_KEY and BROKER_API_SECRET are required"
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{AUTH_BASE_URL}/app/consumeApp-consent",
             params={"tokenId": token_id},
             headers={"app_id": app_id, "app_secret": app_secret},
@@ -226,7 +230,8 @@ def generate_partner_consent():
         if not partner_id or not partner_secret:
             return None, "BROKER_PARTNER_ID and BROKER_PARTNER_SECRET are required"
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{AUTH_BASE_URL}/partner/generate-consent",
             headers={"partner_id": partner_id, "partner_secret": partner_secret},
         )
@@ -268,7 +273,8 @@ def consume_partner_consent(token_id):
         if not partner_id or not partner_secret:
             return None, "BROKER_PARTNER_ID and BROKER_PARTNER_SECRET are required"
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{AUTH_BASE_URL}/partner/consume-consent",
             params={"tokenId": token_id},
             headers={"partner_id": partner_id, "partner_secret": partner_secret},
@@ -301,7 +307,8 @@ def set_static_ip(access_token, dhan_client_id, ip_address, ip_flag="PRIMARY"):
         return None, "access_token, dhan_client_id and ip_address are required"
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{API_BASE_URL}/v2/ip/setIP",
             headers={"access-token": access_token, "Content-Type": "application/json"},
             json={"dhanClientId": dhan_client_id, "ip": ip_address, "ipFlag": ip_flag},
@@ -329,7 +336,8 @@ def modify_static_ip(access_token, dhan_client_id, ip_address, ip_flag="PRIMARY"
         return None, "access_token, dhan_client_id and ip_address are required"
 
     try:
-        response = request_with_circuit_breaker("PUT", 
+        response = request_with_circuit_breaker(
+            "PUT",
             f"{API_BASE_URL}/v2/ip/modifyIP",
             headers={"access-token": access_token, "Content-Type": "application/json"},
             json={"dhanClientId": dhan_client_id, "ip": ip_address, "ipFlag": ip_flag},
@@ -354,7 +362,8 @@ def get_static_ip(access_token):
         return None, "access_token is required"
 
     try:
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             f"{API_BASE_URL}/v2/ip/getIP",
             headers={"access-token": access_token, "Accept": "application/json"},
         )
@@ -378,7 +387,8 @@ def get_user_profile(access_token):
         return None, "access_token is required"
 
     try:
-        response = request_with_circuit_breaker("GET", 
+        response = request_with_circuit_breaker(
+            "GET",
             f"{API_BASE_URL}/v2/profile",
             headers={"access-token": access_token, "Accept": "application/json"},
         )

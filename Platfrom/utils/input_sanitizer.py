@@ -216,6 +216,7 @@ def validate_ip_address(ip_string: str) -> bool:
     """
     try:
         import ipaddress
+
         ipaddress.ip_address(ip_string)
         return True
     except ValueError:

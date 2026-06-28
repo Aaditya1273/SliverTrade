@@ -61,6 +61,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 def _get_google_provider_cfg():
     """Fetch Google's OpenID Connect discovery document."""
     import requests
+
     try:
         resp = requests.get(GOOGLE_DISCOVERY_URL, timeout=10)
         return resp.json()
@@ -83,6 +84,7 @@ def _google_login_or_create_user(email, google_name) -> tuple:
 
     # Create a new user from Google profile info
     import secrets
+
     random_password = secrets.token_urlsafe(32)
     username = email.split("@")[0]
 
@@ -115,7 +117,9 @@ def google_login():
     Flask session for verification on the callback.
     """
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-        logger.warning("Google OAuth is not configured (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)")
+        logger.warning(
+            "Google OAuth is not configured (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)"
+        )
         return jsonify({"status": "error", "message": "Google OAuth is not configured"}), 503
 
     provider_cfg = _get_google_provider_cfg()
@@ -127,6 +131,7 @@ def google_login():
         return jsonify({"status": "error", "message": "Invalid provider config"}), 502
 
     import secrets
+
     state = secrets.token_urlsafe(32)
     session["google_oauth_state"] = state
 
@@ -138,6 +143,7 @@ def google_login():
         "state": state,
     }
     from urllib.parse import urlencode
+
     redirect_url = f"{authorization_endpoint}?{urlencode(params)}"
 
     logger.info(f"Initiating Google OAuth, redirecting to consent screen")
@@ -233,11 +239,14 @@ def google_callback():
 
     # 5. Log the user in by setting session
     session["user"] = user.username
-    logger.info(f"Google OAuth: login success for {user.username} ({'new' if is_new else 'existing'} user)")
+    logger.info(
+        f"Google OAuth: login success for {user.username} ({'new' if is_new else 'existing'} user)"
+    )
 
     # Log the login attempt
     try:
         from database.auth_db import log_login_attempt
+
         log_login_attempt(
             username=user.username,
             ip_address=get_real_ip(),
@@ -259,16 +268,20 @@ def google_config():
 
     Only returns the client ID — the secret is never exposed.
     """
-    return jsonify({
-        "status": "success",
-        "client_id": GOOGLE_CLIENT_ID,
-        "enabled": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "client_id": GOOGLE_CLIENT_ID,
+            "enabled": bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
+        }
+    )
 
 
 @auth_bp.errorhandler(429)
 def ratelimit_handler(e):
-    return jsonify(status="error", message="Too many login attempts. Please wait a minute and try again."), 429
+    return jsonify(
+        status="error", message="Too many login attempts. Please wait a minute and try again."
+    ), 429
 
 
 @auth_bp.route("/csrf-token", methods=["GET"])
@@ -333,60 +346,79 @@ def register():
         username = data.get("username")
         email = data.get("email")
         password = data.get("password")
-        
+
         # Phase 10: Terms acceptance
         accept_terms = data.get("accept_terms", False)
         accept_privacy = data.get("accept_privacy", False)
         accept_risk = data.get("accept_risk", False)
-        
+
         if not username or not email or not password:
             return jsonify({"status": "error", "message": "Missing required fields"}), 400
-        
+
         # Phase 10: Require all three checkboxes
         if not accept_terms or not accept_privacy or not accept_risk:
-            return jsonify({
-                "status": "error",
-                "message": "You must accept the Terms of Service, Privacy Policy, and risk acknowledgment to register"
-            }), 400
-        
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "You must accept the Terms of Service, Privacy Policy, and risk acknowledgment to register",
+                }
+            ), 400
+
         # Password strength validation
         if len(password) < 8:
-            return jsonify({"status": "error", "message": "Password must be at least 8 characters"}), 400
+            return jsonify(
+                {"status": "error", "message": "Password must be at least 8 characters"}
+            ), 400
         if not re.search(r"[A-Z]", password):
-            return jsonify({"status": "error", "message": "Password must contain at least one uppercase letter"}), 400
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "Password must contain at least one uppercase letter",
+                }
+            ), 400
         if not re.search(r"[0-9]", password):
-            return jsonify({"status": "error", "message": "Password must contain at least one number"}), 400
+            return jsonify(
+                {"status": "error", "message": "Password must contain at least one number"}
+            ), 400
         if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
-            return jsonify({"status": "error", "message": "Password must contain at least one special character"}), 400
-        
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "Password must contain at least one special character",
+                }
+            ), 400
+
         # Check if user already exists
         if User.query.filter_by(username=username).first():
             return jsonify({"status": "error", "message": "Username already exists"}), 409
         if User.query.filter_by(email=email).first():
             return jsonify({"status": "error", "message": "Email already registered"}), 409
-        
+
         # Create user with free plan
         from database.user_db import add_user
+
         user = add_user(username, email, password, is_admin=False)
-        
+
         if not user:
             return jsonify({"status": "error", "message": "Failed to create user"}), 500
-        
+
         # Phase 10: Store terms acceptance
         from database.user_db import db_session
         from datetime import datetime
         # TODO: Create terms_acceptance table to store acceptance with timestamp and IP
-        
+
         # Generate email verification token
         verification_token = secrets.token_urlsafe(32)
         # TODO: Store verification token and send email
-        
-        return jsonify({
-            "status": "success",
-            "message": "Registration successful. Please check your email to verify your account.",
-            "user_id": user.id
-        }), 201
-        
+
+        return jsonify(
+            {
+                "status": "success",
+                "message": "Registration successful. Please check your email to verify your account.",
+                "user_id": user.id,
+            }
+        ), 201
+
     except Exception as e:
         logger.exception("Registration error: %s", e)
         return jsonify({"status": "error", "message": "Registration failed"}), 500
@@ -419,12 +451,15 @@ def _try_resume_broker_session(username):
 
         # Validate token with a lightweight broker API call (funds)
         import importlib
+
         try:
             broker_module = importlib.import_module(f"broker.{broker}.api.funds")
             funds_data = broker_module.get_margin_data(auth_token)
             # get_margin_data returns {} on failure (doesn't raise) — treat empty as invalid
             if not funds_data:
-                logger.info(f"Broker token expired or invalid for {username} (empty funds response)")
+                logger.info(
+                    f"Broker token expired or invalid for {username} (empty funds response)"
+                )
                 return None
         except Exception as e:
             logger.info(f"Broker token validation failed for {username}: {e}")
@@ -434,6 +469,7 @@ def _try_resume_broker_session(username):
         logger.info(f"Resuming existing broker session for {username} (broker: {broker})")
 
         from utils.auth_utils import handle_auth_success
+
         # Call handle_auth_success for its side effects (session setup, DB upsert,
         # master contract loading) but ignore its response format — the login
         # endpoint must always return JSON for the React frontend's fetch() call.
@@ -454,12 +490,14 @@ def _try_resume_broker_session(username):
             return None
 
         logger.info(f"Session resume complete for {username}, redirecting to dashboard")
-        return jsonify({
-            "status": "success",
-            "message": "Broker session resumed",
-            "redirect": "/dashboard",
-            "broker": broker,
-        }), 200
+        return jsonify(
+            {
+                "status": "success",
+                "message": "Broker session resumed",
+                "redirect": "/dashboard",
+                "broker": broker,
+            }
+        ), 200
 
     except Exception as e:
         logger.error(f"Error trying to resume broker session: {e}", exc_info=True)
@@ -472,8 +510,12 @@ def _try_resume_broker_session(username):
 def login():
     # Handle POST requests first (for React SPA / AJAX login)
     if request.method == "POST":
-        logger.info(f"[LOGIN] POST from IP={get_real_ip()}, UA={request.headers.get('User-Agent', '')[:80]}")
-        logger.info(f"[LOGIN] Session state: user={session.get('user')}, logged_in={session.get('logged_in')}, broker={session.get('broker')}")
+        logger.info(
+            f"[LOGIN] POST from IP={get_real_ip()}, UA={request.headers.get('User-Agent', '')[:80]}"
+        )
+        logger.info(
+            f"[LOGIN] Session state: user={session.get('user')}, logged_in={session.get('logged_in')}, broker={session.get('broker')}"
+        )
 
         # Check if setup is required
         if find_user_by_username() is None:
@@ -512,25 +554,40 @@ def login():
 
             # Try to resume existing broker session (skip OAuth if token still valid)
             resumed = _try_resume_broker_session(username)
-            logger.info(f"[LOGIN] Resume result: {resumed is not None}, type={type(resumed).__name__ if resumed else 'None'}")
+            logger.info(
+                f"[LOGIN] Resume result: {resumed is not None}, type={type(resumed).__name__ if resumed else 'None'}"
+            )
             if resumed:
                 logger.info(f"[LOGIN] Returning resume response to frontend")
                 from database.auth_db import log_login_attempt
-                log_login_attempt(username, ip, ua, status="success",
-                                  login_type="resume", broker=session.get("broker"))
+
+                log_login_attempt(
+                    username,
+                    ip,
+                    ua,
+                    status="success",
+                    login_type="resume",
+                    broker=session.get("broker"),
+                )
                 return resumed
 
             # No valid broker session — redirect to broker login
             logger.info(f"[LOGIN] No valid broker session, redirecting to /broker")
             from database.auth_db import log_login_attempt
+
             log_login_attempt(username, ip, ua, status="success", login_type="password")
             return jsonify({"status": "success"}), 200
         else:
             from database.auth_db import log_login_attempt
-            log_login_attempt(username, get_real_ip(),
-                              request.headers.get("User-Agent", ""),
-                              status="failed", login_type="password",
-                              failure_reason="invalid_credentials")
+
+            log_login_attempt(
+                username,
+                get_real_ip(),
+                request.headers.get("User-Agent", ""),
+                status="failed",
+                login_type="password",
+                failure_reason="invalid_credentials",
+            )
             return jsonify({"status": "error", "message": "Invalid credentials"}), 401
 
     # Handle GET requests - redirect to React frontend
@@ -685,10 +742,14 @@ def reset_password():
             # could prove control of the email/TOTP, not because every
             # logged-in browser is theirs. Force re-login everywhere.
             from database.auth_db import clear_user_sessions
+
             clear_user_sessions(user.username)
-            socketio.emit("force_logout", {
-                "message": "Your password was reset. Please log in again with the new password.",
-            })
+            socketio.emit(
+                "force_logout",
+                {
+                    "message": "Your password was reset. Please log in again with the new password.",
+                },
+            )
 
             # Clear reset session data for security
             session.pop("reset_token", None)
@@ -785,10 +846,14 @@ def change_password():
             # in again with the new password. This prevents an attacker
             # who already has a valid cookie from continuing to hold it.
             from database.auth_db import clear_user_sessions
+
             clear_user_sessions(username)
-            socketio.emit("force_logout", {
-                "message": "Your password was changed. Please log in again with the new password.",
-            })
+            socketio.emit(
+                "force_logout",
+                {
+                    "message": "Your password was changed. Please log in again with the new password.",
+                },
+            )
             session.clear()
 
             return jsonify(
@@ -940,7 +1005,12 @@ def get_session_status():
         # Return 200 with authenticated: false instead of 401
         # This prevents unnecessary console errors in the browser
         return jsonify(
-            {"status": "success", "message": "Not authenticated", "authenticated": False, "logged_in": False}
+            {
+                "status": "success",
+                "message": "Not authenticated",
+                "authenticated": False,
+                "logged_in": False,
+            }
         ), 200
 
     # If session claims to be logged in with broker, validate the auth token exists
@@ -955,7 +1025,12 @@ def get_session_status():
             # Clear the stale session
             session.clear()
             return jsonify(
-                {"status": "success", "message": "Session expired", "authenticated": False, "logged_in": False}
+                {
+                    "status": "success",
+                    "message": "Session expired",
+                    "authenticated": False,
+                    "logged_in": False,
+                }
             ), 200
 
         # Get API key for the user
@@ -963,6 +1038,7 @@ def get_session_status():
 
         # Include active session count
         from database.auth_db import get_active_sessions
+
         active_count = len(get_active_sessions(session.get("user")))
 
         return jsonify(
@@ -979,6 +1055,7 @@ def get_session_status():
 
     # Include active session count
     from database.auth_db import get_active_sessions
+
     active_count = len(get_active_sessions(session.get("user")))
 
     return jsonify(
@@ -1001,15 +1078,18 @@ def active_sessions():
         return jsonify({"status": "error", "message": "Not authenticated"}), 401
 
     from database.auth_db import get_active_sessions
+
     sessions = get_active_sessions(session["user"])
     current_session_id = session.get("session_id")
 
-    return jsonify({
-        "status": "success",
-        "count": len(sessions),
-        "current_session_id": current_session_id,
-        "sessions": sessions,
-    })
+    return jsonify(
+        {
+            "status": "success",
+            "count": len(sessions),
+            "current_session_id": current_session_id,
+            "sessions": sessions,
+        }
+    )
 
 
 @auth_bp.route("/app-info", methods=["GET"])
@@ -1201,18 +1281,25 @@ def logout():
 
         # Clear ALL sessions for this user (logout means all devices)
         from database.auth_db import clear_user_sessions
+
         clear_user_sessions(username)
 
         # Notify all connected devices to logout immediately
-        socketio.emit("force_logout", {
-            "message": "You have been logged out from another device.",
-        })
+        socketio.emit(
+            "force_logout",
+            {
+                "message": "You have been logged out from another device.",
+            },
+        )
 
         # Update session count to 0
-        socketio.emit("active_sessions_update", {
-            "count": 0,
-            "sessions": [],
-        })
+        socketio.emit(
+            "active_sessions_update",
+            {
+                "count": 0,
+                "sessions": [],
+            },
+        )
 
         # Clear entire session to ensure complete logout
         session.clear()
@@ -1331,10 +1418,14 @@ def change_password_api():
         # again with the new password — typical 5-second flow — and any
         # attacker holding a stolen cookie is kicked out at the same moment.
         from database.auth_db import clear_user_sessions
+
         clear_user_sessions(username)
-        socketio.emit("force_logout", {
-            "message": "Your password was changed. Please log in again with the new password.",
-        })
+        socketio.emit(
+            "force_logout",
+            {
+                "message": "Your password was changed. Please log in again with the new password.",
+            },
+        )
         session.clear()
 
         return jsonify({"status": "success", "message": "Password changed successfully"})

@@ -65,10 +65,12 @@ class CacheInvalidationPublisher:
 
                 # Set socket options
                 self.socket.setsockopt(zmq.LINGER, 1000)  # 1 second linger on close
-                self.socket.setsockopt(zmq.SNDHWM, 100)   # High water mark
+                self.socket.setsockopt(zmq.SNDHWM, 100)  # High water mark
 
                 self._initialized = True
-                logger.debug(f"Cache invalidation publisher connected to tcp://{zmq_host}:{zmq_port}")
+                logger.debug(
+                    f"Cache invalidation publisher connected to tcp://{zmq_host}:{zmq_port}"
+                )
                 return True
 
             except Exception as e:
@@ -84,7 +86,9 @@ class CacheInvalidationPublisher:
             cache_type: Type of cache to invalidate (AUTH, FEED, or ALL)
         """
         if not self._ensure_initialized():
-            logger.warning(f"Cache invalidation skipped - publisher not initialized for user: {user_id}")
+            logger.warning(
+                f"Cache invalidation skipped - publisher not initialized for user: {user_id}"
+            )
             return False
 
         try:
@@ -97,10 +101,7 @@ class CacheInvalidationPublisher:
             }
 
             # Send as multipart message (topic + data)
-            self.socket.send_multipart([
-                topic.encode("utf-8"),
-                json.dumps(message).encode("utf-8")
-            ])
+            self.socket.send_multipart([topic.encode("utf-8"), json.dumps(message).encode("utf-8")])
 
             logger.info(f"Published cache invalidation for user: {user_id}, type: {cache_type}")
             return True

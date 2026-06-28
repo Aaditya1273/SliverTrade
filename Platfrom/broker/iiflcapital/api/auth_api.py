@@ -48,7 +48,9 @@ def authenticate_broker(auth_code: str, client_id: str):
         checksum = _generate_checksum(client_id, auth_code, app_secret)
         payload = {"checkSum": checksum}
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/getusersession", json=payload, headers=headers)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/getusersession", json=payload, headers=headers
+        )
 
         try:
             data = response.json()

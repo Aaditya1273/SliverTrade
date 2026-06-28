@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 def transform_margin_positions(positions):
     """
     Transform SilverTrade AI margin position format to Nubra margin format.
-    
+
     Nubra Margin API Payload Structure:
     {
         "with_portfolio": true,
@@ -35,7 +35,7 @@ def transform_margin_positions(positions):
     """
     transformed_orders = []
     skipped_positions = []
-    
+
     # We need to determine the exchange for the payload.
     # Assuming all positions in the basket are for the same exchange segment for now.
     # If mixed, we'll take the first one found.
@@ -45,10 +45,10 @@ def transform_margin_positions(positions):
         try:
             symbol = position["symbol"]
             exchange = position["exchange"]
-            
+
             if not primary_exchange:
                 primary_exchange = exchange
-            
+
             # Get the token for the symbol
             token = get_token(symbol, exchange)
 
@@ -64,7 +64,7 @@ def transform_margin_positions(positions):
                 logger.warning(f"Invalid token format for {symbol} ({exchange}): '{token_str}'")
                 skipped_positions.append(f"{symbol} ({exchange}) - invalid token: {token_str}")
                 continue
-                
+
             ref_id = int(float(token_str))
 
             # Map fields
@@ -73,7 +73,7 @@ def transform_margin_positions(positions):
             pricetype = position.get("pricetype", "MARKET")
             price_type = map_price_type(pricetype)
             order_type = map_order_type(pricetype)
-            
+
             price = float(position.get("price", 0))
             price_in_paise = int(round(price * 100)) if price else 0
 
@@ -85,7 +85,7 @@ def transform_margin_positions(positions):
                 "order_delivery_type": delivery_type,
                 "price_type": price_type,
                 "order_price": price_in_paise,
-                "order_type": order_type
+                "order_type": order_type,
             }
 
             transformed_orders.append(nubra_order)
@@ -109,25 +109,27 @@ def transform_margin_positions(positions):
 
     # Get default basket parameters from first order
     first_order = transformed_orders[0]
-    
+
     # Construct the final Nubra payload structure
     payload_data = {
         "with_portfolio": True,  # Critical for accurate calculation
         "with_legs": False,
-        "is_basket": True,       # Always treat as basket for margin batch calculation
+        "is_basket": True,  # Always treat as basket for margin batch calculation
         "order_req": {
             "exchange": primary_exchange if primary_exchange else "NSE",
             "orders": transformed_orders,
             # basket_params is REQUIRED when is_basket is true
             "basket_params": {
                 "order_side": first_order.get("order_side", "ORDER_SIDE_BUY"),
-                "order_delivery_type": first_order.get("order_delivery_type", "ORDER_DELIVERY_TYPE_CNC"),
+                "order_delivery_type": first_order.get(
+                    "order_delivery_type", "ORDER_DELIVERY_TYPE_CNC"
+                ),
                 "price_type": first_order.get("price_type", "MARKET"),
-                "multiplier": 1  # Default multiplier
-            }
-        }
+                "multiplier": 1,  # Default multiplier
+            },
+        },
     }
-    
+
     return payload_data
 
 
@@ -137,7 +139,7 @@ def map_product_type(product):
     """
     mapping = {
         "CNC": "ORDER_DELIVERY_TYPE_CNC",
-        "NRML": "ORDER_DELIVERY_TYPE_CNC", # NRML maps to CNC/Margin
+        "NRML": "ORDER_DELIVERY_TYPE_CNC",  # NRML maps to CNC/Margin
         "MIS": "ORDER_DELIVERY_TYPE_IDAY",
     }
     return mapping.get(product.upper(), "ORDER_DELIVERY_TYPE_IDAY")
@@ -197,10 +199,10 @@ def parse_margin_response(response_data):
     try:
         if not response_data or not isinstance(response_data, dict):
             return {"status": "error", "message": "Invalid response from broker"}
-        
+
         # Nubra sometimes returns error code in response
         if response_data.get("code"):
-             return {
+            return {
                 "status": "error",
                 "message": response_data.get("message", "Unknown error from Nubra"),
             }
@@ -211,7 +213,7 @@ def parse_margin_response(response_data):
         total_margin_required = float(response_data.get("total_margin", 0))
         span_margin = float(response_data.get("span", 0))
         exposure_margin = float(response_data.get("exposure", 0))
-        
+
         # Return standardized format match SilverTrade AI API specification
         return {
             "status": "success",
@@ -225,4 +227,3 @@ def parse_margin_response(response_data):
     except Exception as e:
         logger.error(f"Error parsing margin response: {e}")
         return {"status": "error", "message": f"Failed to parse margin response: {str(e)}"}
-

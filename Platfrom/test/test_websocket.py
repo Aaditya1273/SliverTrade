@@ -14,9 +14,7 @@ import websockets
 
 # Configuration
 WS_URL = "ws://localhost:8765"  # Update if your server is on a different host/port
-API_KEY = (
-    "918d504f250e6f7d6b533b245a46009d3f3b8cad8e6314c8b45ae8a35b972d8a"  # Your SilverTrade AI API key
-)
+API_KEY = "918d504f250e6f7d6b533b245a46009d3f3b8cad8e6314c8b45ae8a35b972d8a"  # Your SilverTrade AI API key
 
 # Test symbols
 RELIANCE_NSE = {"exchange": "MCX", "symbol": "GOLDPETAL30MAY25FUT"}

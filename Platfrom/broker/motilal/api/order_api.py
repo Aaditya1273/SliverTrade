@@ -122,14 +122,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -309,7 +309,9 @@ def place_order_api(data, auth):
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = request_with_circuit_breaker("POST", f"{base_url}/rest/trans/v1/placeorder", headers=headers, content=payload)
+    response = request_with_circuit_breaker(
+        "POST", f"{base_url}/rest/trans/v1/placeorder", headers=headers, content=payload
+    )
 
     # Add status attribute to make response compatible with http.client response
     # as the rest of the codebase expects .status instead of .status_code
@@ -532,8 +534,8 @@ def cancel_order(orderid, auth):
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = request_with_circuit_breaker("POST", 
-        f"{base_url}/rest/trans/v1/cancelorder", headers=headers, content=payload
+    response = request_with_circuit_breaker(
+        "POST", f"{base_url}/rest/trans/v1/cancelorder", headers=headers, content=payload
     )
 
     # Add status attribute for compatibility with the existing codebase
@@ -666,8 +668,8 @@ def modify_order(data, auth):
     base_url = os.getenv("BROKER_API_URL", "https://openapi.motilaloswal.com")
 
     # Make the request using the shared client
-    response = request_with_circuit_breaker("POST", 
-        f"{base_url}/rest/trans/v2/modifyorder", headers=headers, content=payload
+    response = request_with_circuit_breaker(
+        "POST", f"{base_url}/rest/trans/v2/modifyorder", headers=headers, content=payload
     )
 
     # Add status attribute for compatibility with the existing codebase

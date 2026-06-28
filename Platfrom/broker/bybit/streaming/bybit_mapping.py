@@ -38,9 +38,9 @@ class BybitModeMapper:
     """Maps SilverTrade AI subscription mode integers to Bybit stream topics."""
 
     MODE_TOPICS = {
-        1: "tickers",              # LTP → tickers stream
-        2: "tickers",              # Quote → tickers stream (includes bid/ask)
-        3: "orderbook.50",         # Depth → orderbook.50 (50 levels)
+        1: "tickers",  # LTP → tickers stream
+        2: "tickers",  # Quote → tickers stream (includes bid/ask)
+        3: "orderbook.50",  # Depth → orderbook.50 (50 levels)
     }
 
     @staticmethod

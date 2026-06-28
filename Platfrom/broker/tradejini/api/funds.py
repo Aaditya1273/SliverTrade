@@ -41,7 +41,9 @@ def get_margin_data(auth_token):
         headers = {"Authorization": f"Bearer {auth_header}", "Content-Type": "application/json"}
 
         # Make request to get limits
-        response = request_with_circuit_breaker("GET", "https://api.tradejini.com/v2/api/oms/limits", headers=headers)
+        response = request_with_circuit_breaker(
+            "GET", "https://api.tradejini.com/v2/api/oms/limits", headers=headers
+        )
 
         # Print response for debugging
         logger.info(f"Tradejini Funds Response: {response.status_code}")

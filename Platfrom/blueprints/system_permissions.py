@@ -48,9 +48,10 @@ def get_permission_checks():
     # with "Error: .env file not found." (See issue #960.) On Docker we
     # therefore expect the file to be world-readable (0o644); on bare-metal
     # gunicorn deployments it is owned by www-data and stays at 0o600.
-    is_docker = os.path.exists("/.dockerenv") or os.environ.get(
-        "APP_MODE", ""
-    ).strip().strip("'\"") == "standalone"
+    is_docker = (
+        os.path.exists("/.dockerenv")
+        or os.environ.get("APP_MODE", "").strip().strip("'\"") == "standalone"
+    )
     env_expected_mode = 0o644 if is_docker else 0o600
 
     # Define expected permissions for each path

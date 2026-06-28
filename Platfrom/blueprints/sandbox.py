@@ -3,7 +3,17 @@ import io
 import os
 from datetime import datetime
 
-from flask import Blueprint, Response, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import (
+    Blueprint,
+    Response,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 from database.sandbox_db import (
     SandboxFunds,
@@ -886,7 +896,7 @@ def sanitize_csv_value(value):
 
     # Check if the value starts with potentially dangerous characters
     # Note: '-' is excluded because negative numbers are common in financial data
-    if str_value and str_value[0] in ('=', '+', '@', '\t', '\r'):
+    if str_value and str_value[0] in ("=", "+", "@", "\t", "\r"):
         return "'" + str_value
 
     return str_value
@@ -1067,7 +1077,9 @@ def export_daily_pnl():
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         response = Response(csv_data, mimetype="text/csv")
-        response.headers["Content-Disposition"] = f'attachment; filename=sandbox_daily_pnl_{timestamp}.csv'
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=sandbox_daily_pnl_{timestamp}.csv"
+        )
         return response
 
     except Exception as e:
@@ -1097,7 +1109,9 @@ def export_positions():
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         response = Response(csv_data, mimetype="text/csv")
-        response.headers["Content-Disposition"] = f'attachment; filename=sandbox_positions_{timestamp}.csv'
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=sandbox_positions_{timestamp}.csv"
+        )
         return response
 
     except Exception as e:
@@ -1127,7 +1141,9 @@ def export_holdings():
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         response = Response(csv_data, mimetype="text/csv")
-        response.headers["Content-Disposition"] = f'attachment; filename=sandbox_holdings_{timestamp}.csv'
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=sandbox_holdings_{timestamp}.csv"
+        )
         return response
 
     except Exception as e:
@@ -1157,7 +1173,9 @@ def export_trades():
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         response = Response(csv_data, mimetype="text/csv")
-        response.headers["Content-Disposition"] = f'attachment; filename=sandbox_trades_{timestamp}.csv'
+        response.headers["Content-Disposition"] = (
+            f"attachment; filename=sandbox_trades_{timestamp}.csv"
+        )
         return response
 
     except Exception as e:

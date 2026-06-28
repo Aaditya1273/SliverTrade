@@ -68,7 +68,9 @@ def authenticate_broker(auth_code=None, state=None):
         # Get the shared httpx client
 
         # Exchange authorization code for access token
-        response = request_with_circuit_breaker("POST", TOKEN_ENDPOINT, headers=headers, content=urlencode(data))
+        response = request_with_circuit_breaker(
+            "POST", TOKEN_ENDPOINT, headers=headers, content=urlencode(data)
+        )
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code

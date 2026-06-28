@@ -211,11 +211,17 @@ def get_security_settings():
         db_session.commit()
 
     result = {
-        "auto_ban_enabled": bool(settings.security_auto_ban_enabled) if settings.security_auto_ban_enabled is not None else False,
+        "auto_ban_enabled": bool(settings.security_auto_ban_enabled)
+        if settings.security_auto_ban_enabled is not None
+        else False,
         "404_threshold": settings.security_404_threshold or 100,
-        "404_ban_duration": settings.security_404_ban_duration if settings.security_404_ban_duration is not None else 0,
+        "404_ban_duration": settings.security_404_ban_duration
+        if settings.security_404_ban_duration is not None
+        else 0,
         "api_threshold": settings.security_api_threshold or 100,
-        "api_ban_duration": settings.security_api_ban_duration if settings.security_api_ban_duration is not None else 0,
+        "api_ban_duration": settings.security_api_ban_duration
+        if settings.security_api_ban_duration is not None
+        else 0,
         "repeat_offender_limit": settings.security_repeat_offender_limit or 2,
     }
 
@@ -261,6 +267,7 @@ def set_security_settings(
 
 class UserSettings(Base):
     """Per-user trading settings for the UI."""
+
     __tablename__ = "user_settings"
     id = Column(Integer, primary_key=True)
     username = Column(String(80), unique=True, nullable=False, index=True)
@@ -307,13 +314,18 @@ def get_user_settings(username: str) -> dict:
 
         return {
             "default_exchange": settings.default_exchange or defaults["default_exchange"],
-            "default_product_type": settings.default_product_type or defaults["default_product_type"],
+            "default_product_type": settings.default_product_type
+            or defaults["default_product_type"],
             "default_order_type": settings.default_order_type or defaults["default_order_type"],
             "risk_per_trade_pct": settings.risk_per_trade_pct or defaults["risk_per_trade_pct"],
-            "min_signal_confidence": settings.min_signal_confidence or defaults["min_signal_confidence"],
+            "min_signal_confidence": settings.min_signal_confidence
+            or defaults["min_signal_confidence"],
             "max_open_positions": settings.max_open_positions or defaults["max_open_positions"],
-            "daily_loss_limit_pct": settings.daily_loss_limit_pct or defaults["daily_loss_limit_pct"],
-            "auto_execute": bool(settings.auto_execute) if settings.auto_execute is not None else False,
+            "daily_loss_limit_pct": settings.daily_loss_limit_pct
+            or defaults["daily_loss_limit_pct"],
+            "auto_execute": bool(settings.auto_execute)
+            if settings.auto_execute is not None
+            else False,
         }
     except Exception as e:
         logger.error(f"Failed to get user settings for {username}: {e}")

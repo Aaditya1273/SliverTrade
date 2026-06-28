@@ -31,6 +31,7 @@ from database.token_db import get_br_symbol
 
 import sys
 import os as _os
+
 sys.path.append(_os.path.join(_os.path.dirname(__file__), "../../../"))
 
 from websocket_proxy.base_adapter import BaseBrokerWebSocketAdapter
@@ -132,25 +133,30 @@ class BybitWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
         with self._lock:
             self.subscriptions[corr_id] = {
-                "symbol":     symbol,
-                "exchange":   exchange,
-                "br_symbol":  br_symbol,
-                "mode":       mode,
+                "symbol": symbol,
+                "exchange": exchange,
+                "br_symbol": br_symbol,
+                "mode": mode,
                 "depth_level": depth_level,
-                "topic":      topic,
+                "topic": topic,
             }
 
         if self.ws_client:
             try:
                 self.ws_client.subscribe([topic])
-                self.logger.info("Subscribed: %s.%s mode=%s topic=%s", symbol, exchange, mode, topic)
+                self.logger.info(
+                    "Subscribed: %s.%s mode=%s topic=%s", symbol, exchange, mode, topic
+                )
             except Exception as exc:
                 self.logger.error("subscribe error %s.%s: %s", symbol, exchange, exc)
                 return self._create_error_response("SUBSCRIPTION_ERROR", str(exc))
 
         return self._create_success_response(
             f"Subscription requested for {symbol}.{exchange}",
-            symbol=symbol, exchange=exchange, mode=mode, topic=topic,
+            symbol=symbol,
+            exchange=exchange,
+            mode=mode,
+            topic=topic,
         )
 
     def unsubscribe(self, symbol: str, exchange: str, mode: int = 2) -> dict[str, Any]:
@@ -160,20 +166,28 @@ class BybitWebSocketAdapter(BaseBrokerWebSocketAdapter):
         with self._lock:
             stored = self.subscriptions.pop(corr_id, None)
             br_symbol = (stored or {}).get("br_symbol") or symbol
-            topic = (stored or {}).get("topic") or BybitModeMapper.get_topic_for_symbol(br_symbol, mode)
+            topic = (stored or {}).get("topic") or BybitModeMapper.get_topic_for_symbol(
+                br_symbol, mode
+            )
 
             remaining = list(self.subscriptions.values())
             remaining_for_topic = [s for s in remaining if s.get("topic") == topic]
 
             cache_key = f"{symbol}_{exchange}"
-            if not any(s.get("symbol") == symbol and s.get("exchange") == exchange for s in remaining):
+            if not any(
+                s.get("symbol") == symbol and s.get("exchange") == exchange for s in remaining
+            ):
                 self.last_values.pop(cache_key, None)
 
             if not remaining:
                 self.logger.info("No subscriptions remaining — disconnecting.")
                 self.disconnect()
-                return self._create_success_response(f"Unsubscribed from {symbol}.{exchange}",
-                                                     symbol=symbol, exchange=exchange, mode=mode)
+                return self._create_success_response(
+                    f"Unsubscribed from {symbol}.{exchange}",
+                    symbol=symbol,
+                    exchange=exchange,
+                    mode=mode,
+                )
 
         if not remaining_for_topic and self.ws_client:
             self.ws_client.unsubscribe([topic])
@@ -240,29 +254,31 @@ class BybitWebSocketAdapter(BaseBrokerWebSocketAdapter):
             return
 
         base_data = {
-            "ltp":           float(data.get("lastPrice", 0)),
-            "open":          float(data.get("open24h", 0)),
-            "high":          float(data.get("high24h", 0)),
-            "low":           float(data.get("low24h", 0)),
-            "close":         float(data.get("lastPrice", 0)),
-            "volume":        float(data.get("volume24h", 0)),
-            "oi":            float(data.get("openInterest", 0)),
-            "bid_price":     float(data.get("bid1Price", 0)),
-            "ask_price":     float(data.get("ask1Price", 0)),
-            "bid_qty":       float(data.get("bid1Size", 0)),
-            "ask_qty":       float(data.get("ask1Size", 0)),
+            "ltp": float(data.get("lastPrice", 0)),
+            "open": float(data.get("open24h", 0)),
+            "high": float(data.get("high24h", 0)),
+            "low": float(data.get("low24h", 0)),
+            "close": float(data.get("lastPrice", 0)),
+            "volume": float(data.get("volume24h", 0)),
+            "oi": float(data.get("openInterest", 0)),
+            "bid_price": float(data.get("bid1Price", 0)),
+            "ask_price": float(data.get("ask1Price", 0)),
+            "bid_qty": float(data.get("bid1Size", 0)),
+            "ask_qty": float(data.get("ask1Size", 0)),
             "average_price": 0,
-            "oi_change":     0,
+            "oi_change": 0,
         }
 
         for subscription in subscriptions:
             market_data = dict(base_data)
-            market_data.update({
-                "symbol":    subscription["symbol"],
-                "exchange":  subscription["exchange"],
-                "mode":      subscription["mode"],
-                "timestamp": ts,
-            })
+            market_data.update(
+                {
+                    "symbol": subscription["symbol"],
+                    "exchange": subscription["exchange"],
+                    "mode": subscription["mode"],
+                    "timestamp": ts,
+                }
+            )
             topic_key = f"{subscription['exchange']}_{subscription['symbol']}_LTP"
             self.publish_market_data(topic_key, market_data)
 
@@ -296,12 +312,14 @@ class BybitWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
         for subscription in subscriptions:
             market_data = dict(base_data)
-            market_data.update({
-                "symbol":    subscription["symbol"],
-                "exchange":  subscription["exchange"],
-                "mode":      subscription["mode"],
-                "timestamp": ts,
-            })
+            market_data.update(
+                {
+                    "symbol": subscription["symbol"],
+                    "exchange": subscription["exchange"],
+                    "mode": subscription["mode"],
+                    "timestamp": ts,
+                }
+            )
             topic_key = f"{subscription['exchange']}_{subscription['symbol']}_DEPTH"
             self.publish_market_data(topic_key, market_data)
 

@@ -71,7 +71,9 @@ def cleanup_websocket_server():
     """
     global _websocket_proxy_instance, _websocket_thread
 
-    if _websocket_proxy_instance is None and (_websocket_thread is None or not _websocket_thread.is_alive()):
+    if _websocket_proxy_instance is None and (
+        _websocket_thread is None or not _websocket_thread.is_alive()
+    ):
         logger.debug("WebSocket server already cleaned up — skipping")
         return
 

@@ -37,6 +37,7 @@ _circuit_breaker_gauge = None
 _ws_connections_gauge = None
 _db_pool_gauge = None
 
+
 def _register_custom_metrics():
     """Register custom Prometheus metrics.  Called once during init_metrics."""
     global _broker_requests, _broker_latency, _circuit_breaker_gauge
@@ -54,7 +55,23 @@ def _register_custom_metrics():
             "broker_api_latency_seconds",
             "Broker API request latency in seconds",
             ["broker", "method"],
-            buckets=(.005, .01, .025, .05, .075, .1, .25, .5, .75, 1.0, 2.5, 5.0, 7.5, 10.0, float("inf")),
+            buckets=(
+                0.005,
+                0.01,
+                0.025,
+                0.05,
+                0.075,
+                0.1,
+                0.25,
+                0.5,
+                0.75,
+                1.0,
+                2.5,
+                5.0,
+                7.5,
+                10.0,
+                float("inf"),
+            ),
         )
         _circuit_breaker_gauge = Gauge(
             "circuit_breaker_state",

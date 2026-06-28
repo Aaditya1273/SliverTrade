@@ -40,7 +40,9 @@ def get_margin_data(auth_token):
         logger.info(f"Fetching margin data for user: {userid}")
 
         # Send POST request using shared httpx client
-        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers, timeout=30)
+        response = request_with_circuit_breaker(
+            "POST", url, json=payload, headers=headers, timeout=30
+        )
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code

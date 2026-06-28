@@ -55,14 +55,16 @@ def emit_analyzer_error(request_data: dict[str, Any], error_message: str) -> dic
         del analyzer_request["apikey"]
     analyzer_request["api_type"] = "splitorder"
 
-    bus.publish(AnalyzerErrorEvent(
-        mode="analyze",
-        api_type="splitorder",
-        request_data=analyzer_request,
-        response_data=error_response,
-        error_message=error_message,
-        api_key=request_data.get("apikey", ""),
-    ))
+    bus.publish(
+        AnalyzerErrorEvent(
+            mode="analyze",
+            api_type="splitorder",
+            request_data=analyzer_request,
+            response_data=error_response,
+            error_message=error_message,
+            api_key=request_data.get("apikey", ""),
+        )
+    )
 
     return error_response
 
@@ -172,14 +174,16 @@ def split_order_with_auth(
             if get_analyze_mode():
                 return False, emit_analyzer_error(original_data, error_message), 400
             error_response = {"status": "error", "message": error_message}
-            bus.publish(OrderFailedEvent(
-                mode="live",
-                api_type="splitorder",
-                request_data=split_request_data,
-                response_data=error_response,
-                error_message=error_message,
-                api_key=original_data.get("apikey", ""),
-            ))
+            bus.publish(
+                OrderFailedEvent(
+                    mode="live",
+                    api_type="splitorder",
+                    request_data=split_request_data,
+                    response_data=error_response,
+                    error_message=error_message,
+                    api_key=original_data.get("apikey", ""),
+                )
+            )
             return False, error_response, 400
 
         # Calculate number of full-size orders and remaining quantity
@@ -193,14 +197,16 @@ def split_order_with_auth(
             if get_analyze_mode():
                 return False, emit_analyzer_error(original_data, error_message), 400
             error_response = {"status": "error", "message": error_message}
-            bus.publish(OrderFailedEvent(
-                mode="live",
-                api_type="splitorder",
-                request_data=split_request_data,
-                response_data=error_response,
-                error_message=error_message,
-                api_key=original_data.get("apikey", ""),
-            ))
+            bus.publish(
+                OrderFailedEvent(
+                    mode="live",
+                    api_type="splitorder",
+                    request_data=split_request_data,
+                    response_data=error_response,
+                    error_message=error_message,
+                    api_key=original_data.get("apikey", ""),
+                )
+            )
             return False, error_response, 400
 
     except ValueError:
@@ -208,14 +214,16 @@ def split_order_with_auth(
         if get_analyze_mode():
             return False, emit_analyzer_error(original_data, error_message), 400
         error_response = {"status": "error", "message": error_message}
-        bus.publish(OrderFailedEvent(
-            mode="live",
-            api_type="splitorder",
-            request_data=split_request_data,
-            response_data=error_response,
-            error_message=error_message,
-            api_key=original_data.get("apikey", ""),
-        ))
+        bus.publish(
+            OrderFailedEvent(
+                mode="live",
+                api_type="splitorder",
+                request_data=split_request_data,
+                response_data=error_response,
+                error_message=error_message,
+                api_key=original_data.get("apikey", ""),
+            )
+        )
         return False, error_response, 400
 
     # If in analyze mode, route to sandbox for virtual trading
@@ -237,6 +245,7 @@ def split_order_with_auth(
         prefetched_quote = None
         try:
             from services.quotes_service import get_quotes
+
             success_q, q_response, _ = get_quotes(
                 symbol=split_data.get("symbol"),
                 exchange=split_data.get("exchange"),
@@ -249,7 +258,9 @@ def split_order_with_auth(
                     f"LTP={prefetched_quote.get('ltp')}"
                 )
         except Exception as e:
-            logger.debug(f"Quote pre-fetch failed for split order, falling back to per-order fetch: {e}")
+            logger.debug(
+                f"Quote pre-fetch failed for split order, falling back to per-order fetch: {e}"
+            )
 
         # Place full-size orders in sandbox
         for i in range(num_full_orders):
@@ -259,7 +270,9 @@ def split_order_with_auth(
 
             # Place order in sandbox with pre-fetched quote
             success, response, status_code = sandbox_place_order(
-                order_data, api_key, {"apikey": api_key, "order_type": "split"},
+                order_data,
+                api_key,
+                {"apikey": api_key, "order_type": "split"},
                 prefetched_quote=prefetched_quote,
             )
 
@@ -289,7 +302,9 @@ def split_order_with_auth(
             order_data["apikey"] = api_key
 
             success, response, status_code = sandbox_place_order(
-                order_data, api_key, {"apikey": api_key, "order_type": "split"},
+                order_data,
+                api_key,
+                {"apikey": api_key, "order_type": "split"},
                 prefetched_quote=prefetched_quote,
             )
 
@@ -325,24 +340,26 @@ def split_order_with_auth(
         analyzer_request["api_type"] = "splitorder"
 
         successful_orders = sum(1 for r in analyze_results if r.get("status") == "success")
-        bus.publish(SplitCompletedEvent(
-            mode="analyze",
-            api_type="splitorder",
-            strategy=split_data.get("strategy", ""),
-            symbol=split_data.get("symbol", ""),
-            exchange=split_data.get("exchange", ""),
-            action=split_data.get("action", ""),
-            pricetype=split_data.get("pricetype", ""),
-            product=split_data.get("product", ""),
-            total_quantity=total_quantity,
-            split_size=split_size,
-            results=analyze_results,
-            successful=successful_orders,
-            total=len(analyze_results),
-            request_data=analyzer_request,
-            response_data=response_data,
-            api_key=split_data.get("apikey", ""),
-        ))
+        bus.publish(
+            SplitCompletedEvent(
+                mode="analyze",
+                api_type="splitorder",
+                strategy=split_data.get("strategy", ""),
+                symbol=split_data.get("symbol", ""),
+                exchange=split_data.get("exchange", ""),
+                action=split_data.get("action", ""),
+                pricetype=split_data.get("pricetype", ""),
+                product=split_data.get("product", ""),
+                total_quantity=total_quantity,
+                split_size=split_size,
+                results=analyze_results,
+                successful=successful_orders,
+                total=len(analyze_results),
+                request_data=analyzer_request,
+                response_data=response_data,
+                api_key=split_data.get("apikey", ""),
+            )
+        )
 
         return True, response_data, 200
 
@@ -350,14 +367,16 @@ def split_order_with_auth(
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}
-        bus.publish(OrderFailedEvent(
-            mode="live",
-            api_type="splitorder",
-            request_data=split_request_data,
-            response_data=error_response,
-            error_message="Broker-specific module not found",
-            api_key=original_data.get("apikey", ""),
-        ))
+        bus.publish(
+            OrderFailedEvent(
+                mode="live",
+                api_type="splitorder",
+                request_data=split_request_data,
+                response_data=error_response,
+                error_message="Broker-specific module not found",
+                api_key=original_data.get("apikey", ""),
+            )
+        )
         return False, error_response, 404
 
     # Process orders sequentially with rate limiting
@@ -374,10 +393,12 @@ def split_order_with_auth(
         result = place_single_order(order_data, broker_module, auth_token, i + 1, total_orders)
         results.append(result)
         if result.get("status") == "success" and result.get("orderid"):
-            successful_order_ids.append({
-                "orderid": result["orderid"],
-                "order_num": result.get("order_num", 0),
-            })
+            successful_order_ids.append(
+                {
+                    "orderid": result["orderid"],
+                    "order_num": result.get("order_num", 0),
+                }
+            )
 
     # Place remaining quantity order if any
     if remaining_qty > 0:
@@ -390,10 +411,12 @@ def split_order_with_auth(
         )
         results.append(result)
         if result.get("status") == "success" and result.get("orderid"):
-            successful_order_ids.append({
-                "orderid": result["orderid"],
-                "order_num": result.get("order_num", 0),
-            })
+            successful_order_ids.append(
+                {
+                    "orderid": result["orderid"],
+                    "order_num": result.get("order_num", 0),
+                }
+            )
 
     # If ALL orders failed, return error (no reversal needed)
     total_errors = sum(1 for r in results if r.get("status") == "error")
@@ -405,24 +428,26 @@ def split_order_with_auth(
             "split_size": split_size,
             "results": results,
         }
-        bus.publish(SplitCompletedEvent(
-            mode="live",
-            api_type="splitorder",
-            strategy=split_data.get("strategy", ""),
-            symbol=split_data.get("symbol", ""),
-            exchange=split_data.get("exchange", ""),
-            action=split_data.get("action", ""),
-            pricetype=split_data.get("pricetype", ""),
-            product=split_data.get("product", ""),
-            total_quantity=total_quantity,
-            split_size=split_size,
-            results=results,
-            successful=0,
-            total=len(results),
-            request_data=split_request_data,
-            response_data=response_data,
-            api_key=original_data.get("apikey", ""),
-        ))
+        bus.publish(
+            SplitCompletedEvent(
+                mode="live",
+                api_type="splitorder",
+                strategy=split_data.get("strategy", ""),
+                symbol=split_data.get("symbol", ""),
+                exchange=split_data.get("exchange", ""),
+                action=split_data.get("action", ""),
+                pricetype=split_data.get("pricetype", ""),
+                product=split_data.get("product", ""),
+                total_quantity=total_quantity,
+                split_size=split_size,
+                results=results,
+                successful=0,
+                total=len(results),
+                request_data=split_request_data,
+                response_data=response_data,
+                api_key=original_data.get("apikey", ""),
+            )
+        )
         return False, response_data, 400
 
     # Log the split order results
@@ -434,24 +459,26 @@ def split_order_with_auth(
     }
 
     successful_orders = sum(1 for r in results if r.get("status") == "success")
-    bus.publish(SplitCompletedEvent(
-        mode="live",
-        api_type="splitorder",
-        strategy=split_data.get("strategy", ""),
-        symbol=split_data.get("symbol", ""),
-        exchange=split_data.get("exchange", ""),
-        action=split_data.get("action", ""),
-        pricetype=split_data.get("pricetype", ""),
-        product=split_data.get("product", ""),
-        total_quantity=total_quantity,
-        split_size=split_size,
-        results=results,
-        successful=successful_orders,
-        total=len(results),
-        request_data=split_request_data,
-        response_data=response_data,
-        api_key=original_data.get("apikey", ""),
-    ))
+    bus.publish(
+        SplitCompletedEvent(
+            mode="live",
+            api_type="splitorder",
+            strategy=split_data.get("strategy", ""),
+            symbol=split_data.get("symbol", ""),
+            exchange=split_data.get("exchange", ""),
+            action=split_data.get("action", ""),
+            pricetype=split_data.get("pricetype", ""),
+            product=split_data.get("product", ""),
+            total_quantity=total_quantity,
+            split_size=split_size,
+            results=results,
+            successful=successful_orders,
+            total=len(results),
+            request_data=split_request_data,
+            response_data=response_data,
+            api_key=original_data.get("apikey", ""),
+        )
+    )
 
     return True, response_data, 200
 

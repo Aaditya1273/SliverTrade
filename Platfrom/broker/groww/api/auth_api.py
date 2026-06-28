@@ -57,7 +57,9 @@ def get_access_token_via_checksum(api_key, api_secret):
         endpoint = "https://api.groww.in/v1/token/api/access"
 
         try:
-            response = request_with_circuit_breaker("POST", endpoint, headers=headers, json=payload, timeout=30)
+            response = request_with_circuit_breaker(
+                "POST", endpoint, headers=headers, json=payload, timeout=30
+            )
 
             if response.status_code == 200:
                 response_data = response.json()

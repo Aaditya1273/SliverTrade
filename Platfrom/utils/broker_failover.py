@@ -53,7 +53,9 @@ logger = logging.getLogger(__name__)
 
 # Whether the broker failover system is enabled. Disabled = always use primary.
 BROKER_FAILOVER_ENABLED = os.getenv("BROKER_FAILOVER_ENABLED", "true").lower() in (
-    "true", "1", "yes"
+    "true",
+    "1",
+    "yes",
 )
 
 # How often (seconds) to health-check a broker that is currently in OPEN state.
@@ -72,6 +74,7 @@ CB_HALF_OPEN_MAX = int(os.getenv("BROKER_CB_HALF_OPEN_MAX", "3"))
 @dataclass
 class BrokerHealth:
     """Runtime health state for a single broker instance on a user account."""
+
     broker_name: str
     user_id: str
     last_health_check: float = 0.0
@@ -89,6 +92,7 @@ class BrokerHealth:
 @dataclass
 class UserBrokerConfig:
     """Failover configuration for a single user."""
+
     user_id: str
     # Ordered list of broker names, e.g. ["zerodha", "angel", "icici"]
     failover_order: list[str] = field(default_factory=list)
@@ -335,9 +339,7 @@ class BrokerFailoverManager:
             else:
                 start_idx = 0
 
-            ordered_brokers = (
-                cfg.failover_order[start_idx:] + cfg.failover_order[:start_idx]
-            )
+            ordered_brokers = cfg.failover_order[start_idx:] + cfg.failover_order[:start_idx]
 
         # Try each broker in failover order
         last_error: Optional[str] = None

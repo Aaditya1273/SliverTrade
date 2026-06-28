@@ -77,8 +77,8 @@ class AliceBlueWebSocket:
         try:
             url = self.BASE_URL + "open-api/od/v1/profile/invalidateWsSess"
             payload = {"source": "API", "userId": self.user_id}
-            response = request_with_circuit_breaker("POST", 
-                url, json=payload, headers=self._get_auth_header(), timeout=10
+            response = request_with_circuit_breaker(
+                "POST", url, json=payload, headers=self._get_auth_header(), timeout=10
             )
 
             if response.status_code == 200:
@@ -105,8 +105,8 @@ class AliceBlueWebSocket:
         try:
             url = self.BASE_URL + "open-api/od/v1/profile/createWsSess"
             payload = {"source": "API", "userId": self.user_id}
-            response = request_with_circuit_breaker("POST", 
-                url, json=payload, headers=self._get_auth_header(), timeout=10
+            response = request_with_circuit_breaker(
+                "POST", url, json=payload, headers=self._get_auth_header(), timeout=10
             )
 
             if response.status_code == 200:

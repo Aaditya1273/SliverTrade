@@ -60,7 +60,8 @@ def calculate_margin_api(positions, auth):
     logger.info(f"Shoonya basket margin payload: {safe_payload}")
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://api.shoonya.com/NorenWClientAPI/GetBasketMargin",
             headers=headers,
             content=payload,

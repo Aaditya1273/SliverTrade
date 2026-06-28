@@ -13,14 +13,56 @@ client = api(
 )
 
 SYMBOLS = [
-    "INDIGO", "TRENT", "HINDUNILVR", "HCLTECH", "WIPRO", "INFY", "TATACONSUM",
-    "TATASTEEL", "ITC", "ASIANPAINT", "SBILIFE", "LT", "SHRIRAMFIN", "BEL",
-    "SBIN", "COALINDIA", "KOTAKBANK", "TCS", "SUNPHARMA", "MAXHEALTH",
-    "NESTLEIND", "RELIANCE", "ETERNAL", "APOLLOHOSP", "ICICIBANK", "GRASIM",
-    "ULTRACEMCO", "ADANIENT", "AXISBANK", "DRREDDY", "TECHM", "TMPV", "JIOFIN",
-    "NTPC", "BAJFINANCE", "BHARTIARTL", "POWERGRID", "HINDALCO", "HDFCBANK",
-    "TITAN", "HDFCLIFE", "MARUTI", "BAJAJFINSV", "ADANIPORTS", "CIPLA",
-    "JSWSTEEL", "BAJAJ-AUTO", "ONGC", "EICHERMOT", "M&M",
+    "INDIGO",
+    "TRENT",
+    "HINDUNILVR",
+    "HCLTECH",
+    "WIPRO",
+    "INFY",
+    "TATACONSUM",
+    "TATASTEEL",
+    "ITC",
+    "ASIANPAINT",
+    "SBILIFE",
+    "LT",
+    "SHRIRAMFIN",
+    "BEL",
+    "SBIN",
+    "COALINDIA",
+    "KOTAKBANK",
+    "TCS",
+    "SUNPHARMA",
+    "MAXHEALTH",
+    "NESTLEIND",
+    "RELIANCE",
+    "ETERNAL",
+    "APOLLOHOSP",
+    "ICICIBANK",
+    "GRASIM",
+    "ULTRACEMCO",
+    "ADANIENT",
+    "AXISBANK",
+    "DRREDDY",
+    "TECHM",
+    "TMPV",
+    "JIOFIN",
+    "NTPC",
+    "BAJFINANCE",
+    "BHARTIARTL",
+    "POWERGRID",
+    "HINDALCO",
+    "HDFCBANK",
+    "TITAN",
+    "HDFCLIFE",
+    "MARUTI",
+    "BAJAJFINSV",
+    "ADANIPORTS",
+    "CIPLA",
+    "JSWSTEEL",
+    "BAJAJ-AUTO",
+    "ONGC",
+    "EICHERMOT",
+    "M&M",
 ]
 
 BASELINE_DATE = pd.Timestamp("2025-12-31").date()
@@ -62,13 +104,15 @@ for sym in SYMBOLS:
         continue
 
     pct = ((last_close / base) - 1.0) * 100.0
-    rows.append({
-        "symbol": sym,
-        "base_2025_12_31": round(float(base), 2),
-        "last_close": round(float(last_close), 2),
-        "last_date": last_date.isoformat(),
-        "ytd_pct": round(float(pct), 2),
-    })
+    rows.append(
+        {
+            "symbol": sym,
+            "base_2025_12_31": round(float(base), 2),
+            "last_close": round(float(last_close), 2),
+            "last_date": last_date.isoformat(),
+            "ytd_pct": round(float(pct), 2),
+        }
+    )
 
 if not rows:
     raise SystemExit("No data for any symbol. Run Historify bulk download first.")

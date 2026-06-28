@@ -211,7 +211,9 @@ def transform_order_data(orders):
                 "trigger_price": _to_float(_first_present(row, "slTriggerPrice", "triggerPrice")),
                 "pricetype": reverse_map_order_type(str(row.get("orderType", "MARKET"))),
                 "product": reverse_map_product_type(str(row.get("product", "INTRADAY"))),
-                "orderid": str(_first_present(row, "brokerOrderId", "exchangeOrderId", "orderId") or ""),
+                "orderid": str(
+                    _first_present(row, "brokerOrderId", "exchangeOrderId", "orderId") or ""
+                ),
                 "order_status": _map_status(str(row.get("orderStatus", ""))),
                 "rejection_reason": str(row.get("rejectionReason", "") or ""),
                 "timestamp": _first_present(
@@ -251,7 +253,9 @@ def transform_tradebook_data(tradebook_data):
                 "quantity": qty,
                 "average_price": avg_price,
                 "trade_value": qty * avg_price,
-                "orderid": str(_first_present(row, "brokerOrderId", "exchangeOrderId", "orderId") or ""),
+                "orderid": str(
+                    _first_present(row, "brokerOrderId", "exchangeOrderId", "orderId") or ""
+                ),
                 "timestamp": _first_present(
                     row,
                     "fillTimestamp",
@@ -288,7 +292,9 @@ def transform_positions_data(positions_data):
                 "product": reverse_map_product_type(row.get("product", "NORMAL")),
                 "quantity": quantity,
                 "average_price": f"{average_price:.2f}",
-                "ltp": float(row.get("ltp", row.get("lastPrice", row.get("previousDayClose", 0))) or 0),
+                "ltp": float(
+                    row.get("ltp", row.get("lastPrice", row.get("previousDayClose", 0))) or 0
+                ),
                 "pnl": float(row.get("pnl", row.get("mtm", 0)) or 0),
             }
         )

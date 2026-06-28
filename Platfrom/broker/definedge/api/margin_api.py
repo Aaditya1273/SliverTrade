@@ -63,7 +63,9 @@ def calculate_margin_api(positions, auth):
 
     try:
         # Make the request to Definedge Span Calculator API
-        response = request_with_circuit_breaker("POST", DEFINEDGE_MARGIN_URL, headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", DEFINEDGE_MARGIN_URL, headers=headers, json=payload
+        )
 
         # Add status attribute for compatibility
         response.status = response.status_code

@@ -74,9 +74,8 @@ class CircuitBreakerOpenError(Exception):
         self.circuit_name = name
         self.circuit_state = state
         self.retry_after = retry_after
-        msg = (
-            f"Circuit '{name}' is {state.value}"
-            + (f" — retry after {retry_after:.0f}s" if retry_after else "")
+        msg = f"Circuit '{name}' is {state.value}" + (
+            f" — retry after {retry_after:.0f}s" if retry_after else ""
         )
         super().__init__(msg)
 
@@ -153,19 +152,19 @@ class CircuitBreaker(Generic[T]):
             except Exception as exc:
                 self.record_failure()
                 raise
-        raise CircuitBreakerOpenError(
-            self.name, self._state, self._remaining_seconds()
-        )
+        raise CircuitBreakerOpenError(self.name, self._state, self._remaining_seconds())
 
     # ── Asynchronous call ───────────────────────────────────────────────────
 
-    async def call_async(
-        self, fn: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> Any:
+    async def call_async(self, fn: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         """Execute *fn* under circuit breaker protection (asynchronous / awaitable)."""
         if self._try_acquire():
             try:
-                result = await fn(*args, **kwargs) if asyncio.iscoroutinefunction(fn) else fn(*args, **kwargs)
+                result = (
+                    await fn(*args, **kwargs)
+                    if asyncio.iscoroutinefunction(fn)
+                    else fn(*args, **kwargs)
+                )
                 self.record_success()
                 return result
             except CircuitBreakerOpenError:
@@ -173,9 +172,7 @@ class CircuitBreaker(Generic[T]):
             except Exception as exc:
                 self.record_failure()
                 raise
-        raise CircuitBreakerOpenError(
-            self.name, self._state, self._remaining_seconds()
-        )
+        raise CircuitBreakerOpenError(self.name, self._state, self._remaining_seconds())
 
     # ── Manual success / failure recording ──────────────────────────────────
 
@@ -300,6 +297,7 @@ class CircuitBreaker(Generic[T]):
             # Update Prometheus gauge (best-effort, no-op if metrics not initialised)
             try:
                 from blueprints.metrics import circuit_breaker_set
+
                 circuit_breaker_set(self.name, new_state.value)
             except ImportError:
                 pass
@@ -409,9 +407,11 @@ def retry_with_backoff(
                     delay *= 0.5 + random.random() * 0.5  # ±50% jitter
                 logger.warning(
                     "Retry %d/%d for %s failed: %s. Waiting %.2fs...",
-                    attempt, max_retries,
+                    attempt,
+                    max_retries,
                     getattr(fn, "__name__", "call"),
-                    exc, delay,
+                    exc,
+                    delay,
                 )
                 time.sleep(delay)
 
@@ -447,9 +447,11 @@ async def retry_with_backoff_async(
                     delay *= 0.5 + random.random() * 0.5
                 logger.warning(
                     "Async retry %d/%d for %s failed: %s. Waiting %.2fs...",
-                    attempt, max_retries,
+                    attempt,
+                    max_retries,
                     getattr(fn, "__name__", "call"),
-                    exc, delay,
+                    exc,
+                    delay,
                 )
                 await asyncio.sleep(delay)
 
@@ -461,10 +463,14 @@ def _raise_retry_exhausted(exc: Exception | None, max_retries: int, name: str) -
     from functools import partial
 
     if exc is None:
-        raise RuntimeError(f"{name} failed after {max_retries + 1} attempts (no exception captured)")
+        raise RuntimeError(
+            f"{name} failed after {max_retries + 1} attempts (no exception captured)"
+        )
     logger.error(
         "%s failed after %d attempts. Last error: %s",
-        name, max_retries + 1, exc,
+        name,
+        max_retries + 1,
+        exc,
     )
     raise exc
 

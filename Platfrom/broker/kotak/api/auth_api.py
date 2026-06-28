@@ -75,7 +75,8 @@ def authenticate_broker(mobile_number, totp, mpin):
 
         logger.debug(f"TOTP Login Request - Mobile: {mobile_number[:5]}***, UCC: {ucc}")
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://mis.kotaksecurities.com/login/1.0/tradeApiLogin",
             headers=headers,
             content=payload,
@@ -111,7 +112,8 @@ def authenticate_broker(mobile_number, totp, mpin):
 
         logger.debug("MPIN Validation Request initiated")
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://mis.kotaksecurities.com/login/1.0/tradeApiValidate",
             headers=headers,
             content=payload,

@@ -92,11 +92,14 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     try:
         from sqlalchemy import inspect as sa_inspect
+
         insp = sa_inspect(engine)
         existing_cols = {c["name"] for c in insp.get_columns("symtoken")}
         if "contract_value" not in existing_cols:
             with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE symtoken ADD COLUMN contract_value REAL DEFAULT 1.0"))
+                conn.execute(
+                    text("ALTER TABLE symtoken ADD COLUMN contract_value REAL DEFAULT 1.0")
+                )
                 conn.commit()
                 logger.info("Migrated symtoken table: added contract_value column")
     except Exception as e:
@@ -117,6 +120,7 @@ def copy_from_dataframe(df):
 
     try:
         from sqlalchemy import inspect as sa_inspect
+
         _db_cols = {c["name"] for c in sa_inspect(engine).get_columns("symtoken")}
     except Exception:
         _db_cols = None
@@ -145,7 +149,9 @@ def copy_from_dataframe(df):
                     if (i // chunk_size + 1) % 20 == 0:
                         logger.debug(f"Processed {total_inserted} records so far...")
                 except Exception as chunk_error:
-                    logger.warning(f"Error inserting chunk {i // chunk_size + 1}, retrying: {chunk_error}")
+                    logger.warning(
+                        f"Error inserting chunk {i // chunk_size + 1}, retrying: {chunk_error}"
+                    )
                     db_session.rollback()
                     try:
                         time.sleep(0.1)
@@ -252,20 +258,22 @@ def process_bybit_symbols(symbols):
         else:
             lotsize_int = lotsize
 
-        rows.append({
-            "token": symbol,
-            "symbol": base_coin,
-            "brsymbol": symbol,
-            "name": f"{base_coin}/{quote_coin}",
-            "exchange": "CRYPTO",
-            "brexchange": "BYBIT",
-            "expiry": "",
-            "strike": 0.0,
-            "lotsize": lotsize_int,
-            "instrumenttype": "SPOT",
-            "tick_size": tick_size,
-            "contract_value": 1.0,
-        })
+        rows.append(
+            {
+                "token": symbol,
+                "symbol": base_coin,
+                "brsymbol": symbol,
+                "name": f"{base_coin}/{quote_coin}",
+                "exchange": "CRYPTO",
+                "brexchange": "BYBIT",
+                "expiry": "",
+                "strike": 0.0,
+                "lotsize": lotsize_int,
+                "instrumenttype": "SPOT",
+                "tick_size": tick_size,
+                "contract_value": 1.0,
+            }
+        )
 
     if not rows:
         logger.error("No TRADING spot symbols found in Bybit instruments-info")
@@ -293,7 +301,10 @@ def master_contract_download():
         if not fetch_success:
             return socketio.emit(
                 "master_contract_download",
-                {"status": "error", "message": "Failed to fetch symbols from Bybit. Existing master contract preserved."},
+                {
+                    "status": "error",
+                    "message": "Failed to fetch symbols from Bybit. Existing master contract preserved.",
+                },
             )
 
         token_df = process_bybit_symbols(symbols)
@@ -309,7 +320,10 @@ def master_contract_download():
 
         return socketio.emit(
             "master_contract_download",
-            {"status": "success", "message": f"Successfully Downloaded {len(token_df)} Bybit Trading Pairs"},
+            {
+                "status": "success",
+                "message": f"Successfully Downloaded {len(token_df)} Bybit Trading Pairs",
+            },
         )
 
     except Exception as e:

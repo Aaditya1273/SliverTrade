@@ -36,7 +36,9 @@ def get_margin_data(auth_token):
 
     logger.debug(f"Nubra funds request to: {base_url}/portfolio/user_funds_and_margin")
 
-    response = request_with_circuit_breaker("GET", f"{base_url}/portfolio/user_funds_and_margin", headers=headers)
+    response = request_with_circuit_breaker(
+        "GET", f"{base_url}/portfolio/user_funds_and_margin", headers=headers
+    )
 
     # Add status attribute for compatibility with the existing codebase
     response.status = response.status_code
@@ -51,7 +53,7 @@ def get_margin_data(auth_token):
         # Map Nubra fields to SilverTrade AI standard format
         try:
             # Nubra API returns values in paise, convert to rupees by dividing by 100
-            
+
             # Available cash - using net_margin_available as available funds
             availablecash = float(data.get("net_margin_available", 0) or 0) / 100
 

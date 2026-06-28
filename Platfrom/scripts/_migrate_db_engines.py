@@ -13,7 +13,9 @@ import os
 import re
 import sys
 
-PROJECT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))  # Platfrom/
+PROJECT = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+)  # Platfrom/
 DB_DIR = os.path.join(PROJECT, "database")
 
 # ---------------------------------------------------------------------------
@@ -225,7 +227,10 @@ def main():
             content = f.read()
 
         # Skip files that already use get_db_engine
-        if "from database.db_config import get_db_engine" in content or "from database.db_config import create_db_engine" in content:
+        if (
+            "from database.db_config import get_db_engine" in content
+            or "from database.db_config import create_db_engine" in content
+        ):
             print(f"  SKIP  {os.path.basename(path)} — already uses db_config")
             skipped += 1
             continue
@@ -256,19 +261,16 @@ def main():
         # Replace the sqlalchemy import to remove create_engine
         content = content.replace(
             "from sqlalchemy import (\n    Boolean, Column, DateTime, ForeignKey, Integer, String, Text,\n    create_engine, UniqueConstraint,\n)",
-            "from sqlalchemy import (\n    Boolean, Column, DateTime, ForeignKey, Integer, String, Text,\n    UniqueConstraint,\n)"
+            "from sqlalchemy import (\n    Boolean, Column, DateTime, ForeignKey, Integer, String, Text,\n    UniqueConstraint,\n)",
         )
         needs_org_fix = True
 
     if "from database.db_config import create_db_engine" in content:
         content = content.replace(
             "from database.db_config import create_db_engine",
-            "from database.db_config import get_db_engine"
+            "from database.db_config import get_db_engine",
         )
-        content = content.replace(
-            "engine = create_db_engine(",
-            "engine = get_db_engine("
-        )
+        content = content.replace("engine = create_db_engine(", "engine = get_db_engine(")
         needs_org_fix = True
 
     if needs_org_fix:
@@ -276,10 +278,10 @@ def main():
             f.write(content)
         print(f"  OK    organization_db.py")
 
-    print(f"\n{'='*40}")
+    print(f"\n{'=' * 40}")
     print(f"  Modified: {modified}")
     print(f"  Skipped:  {skipped}")
-    print(f"{'='*40}")
+    print(f"{'=' * 40}")
 
 
 if __name__ == "__main__":

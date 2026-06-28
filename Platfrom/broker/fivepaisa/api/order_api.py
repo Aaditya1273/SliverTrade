@@ -57,7 +57,8 @@ def get_api_response(
         if method.upper() == "GET":
             response = request_with_circuit_breaker("GET", f"{BASE_URL}{endpoint}", headers=headers)
         else:  # POST
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}{endpoint}",
                 content=payload,  # Use content since payload is already JSON string
                 headers=headers,
@@ -138,7 +139,8 @@ def get_positions(auth: str) -> dict[str, Any]:
             headers = {"Authorization": f"bearer {auth}", "Content-Type": "application/json"}
 
             # Make the request with extended timeout
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/V2/NetPositionNetWise",
                 content=payload,
                 headers=headers,
@@ -305,7 +307,8 @@ def place_order_api(data: dict[str, Any], auth: str) -> dict[str, Any]:
         # Get the shared httpx client
 
         # Make API request
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/PlaceOrderRequest",
             content=payload,
             headers=headers,
@@ -541,7 +544,8 @@ def cancel_order(orderid: str, auth: str) -> dict[str, Any]:
         headers = {"Authorization": f"bearer {AUTH_TOKEN}", "Content-Type": "application/json"}
 
         logger.info(f"Cancel order request: {json.dumps(cancel_data)}")
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/CancelOrderRequest",  # Official endpoint for cancel
             json=cancel_data,
             headers=headers,
@@ -621,7 +625,8 @@ def modify_order(data: dict[str, Any], auth: str) -> dict[str, Any]:
         # Make API request
         headers = {"Authorization": f"bearer {AUTH_TOKEN}", "Content-Type": "application/json"}
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{BASE_URL}/VendorsAPI/Service1.svc/V1/ModifyOrderRequest",
             json=json_data,
             headers=headers,

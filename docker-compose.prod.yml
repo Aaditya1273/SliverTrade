@@ -103,8 +103,10 @@ services:
       - REDIRECT_URL=${REDIRECT_URL:-https://your-domain.com/zerodha/callback}
       - BROKER_API_KEY=${BROKER_API_KEY:-}
       - BROKER_API_SECRET=${BROKER_API_SECRET:-}
-      - APP_KEY=${APP_KEY:-}
-      - API_KEY_PEPPER=${API_KEY_PEPPER:-}
+      ## ⚠️ REQUIRED — compose will fail to start without these
+      #  Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
+      - APP_KEY=${APP_KEY:?APP_KEY is required — generate with secrets.token_hex(32)}
+      - API_KEY_PEPPER=${API_KEY_PEPPER:?API_KEY_PEPPER is required — generate with secrets.token_hex(32)}
       - WEBSOCKET_URL=${WEBSOCKET_URL:-wss://your-domain.com/ws}
       - DATA_FETCH_URL=http://data_fetch:5005
       - TRADE_STRATEGIES_URL=http://trade_strategies:5007
@@ -171,7 +173,8 @@ services:
       - "127.0.0.1:5007:5007"
     environment:
       - SILVERTRADE_HOST=http://platform:5000
-      - SILVERTRADE_API_KEY=${SILVERTRADE_API_KEY:-}
+      ## Generate a Platform API key at /apikey after first login and set here
+      - SILVERTRADE_API_KEY=${SILVERTRADE_API_KEY:?Generate a Platform API key and set SILVERTRADE_API_KEY}
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=5007
       - FLASK_DEBUG=False

@@ -2202,6 +2202,5 @@ def get_catalog_grouped_service(group_by: str = "underlying") -> tuple[bool, dic
 # This runs once when the module is first imported
 try:
     cleanup_zombie_jobs()
-except Exception as e:        logger.exception(f"Failed to cleanup zombie jobs on startup: {e}")
-
-
+except Exception as e:
+    logger.exception(f"Failed to cleanup zombie jobs on startup: {e}")

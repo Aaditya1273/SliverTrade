@@ -48,6 +48,7 @@ def risk_validate():
 
         # Get user settings
         from database.settings_db import get_user_settings
+
         settings = get_user_settings(login_username) or {}
 
         # Fetch portfolio for risk checks
@@ -55,37 +56,54 @@ def risk_validate():
         open_positions = []
         try:
             from database.settings_db import get_analyze_mode
+
             if get_analyze_mode():
                 from database.auth_db import get_api_key_for_tradingview
+
                 api_key = get_api_key_for_tradingview(login_username)
                 if api_key:
                     from services.funds_service import get_funds
+
                     success, funds_resp, _ = get_funds(api_key=api_key)
                     if success and funds_resp.get("data"):
-                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["available_balance"] = float(
+                            funds_resp["data"].get("available_balance", 0)
+                        )
                         portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
                         portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
                     # Get open positions
                     from services.positionbook_service import get_positionbook
+
                     pos_success, pos_resp, _ = get_positionbook(api_key=api_key)
                     if pos_success and pos_resp.get("data"):
-                        open_positions = pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+                        open_positions = (
+                            pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+                        )
             else:
                 from database.auth_db import get_auth_token
+
                 auth_token = get_auth_token(login_username)
                 broker = session.get("broker")
                 if auth_token and broker:
                     from services.funds_service import get_funds
+
                     success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
                     if success and funds_resp.get("data"):
-                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["available_balance"] = float(
+                            funds_resp["data"].get("available_balance", 0)
+                        )
                         portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
                         portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
                     # Get open positions
                     from services.positionbook_service import get_positionbook
-                    pos_success, pos_resp, _ = get_positionbook(auth_token=auth_token, broker=broker)
+
+                    pos_success, pos_resp, _ = get_positionbook(
+                        auth_token=auth_token, broker=broker
+                    )
                     if pos_success and pos_resp.get("data"):
-                        open_positions = pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+                        open_positions = (
+                            pos_resp["data"] if isinstance(pos_resp["data"], list) else []
+                        )
         except Exception as e:
             logger.warning(f"Portfolio fetch for risk validation failed: {e}")
 
@@ -96,10 +114,11 @@ def risk_validate():
         if not current_price or float(current_price) <= 0:
             try:
                 import requests
+
                 quote_resp = requests.post(
                     f"{request.host_url.rstrip('/')}/api/v1/quotes",
                     json={"apikey": data.get("apikey", ""), "symbol": symbol, "exchange": exchange},
-                    timeout=5
+                    timeout=5,
                 )
                 if quote_resp.status_code == 200:
                     quote_data = quote_resp.json()
@@ -122,6 +141,7 @@ def risk_validate():
 
         # Run risk validation
         from services.risk_engine import RiskEngine
+
         risk_engine = RiskEngine()
         risk_result = risk_engine.validate(order_data, settings, portfolio)
 
@@ -144,13 +164,15 @@ def risk_validate():
 
     except Exception as e:
         logger.exception(f"Error in risk_validate: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": "Risk validation failed",
-            "approved": False,
-            "warnings": ["Unable to validate risk — proceed with caution"],
-            "blocks": [],
-        }), 200
+        return jsonify(
+            {
+                "status": "error",
+                "message": "Risk validation failed",
+                "approved": False,
+                "warnings": ["Unable to validate risk — proceed with caution"],
+                "blocks": [],
+            }
+        ), 200
 
 
 @orders_bp.route("/api/v1/execute-signal", methods=["POST"])
@@ -167,32 +189,45 @@ def execute_signal():
         decision = data.get("decision")
         confidence = data.get("confidence", 0)
         exchange = data.get("exchange", "NSE")
-        
+
         if not symbol or not decision:
             return jsonify({"status": "error", "message": "Missing symbol or decision"}), 400
 
         # Map decision to action
         action = "BUY" if decision == "BUY" else "SELL" if decision == "SELL" else None
-        
+
         if not action:
-            return jsonify({"status": "error", "message": f"Cannot execute action for decision: {decision}"}), 400
+            return jsonify(
+                {"status": "error", "message": f"Cannot execute action for decision: {decision}"}
+            ), 400
 
         # Phase 4: Signal staleness check (reject if > 5 minutes old)
         if signal_id:
             try:
                 from datetime import datetime, timezone, timedelta
+
                 # Try to fetch signal timestamp from Strategy Engine
                 import requests
+
                 strategy_host = os.getenv("STRATEGY_HOST", "http://127.0.0.1:5007")
                 try:
-                    signal_resp = requests.get(f"{strategy_host}/api/v1/signals/{signal_id}", timeout=5)
+                    signal_resp = requests.get(
+                        f"{strategy_host}/api/v1/signals/{signal_id}", timeout=5
+                    )
                     if signal_resp.status_code == 200:
                         signal_data = signal_resp.json().get("data", {})
                         signal_timestamp = signal_data.get("timestamp")
                         if signal_timestamp:
-                            signal_time = datetime.fromisoformat(signal_timestamp.replace('Z', '+00:00'))
+                            signal_time = datetime.fromisoformat(
+                                signal_timestamp.replace("Z", "+00:00")
+                            )
                             if datetime.now(timezone.utc) - signal_time > timedelta(minutes=5):
-                                return jsonify({"status": "rejected", "message": "Signal expired (older than 5 minutes)"}), 400
+                                return jsonify(
+                                    {
+                                        "status": "rejected",
+                                        "message": "Signal expired (older than 5 minutes)",
+                                    }
+                                ), 400
                 except Exception:
                     # If Strategy Engine unreachable, skip staleness check (graceful degradation)
                     pass
@@ -206,6 +241,7 @@ def execute_signal():
 
         try:
             from database.settings_db import get_user_settings
+
             settings = get_user_settings(login_username) or {}
             min_confidence = settings.get("min_signal_confidence", 60)
             risk_pct = settings.get("risk_per_trade_pct", 2.0)
@@ -219,7 +255,12 @@ def execute_signal():
 
         # Phase 4: Confidence threshold check
         if confidence < min_confidence:
-            return jsonify({"status": "rejected", "message": f"Signal confidence {confidence}% below threshold {min_confidence}%"}), 400
+            return jsonify(
+                {
+                    "status": "rejected",
+                    "message": f"Signal confidence {confidence}% below threshold {min_confidence}%",
+                }
+            ), 400
 
         # Phase 4: Duplicate order prevention (check for open orders for same symbol)
         try:
@@ -229,8 +270,17 @@ def execute_signal():
                     success, orderbook_resp, _ = get_orderbook(api_key=api_key)
                     if success and orderbook_resp.get("data"):
                         for order in orderbook_resp["data"].get("orders", []):
-                            if order.get("symbol") == symbol and order.get("order_status") in ["OPEN", "PENDING", "TRIGGER PENDING"]:
-                                return jsonify({"status": "rejected", "message": "Open order exists for this symbol"}), 409
+                            if order.get("symbol") == symbol and order.get("order_status") in [
+                                "OPEN",
+                                "PENDING",
+                                "TRIGGER PENDING",
+                            ]:
+                                return jsonify(
+                                    {
+                                        "status": "rejected",
+                                        "message": "Open order exists for this symbol",
+                                    }
+                                ), 409
             else:
                 auth_token = get_auth_token(login_username)
                 broker = session.get("broker")
@@ -238,8 +288,17 @@ def execute_signal():
                     success, orderbook_resp, _ = get_orderbook(auth_token=auth_token, broker=broker)
                     if success and orderbook_resp.get("data"):
                         for order in orderbook_resp["data"].get("orders", []):
-                            if order.get("symbol") == symbol and order.get("order_status") in ["OPEN", "PENDING", "TRIGGER PENDING"]:
-                                return jsonify({"status": "rejected", "message": "Open order exists for this symbol"}), 409
+                            if order.get("symbol") == symbol and order.get("order_status") in [
+                                "OPEN",
+                                "PENDING",
+                                "TRIGGER PENDING",
+                            ]:
+                                return jsonify(
+                                    {
+                                        "status": "rejected",
+                                        "message": "Open order exists for this symbol",
+                                    }
+                                ), 409
         except Exception as e:
             logger.warning(f"Duplicate order check failed: {e}")
 
@@ -252,16 +311,22 @@ def execute_signal():
                     api_key = get_api_key_for_tradingview(login_username)
                     if api_key:
                         from services.funds_service import get_funds
+
                         success, funds_resp, _ = get_funds(api_key=api_key)
                         if success and funds_resp.get("data"):
                             available = float(funds_resp["data"].get("available_balance", 0))
                             # Get current price
                             try:
                                 import requests
+
                                 quote_resp = requests.post(
                                     f"{request.host_url.rstrip('/')}/api/v1/quotes",
-                                    json={"apikey": api_key, "symbol": symbol, "exchange": exchange},
-                                    timeout=10
+                                    json={
+                                        "apikey": api_key,
+                                        "symbol": symbol,
+                                        "exchange": exchange,
+                                    },
+                                    timeout=10,
                                 )
                                 if quote_resp.status_code == 200:
                                     quote_data = quote_resp.json()
@@ -276,15 +341,21 @@ def execute_signal():
                     broker = session.get("broker")
                     if auth_token and broker:
                         from services.funds_service import get_funds
+
                         success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
                         if success and funds_resp.get("data"):
                             available = float(funds_resp["data"].get("available_balance", 0))
                             try:
                                 import requests
+
                                 quote_resp = requests.post(
                                     f"{request.host_url.rstrip('/')}/api/v1/quotes",
-                                    json={"apikey": get_api_key_for_tradingview(login_username), "symbol": symbol, "exchange": exchange},
-                                    timeout=10
+                                    json={
+                                        "apikey": get_api_key_for_tradingview(login_username),
+                                        "symbol": symbol,
+                                        "exchange": exchange,
+                                    },
+                                    timeout=10,
                                 )
                                 if quote_resp.status_code == 200:
                                     quote_data = quote_resp.json()
@@ -316,17 +387,21 @@ def execute_signal():
         # Phase 7: Risk engine validation
         try:
             from services.risk_engine import RiskEngine
+
             risk_engine = RiskEngine()
-            
+
             # Fetch portfolio for risk checks
             portfolio = {}
             if get_analyze_mode():
                 api_key = get_api_key_for_tradingview(login_username)
                 if api_key:
                     from services.funds_service import get_funds
+
                     success, funds_resp, _ = get_funds(api_key=api_key)
                     if success and funds_resp.get("data"):
-                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["available_balance"] = float(
+                            funds_resp["data"].get("available_balance", 0)
+                        )
                         portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
                         portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
             else:
@@ -334,35 +409,45 @@ def execute_signal():
                 broker = session.get("broker")
                 if auth_token and broker:
                     from services.funds_service import get_funds
+
                     success, funds_resp, _ = get_funds(auth_token=auth_token, broker=broker)
                     if success and funds_resp.get("data"):
-                        portfolio["available_balance"] = float(funds_resp["data"].get("available_balance", 0))
+                        portfolio["available_balance"] = float(
+                            funds_resp["data"].get("available_balance", 0)
+                        )
                         portfolio["total_value"] = float(funds_resp["data"].get("total_balance", 0))
                         portfolio["day_pnl"] = float(funds_resp["data"].get("day_pnl", 0))
-            
+
             # Add price to order_data for risk checks
             try:
                 import requests
+
                 quote_resp = requests.post(
                     f"{request.host_url.rstrip('/')}/api/v1/quotes",
-                    json={"apikey": get_api_key_for_tradingview(login_username), "symbol": symbol, "exchange": exchange},
-                    timeout=10
+                    json={
+                        "apikey": get_api_key_for_tradingview(login_username),
+                        "symbol": symbol,
+                        "exchange": exchange,
+                    },
+                    timeout=10,
                 )
                 if quote_resp.status_code == 200:
                     quote_data = quote_resp.json()
                     order_data["price"] = str(quote_data.get("data", {}).get("ltp", 0))
             except Exception:
                 pass
-            
+
             risk_result = risk_engine.validate(order_data, settings, portfolio)
-            
+
             if not risk_result.approved:
-                return jsonify({
-                    "status": "rejected",
-                    "message": "Order rejected by risk engine",
-                    "blocks": risk_result.blocks,
-                    "warnings": risk_result.warnings
-                }), 400
+                return jsonify(
+                    {
+                        "status": "rejected",
+                        "message": "Order rejected by risk engine",
+                        "blocks": risk_result.blocks,
+                        "warnings": risk_result.warnings,
+                    }
+                ), 400
         except Exception as e:
             logger.warning(f"Risk engine check failed: {e}")
             # Continue without risk check if engine fails
@@ -371,27 +456,36 @@ def execute_signal():
         if get_analyze_mode():
             api_key = get_api_key_for_tradingview(login_username)
             if not api_key:
-                return jsonify({"status": "error", "message": "API key required for sandbox execution"}), 401
-            
-            success, response_data, status_code = place_smart_order(order_data=order_data, api_key=api_key)
+                return jsonify(
+                    {"status": "error", "message": "API key required for sandbox execution"}
+                ), 401
+
+            success, response_data, status_code = place_smart_order(
+                order_data=order_data, api_key=api_key
+            )
         else:
             auth_token = get_auth_token(login_username)
             broker = session.get("broker")
-            
+
             if not auth_token or not broker:
-                return jsonify({"status": "error", "message": "User not authenticated for live trading"}), 401
-                
-            success, response_data, status_code = place_smart_order(order_data=order_data, auth_token=auth_token, broker=broker)
+                return jsonify(
+                    {"status": "error", "message": "User not authenticated for live trading"}
+                ), 401
+
+            success, response_data, status_code = place_smart_order(
+                order_data=order_data, auth_token=auth_token, broker=broker
+            )
 
         # Phase 4: Mark signal as executed in Strategy Engine database
         if success and signal_id:
             try:
                 import requests
+
                 strategy_host = os.getenv("STRATEGY_HOST", "http://127.0.0.1:5007")
                 requests.post(
                     f"{strategy_host}/api/v1/signals/{signal_id}/mark-executed",
                     json={"order_id": response_data.get("orderid", "")},
-                    timeout=5
+                    timeout=5,
                 )
             except Exception as e:
                 logger.warning(f"Failed to mark signal as executed: {e}")
@@ -990,18 +1084,20 @@ def close_position():
                 log_request = order_data.copy()
                 log_request["api_type"] = "closeposition"
 
-                bus.publish(PositionClosedEvent(
-                    mode="live",
-                    api_type="closeposition",
-                    symbol=symbol,
-                    exchange=exchange,
-                    product=product,
-                    orderid=str(orderid),
-                    message="Position close order placed successfully.",
-                    request_data=log_request,
-                    response_data=response_data,
-                    api_key=api_key,
-                ))
+                bus.publish(
+                    PositionClosedEvent(
+                        mode="live",
+                        api_type="closeposition",
+                        symbol=symbol,
+                        exchange=exchange,
+                        product=product,
+                        orderid=str(orderid),
+                        message="Position close order placed successfully.",
+                        request_data=log_request,
+                        response_data=response_data,
+                        api_key=api_key,
+                    )
+                )
         else:
             # No orderid, definite error
             response_data = {
@@ -1019,7 +1115,9 @@ def close_position():
 
     except Exception as e:
         logger.exception(f"Error in close_position endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while closing the position"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while closing the position"}
+        ), 500
 
 
 @orders_bp.route("/close_all_positions", methods=["POST"])
@@ -1064,7 +1162,9 @@ def close_all_positions():
 
     except Exception as e:
         logger.exception(f"Error in close_all_positions endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while closing positions"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while closing positions"}
+        ), 500
 
 
 @orders_bp.route("/cancel_all_orders", methods=["POST"])
@@ -1120,7 +1220,9 @@ def cancel_all_orders_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_all_orders_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while cancelling orders"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while cancelling orders"}
+        ), 500
 
 
 @orders_bp.route("/cancel_order", methods=["POST"])
@@ -1163,7 +1265,9 @@ def cancel_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while cancelling the order"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while cancelling the order"}
+        ), 500
 
 
 @orders_bp.route("/modify_gtt_order", methods=["POST"])
@@ -1221,7 +1325,9 @@ def modify_gtt_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in modify_gtt_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while modifying the GTT order"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while modifying the GTT order"}
+        ), 500
 
 
 @orders_bp.route("/cancel_gtt_order", methods=["POST"])
@@ -1258,7 +1364,9 @@ def cancel_gtt_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in cancel_gtt_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while cancelling the GTT order"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while cancelling the GTT order"}
+        ), 500
 
 
 @orders_bp.route("/modify_order", methods=["POST"])
@@ -1315,7 +1423,9 @@ def modify_order_ui():
 
     except Exception as e:
         logger.exception(f"Error in modify_order_ui endpoint: {str(e)}")
-        return jsonify({"status": "error", "message": "An error occurred while modifying the order"}), 500
+        return jsonify(
+            {"status": "error", "message": "An error occurred while modifying the order"}
+        ), 500
 
 
 @orders_bp.route("/action-center")

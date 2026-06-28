@@ -11,14 +11,17 @@ import pandas as pd
 from database.token_db import get_br_symbol, get_oa_symbol, get_token
 from utils.logging import get_logger
 
+
 # Auto-detect eventlet environment (Docker/standalone uses gunicorn+eventlet)
 # asyncio.run() cannot be called under eventlet's monkey-patched event loop
 def _is_eventlet_patched():
     try:
         import eventlet.patcher
+
         return eventlet.patcher.is_monkey_patched("socket")
     except (ImportError, AttributeError):
         return False
+
 
 USE_ASYNC = not _is_eventlet_patched()
 
@@ -278,6 +281,7 @@ class BrokerData:
 
             # Use shared httpx client for connection pooling
             from utils.httpx_client import request_with_circuit_breaker
+
             http_response = request_with_circuit_breaker("GET", url, headers=headers, timeout=10.0)
 
             if http_response.status_code != 200:
@@ -725,9 +729,7 @@ class BrokerData:
 
                     # Check if we have valid data
                     if chunk_df.empty:
-                        logger.debug(
-                            f"No valid data after parsing CSV for {timeframe} timeframe"
-                        )
+                        logger.debug(f"No valid data after parsing CSV for {timeframe} timeframe")
                         logger.debug("This might be due to incorrect date parsing")
                         current_start = current_end + timedelta(days=1)
                         continue

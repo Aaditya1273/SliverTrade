@@ -46,13 +46,13 @@ WS_URL = os.getenv("WEBSOCKET_URL", "ws://127.0.0.1:8765")
 # EXCHANGE prefers SILVERTRADE_STRATEGY_EXCHANGE (set by /python runner from the
 # strategy's config) so the script trades on whichever exchange the host is
 # gating its calendar against. Falls back to EXCHANGE env var, then NSE.
-SYMBOL = os.getenv("SYMBOL", "NHPC")              # Stock to trade
+SYMBOL = os.getenv("SYMBOL", "NHPC")  # Stock to trade
 EXCHANGE = os.getenv(
     "SILVERTRADE_STRATEGY_EXCHANGE",
     os.getenv("EXCHANGE", "NSE"),
-)                                                 # NSE, BSE, NFO, BFO, MCX, BCD, CDS, CRYPTO
-QUANTITY = int(os.getenv("QUANTITY", "1"))        # Number of shares
-PRODUCT = os.getenv("PRODUCT", "MIS")             # MIS (Intraday) or CNC (Delivery)
+)  # NSE, BSE, NFO, BFO, MCX, BCD, CDS, CRYPTO
+QUANTITY = int(os.getenv("QUANTITY", "1"))  # Number of shares
+PRODUCT = os.getenv("PRODUCT", "MIS")  # MIS (Intraday) or CNC (Delivery)
 
 # Strategy Parameters
 FAST_EMA_PERIOD = int(os.getenv("FAST_EMA_PERIOD", "2"))

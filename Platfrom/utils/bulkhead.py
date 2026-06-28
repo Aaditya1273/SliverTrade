@@ -103,6 +103,7 @@ _dead_letter_queue: Queue = Queue()
 @dataclass
 class DeadLetter:
     """Record of a task that was rejected or failed irrevocably."""
+
     category: BulkheadCategory
     task_name: str
     error: str
@@ -159,6 +160,7 @@ def peek_dead_letter_queue(limit: int = 50) -> list[DeadLetter]:
 
 
 # ── Metrics (for Prometheus / monitoring) ─────────────────────────────────────
+
 
 class BulkheadMetrics:
     """Gathers per-pool utilisation metrics for observability.
@@ -239,6 +241,7 @@ def get_executor(category: BulkheadCategory) -> ThreadPoolExecutor:
 
 
 # ── Custom executor with metrics and dead-letter tracking ─────────────────────
+
 
 class _ThreadPoolWithMetrics(ThreadPoolExecutor):
     """A ``ThreadPoolExecutor`` subclass that records metrics and rejects tasks

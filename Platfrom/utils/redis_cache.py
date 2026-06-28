@@ -309,12 +309,8 @@ class RedisCache:
                 result["connected_clients"] = info.get("clients", {}).get(
                     "connected_clients", "N/A"
                 )
-                result["used_memory_human"] = info.get("memory", {}).get(
-                    "used_memory_human", "N/A"
-                )
-                result["uptime_in_seconds"] = info.get("server", {}).get(
-                    "uptime_in_seconds", 0
-                )
+                result["used_memory_human"] = info.get("memory", {}).get("used_memory_human", "N/A")
+                result["uptime_in_seconds"] = info.get("server", {}).get("uptime_in_seconds", 0)
                 dbsize = self._redis.dbsize()
                 result["total_keys"] = dbsize
             except Exception as exc:

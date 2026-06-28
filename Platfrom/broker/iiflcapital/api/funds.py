@@ -36,7 +36,9 @@ def _extract_result(payload):
 
 def _fetch_limits(client, endpoint, auth_token):
     try:
-        response = request_with_circuit_breaker("GET", f"{BASE_URL}{endpoint}", headers=_headers(auth_token))
+        response = request_with_circuit_breaker(
+            "GET", f"{BASE_URL}{endpoint}", headers=_headers(auth_token)
+        )
     except Exception:
         logger.exception(f"IIFL Capital limits request failed for endpoint: {endpoint}")
         return {}

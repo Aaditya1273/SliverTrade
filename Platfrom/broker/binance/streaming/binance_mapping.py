@@ -9,7 +9,7 @@ Binance WebSocket streams:
   <symbol>@depth20         – 20-level order book snapshot
   <symbol>@depth@100ms     – 5/10/20 level order book (100ms updates)
   <symbol>@kline_<interval> – Kline/candlestick updates
-  
+
 Combined streams:
   /stream?streams=<stream1>/<stream2>/...
 
@@ -42,9 +42,9 @@ class BinanceModeMapper:
 
     # SilverTrade AI mode → Binance stream suffix
     MODE_STREAMS = {
-        1: "ticker",         # LTP mode → 24hr ticker (includes lastPrice)
-        2: "bookTicker",     # Quote mode → best bid/ask
-        3: "depth20",        # Depth mode → 20-level order book
+        1: "ticker",  # LTP mode → 24hr ticker (includes lastPrice)
+        2: "bookTicker",  # Quote mode → best bid/ask
+        3: "depth20",  # Depth mode → 20-level order book
     }
 
     @staticmethod

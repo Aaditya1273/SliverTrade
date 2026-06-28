@@ -285,9 +285,7 @@ class TestRedisCacheConcurrency:
         for t in threads:
             t.join()
 
-        assert cache.get("race_counter") == 1000, (
-            f"Expected 1000, got {cache.get('race_counter')}"
-        )
+        assert cache.get("race_counter") == 1000, f"Expected 1000, got {cache.get('race_counter')}"
 
 
 # ── Health ──────────────────────────────────────────────────────────────

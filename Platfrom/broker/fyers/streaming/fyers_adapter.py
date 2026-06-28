@@ -206,7 +206,9 @@ class FyersAdapter:
 
                 # Convert SilverTrade AI symbols directly to HSM tokens using database lookup
                 hsm_tokens, token_mappings, invalid_symbols = (
-                    self.token_converter.convert_silvertrade_symbols_to_hsm(valid_symbols, data_type)
+                    self.token_converter.convert_silvertrade_symbols_to_hsm(
+                        valid_symbols, data_type
+                    )
                 )
 
                 if invalid_symbols:
@@ -249,18 +251,14 @@ class FyersAdapter:
                         continue
                     pair = brsymbol_to_silvertrade.get(brsym)
                     if not pair:
-                        self.logger.warning(
-                            f"brsymbol {brsym} did not match any input symbol"
-                        )
+                        self.logger.warning(f"brsymbol {brsym} did not match any input symbol")
                         continue
                     exch, sym = pair
                     full_symbol = f"{exch}:{sym}"
                     self.symbol_to_hsm[full_symbol] = hsm_token
                     self.hsm_to_symbol[hsm_token] = full_symbol
                     mapped_count += 1
-                    self.logger.debug(
-                        f"Mapped {full_symbol} <-> {hsm_token} (brsymbol: {brsym})"
-                    )
+                    self.logger.debug(f"Mapped {full_symbol} <-> {hsm_token} (brsymbol: {brsym})")
 
                 # Sanity check: every input symbol should have ended up mapped.
                 unmapped_subs = [

@@ -53,15 +53,14 @@ def _get_symbol_lock(symbol, exchange, product):
 # Order book / trade book
 # ---------------------------------------------------------------------------
 
+
 def get_order_book(auth):
     """Fetch open orders + recent order history."""
     try:
         all_orders = []
 
         # 1. Fetch open orders from realtime endpoint
-        open_result = get_api_response(
-            "/v5/order/realtime", auth, method="GET", signed=True
-        )
+        open_result = get_api_response("/v5/order/realtime", auth, method="GET", signed=True)
         if open_result.get("success"):
             data = open_result.get("result", {})
             orders_list = data.get("list", [])
@@ -70,8 +69,7 @@ def get_order_book(auth):
 
         # 2. Fetch recent order history
         hist_result = get_api_response(
-            "/v5/order/history", auth, method="GET", signed=True,
-            params={"limit": 50}
+            "/v5/order/history", auth, method="GET", signed=True, params={"limit": 50}
         )
         if hist_result.get("success"):
             data = hist_result.get("result", {})
@@ -80,7 +78,8 @@ def get_order_book(auth):
                 # Merge with dedup, preferring history for authoritative status
                 hist_by_id = {o.get("orderId"): o for o in hist_list if isinstance(o, dict)}
                 all_orders = [
-                    o for o in all_orders
+                    o
+                    for o in all_orders
                     if not (isinstance(o, dict) and o.get("orderId") in hist_by_id)
                 ]
                 all_orders.extend(hist_list)
@@ -97,8 +96,7 @@ def get_trade_book(auth):
     """Fetch trade fills/execution history."""
     try:
         result = get_api_response(
-            "/v5/execution/list", auth, method="GET", signed=True,
-            params={"limit": 100}
+            "/v5/execution/list", auth, method="GET", signed=True, params={"limit": 100}
         )
         if result.get("success"):
             data = result.get("result", {})
@@ -114,14 +112,18 @@ def get_trade_book(auth):
 # Positions / holdings
 # ---------------------------------------------------------------------------
 
+
 def get_positions(auth):
     """Fetch account wallet balances as synthetic position dicts."""
     positions = []
 
     try:
         result = get_api_response(
-            "/v5/account/wallet-balance", auth, method="GET",
-            signed=True, params={"accountType": "UNIFIED"}
+            "/v5/account/wallet-balance",
+            auth,
+            method="GET",
+            signed=True,
+            params={"accountType": "UNIFIED"},
         )
         if not result.get("success"):
             logger.warning(f"[Bybit] get_positions failed: {result}")
@@ -150,15 +152,17 @@ def get_positions(auth):
             if total <= 0:
                 continue
 
-            positions.append({
-                "symbol": asset,
-                "asset": asset,
-                "free": float(free_str),
-                "locked": float(locked_str),
-                "total": total,
-                "product_symbol": f"{asset}USDT",
-                "_is_spot": True,
-            })
+            positions.append(
+                {
+                    "symbol": asset,
+                    "asset": asset,
+                    "free": float(free_str),
+                    "locked": float(locked_str),
+                    "total": total,
+                    "product_symbol": f"{asset}USDT",
+                    "_is_spot": True,
+                }
+            )
 
         logger.debug(f"[Bybit] get_positions: {len(positions)} non-zero assets")
         return positions
@@ -188,6 +192,7 @@ def get_open_position(tradingsymbol, exchange, product, auth):
 # Order placement
 # ---------------------------------------------------------------------------
 
+
 def place_order_api(data, auth):
     """
     Place a new order on Bybit via POST /v5/order/create.
@@ -199,23 +204,26 @@ def place_order_api(data, auth):
     logger.info(f"[Bybit] place_order: symbol={data['symbol']} token={token}")
 
     if not token:
-        msg = (f"[Bybit] Symbol '{data['symbol']}' not found in master contract DB "
-               f"for exchange '{data['exchange']}'. Run master contract sync first.")
+        msg = (
+            f"[Bybit] Symbol '{data['symbol']}' not found in master contract DB "
+            f"for exchange '{data['exchange']}'. Run master contract sync first."
+        )
         logger.error(msg)
+
         class _ErrResp:
             status_code = 400
             status = 400
+
         return _ErrResp(), {"status": "error", "message": msg}, None
 
     # Transform SilverTrade data → Bybit API params
     order_body = transform_data(data, token)
-    
+
     # Bybit order endpoints use category parameter; map exchange to category
     category = data.get("category", TRADE_TYPE_SPOT)
 
     result = get_api_response(
-        "/v5/order/create", auth, method="POST",
-        body=order_body, signed=True, category=category
+        "/v5/order/create", auth, method="POST", body=order_body, signed=True, category=category
     )
     logger.debug(f"[Bybit] place_order response: {result}")
 
@@ -268,9 +276,11 @@ def place_smartorder_api(data, auth):
             return place_order_api(data, auth)
 
         if position_size == current_position:
-            msg = ("No OpenPosition Found. Not placing Exit order."
-                   if float(data["quantity"]) == 0
-                   else "No action needed. Position size matches current position")
+            msg = (
+                "No OpenPosition Found. Not placing Exit order."
+                if float(data["quantity"]) == 0
+                else "No action needed. Position size matches current position"
+            )
             return res, {"status": "success", "message": msg}, None
 
         action = None
@@ -301,6 +311,7 @@ def place_smartorder_api(data, auth):
 # Order cancellation
 # ---------------------------------------------------------------------------
 
+
 def cancel_order(orderid, auth):
     """
     Cancel an open order via POST /v5/order/cancel.
@@ -318,10 +329,10 @@ def cancel_order(orderid, auth):
 
         # Fallback: fetch from open orders
         if not symbol:
-            logger.warning(f"[Bybit] Symbol for order {orderid} not in local map; fetching from API")
-            open_result = get_api_response(
-                "/v5/order/realtime", auth, method="GET", signed=True
+            logger.warning(
+                f"[Bybit] Symbol for order {orderid} not in local map; fetching from API"
             )
+            open_result = get_api_response("/v5/order/realtime", auth, method="GET", signed=True)
             if open_result.get("success"):
                 data = open_result.get("result", {})
                 for order in data.get("list", []):
@@ -330,13 +341,13 @@ def cancel_order(orderid, auth):
                         break
 
         if not symbol:
-            return {"status": "error", "message": "Could not determine symbol for order cancellation."}, 400
+            return {
+                "status": "error",
+                "message": "Could not determine symbol for order cancellation.",
+            }, 400
 
         body = {"symbol": symbol, "orderId": orderid_str}
-        result = get_api_response(
-            "/v5/order/cancel", auth, method="POST",
-            body=body, signed=True
-        )
+        result = get_api_response("/v5/order/cancel", auth, method="POST", body=body, signed=True)
 
         if result.get("success"):
             logger.info(f"[Bybit] Order {orderid} cancelled (symbol={symbol})")
@@ -357,8 +368,7 @@ def cancel_all_orders_api(data, auth):
     """Cancel all open orders. Bybit supports POST /v5/order/cancel-all."""
     try:
         result = get_api_response(
-            "/v5/order/cancel-all", auth, method="POST",
-            body={"category": "spot"}, signed=True
+            "/v5/order/cancel-all", auth, method="POST", body={"category": "spot"}, signed=True
         )
         if result.get("success"):
             logger.info("[Bybit] All orders cancelled")
@@ -373,6 +383,7 @@ def cancel_all_orders_api(data, auth):
 # Order modification (amend)
 # ---------------------------------------------------------------------------
 
+
 def modify_order(data, auth):
     """
     Modify an existing open order via POST /v5/order/amend.
@@ -382,10 +393,7 @@ def modify_order(data, auth):
     orderid = data["orderid"]
     transformed = transform_modify_order_data(data)
 
-    result = get_api_response(
-        "/v5/order/amend", auth, method="POST",
-        body=transformed, signed=True
-    )
+    result = get_api_response("/v5/order/amend", auth, method="POST", body=transformed, signed=True)
 
     if result.get("success"):
         return {"status": "success", "orderid": orderid}, 200
@@ -398,6 +406,7 @@ def modify_order(data, auth):
 # ---------------------------------------------------------------------------
 # Close all positions
 # ---------------------------------------------------------------------------
+
 
 def close_all_positions(current_api_key, auth):
     """Close all open positions using market orders."""

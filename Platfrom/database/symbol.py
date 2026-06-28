@@ -13,6 +13,7 @@ def _escape_like(term: str) -> str:
     """Escape LIKE wildcard characters to prevent unintended broad matching."""
     return term.replace("%", r"\%").replace("_", r"\_")
 
+
 from database.db_config import get_db_engine
 
 engine = get_db_engine()

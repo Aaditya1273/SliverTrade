@@ -58,7 +58,9 @@ def _compute_mp(data, auth_token):
             )
             return mp_value
         except Exception as e:
-            logger.warning(f"MPP: Failed to compute mp for {symbol}/{exchange}: {e}. Using mp={FALLBACK_MP}")
+            logger.warning(
+                f"MPP: Failed to compute mp for {symbol}/{exchange}: {e}. Using mp={FALLBACK_MP}"
+            )
             return FALLBACK_MP
 
     # SL-M

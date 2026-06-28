@@ -42,6 +42,7 @@ _user_credentials_cache = TTLCache(maxsize=10000, ttl=1800)  # 30 minutes TTL
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///db/telegram.db")
 
 from database.db_config import ensure_db_dir
+
 ensure_db_dir(DATABASE_URL)
 
 TELEGRAM_KEY_SALT = os.getenv("TELEGRAM_KEY_SALT", "telegram-silvertrade-salt").encode()

@@ -16,7 +16,9 @@ def get_margin_data(auth_token):
 
     try:
         # Make the GET request using the circuit-breaker-protected client
-        response = request_with_circuit_breaker("GET", "https://api.kite.trade/user/margins", headers=headers)
+        response = request_with_circuit_breaker(
+            "GET", "https://api.kite.trade/user/margins", headers=headers
+        )
         response.raise_for_status()  # Raises an exception for 4XX/5XX responses
 
         # Parse the response
@@ -83,9 +85,7 @@ def get_margin_data(auth_token):
 
                 # Fetch live LTP for open positions via quotes API
                 if open_positions:
-                    instruments = [
-                        f"{p['exchange']}:{p['tradingsymbol']}" for p in open_positions
-                    ]
+                    instruments = [f"{p['exchange']}:{p['tradingsymbol']}" for p in open_positions]
                     query = "&".join(f"i={inst}" for inst in instruments)
                     quote_response = request_with_circuit_breaker(
                         "GET", f"https://api.kite.trade/quote/ltp?{query}", headers=headers

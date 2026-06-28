@@ -50,8 +50,8 @@ _TRANSIENT_ERRORS = (
     httpx.ReadTimeout,
     httpx.TimeoutException,
 )
-_MAX_RETRIES = 2        # up to 2 retries (3 total attempts)
-_RETRY_DELAY = 0.3      # seconds between retries
+_MAX_RETRIES = 2  # up to 2 retries (3 total attempts)
+_RETRY_DELAY = 0.3  # seconds between retries
 
 
 def _get_ticker(symbol: str) -> dict:
@@ -68,14 +68,19 @@ def _get_ticker(symbol: str) -> dict:
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            resp = request_with_circuit_breaker("GET", url, headers={"Accept": "application/json"}, timeout=15.0)
+            resp = request_with_circuit_breaker(
+                "GET", url, headers={"Accept": "application/json"}, timeout=15.0
+            )
             break  # success
         except _TRANSIENT_ERRORS as exc:
             last_err = exc
             if attempt < _MAX_RETRIES:
                 logger.warning(
                     "Transient error fetching ticker %s (attempt %d/%d): %s – retrying",
-                    symbol, attempt + 1, _MAX_RETRIES + 1, exc,
+                    symbol,
+                    attempt + 1,
+                    _MAX_RETRIES + 1,
+                    exc,
                 )
                 time.sleep(_RETRY_DELAY)
             else:
@@ -91,7 +96,7 @@ def _get_ticker(symbol: str) -> dict:
     result = data.get("result")
     if result is None:
         result = {}
-        
+
     # Guard: single-symbol endpoint must return a dict
     if not isinstance(result, dict):
         raise Exception(
@@ -123,14 +128,19 @@ def _get_l2orderbook(product_id: int) -> dict:
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            resp = request_with_circuit_breaker("GET", url, headers={"Accept": "application/json"}, timeout=15.0)
+            resp = request_with_circuit_breaker(
+                "GET", url, headers={"Accept": "application/json"}, timeout=15.0
+            )
             break  # success
         except _TRANSIENT_ERRORS as exc:
             last_err = exc
             if attempt < _MAX_RETRIES:
                 logger.warning(
                     "Transient error fetching l2orderbook %s (attempt %d/%d): %s – retrying",
-                    product_id, attempt + 1, _MAX_RETRIES + 1, exc,
+                    product_id,
+                    attempt + 1,
+                    _MAX_RETRIES + 1,
+                    exc,
                 )
                 time.sleep(_RETRY_DELAY)
             else:
@@ -138,8 +148,7 @@ def _get_l2orderbook(product_id: int) -> dict:
 
     if resp.status_code != 200:
         raise Exception(
-            f"L2 orderbook HTTP {resp.status_code} for product_id={product_id}: "
-            f"{resp.text[:200]}"
+            f"L2 orderbook HTTP {resp.status_code} for product_id={product_id}: {resp.text[:200]}"
         )
 
     data = resp.json()
@@ -169,19 +178,19 @@ class BrokerData:
     # The API caps responses to ~4,000 candles (most recent) per request regardless
     # of the requested range. CHUNK_DAYS below are sized accordingly.
     TIMEFRAME_MAP = {
-        "1m":  "1m",
-        "3m":  "3m",
-        "5m":  "5m",
+        "1m": "1m",
+        "3m": "3m",
+        "5m": "5m",
         "15m": "15m",
         "30m": "30m",
-        "1h":  "1h",
-        "2h":  "2h",
-        "4h":  "4h",
-        "6h":  "6h",
-        "1d":  "1d",
-        "D":   "1d",   # alias
-        "1w":  "1w",
-        "W":   "1w",   # alias
+        "1h": "1h",
+        "2h": "2h",
+        "4h": "4h",
+        "6h": "6h",
+        "1d": "1d",
+        "D": "1d",  # alias
+        "1w": "1w",
+        "W": "1w",  # alias
     }
 
     def __init__(self, auth_token: str):
@@ -222,15 +231,15 @@ class BrokerData:
             quotes = ticker.get("quotes") or {}
 
             result = {
-                "ltp":        _f(ticker.get("mark_price", 0)),
-                "open":       _f(ticker.get("open", 0)),
-                "high":       _f(ticker.get("high", 0)),
-                "low":        _f(ticker.get("low", 0)),
-                "volume":     _i(ticker.get("volume", 0)),
+                "ltp": _f(ticker.get("mark_price", 0)),
+                "open": _f(ticker.get("open", 0)),
+                "high": _f(ticker.get("high", 0)),
+                "low": _f(ticker.get("low", 0)),
+                "volume": _i(ticker.get("volume", 0)),
                 "prev_close": _f(ticker.get("close", 0)),
-                "oi":         _f(ticker.get("oi", 0)),
-                "bid":        _f(quotes.get("best_bid", 0)),
-                "ask":        _f(quotes.get("best_ask", 0)),
+                "oi": _f(ticker.get("oi", 0)),
+                "bid": _f(quotes.get("best_bid", 0)),
+                "ask": _f(quotes.get("best_ask", 0)),
             }
 
             logger.debug(f"[DeltaExchange] Quotes for {br_symbol}: ltp={result['ltp']}")
@@ -271,13 +280,13 @@ class BrokerData:
             ticker = _get_ticker(br_symbol)
             product_id = _i(ticker.get("product_id", 0))
 
-            ltp        = _f(ticker.get("mark_price", 0))
-            open_p     = _f(ticker.get("open", 0))
-            high_p     = _f(ticker.get("high", 0))
-            low_p      = _f(ticker.get("low", 0))
+            ltp = _f(ticker.get("mark_price", 0))
+            open_p = _f(ticker.get("open", 0))
+            high_p = _f(ticker.get("high", 0))
+            low_p = _f(ticker.get("low", 0))
             prev_close = _f(ticker.get("close", 0))
-            volume     = _i(ticker.get("volume", 0))
-            oi         = _f(ticker.get("oi", 0))
+            volume = _i(ticker.get("volume", 0))
+            oi = _f(ticker.get("oi", 0))
 
             # Factory that always returns a *new* list of empty level dicts.
             # Never reuse a single empty_side object for both bids and asks —
@@ -294,25 +303,33 @@ class BrokerData:
                 return {
                     "bids": _empty_side(),
                     "asks": _empty_side(),
-                    "ltp": ltp, "ltq": 0,
-                    "volume": volume, "open": open_p, "high": high_p,
-                    "low": low_p, "prev_close": prev_close, "oi": oi,
-                    "totalbuyqty": 0, "totalsellqty": 0,
+                    "ltp": ltp,
+                    "ltq": 0,
+                    "volume": volume,
+                    "open": open_p,
+                    "high": high_p,
+                    "low": low_p,
+                    "prev_close": prev_close,
+                    "oi": oi,
+                    "totalbuyqty": 0,
+                    "totalsellqty": 0,
                 }
 
             # ── call 2: l2 orderbook ────────────────────────────────────────
             try:
                 book = _get_l2orderbook(product_id)
-                buy_levels  = book.get("buy",  []) or []
+                buy_levels = book.get("buy", []) or []
                 sell_levels = book.get("sell", []) or []
 
                 def _parse_level(level_list, n=5):
                     out = []
                     for lvl in level_list[:n]:
-                        out.append({
-                            "price":    _f(lvl.get("price", 0)),
-                            "quantity": _i(lvl.get("size",  0)),
-                        })
+                        out.append(
+                            {
+                                "price": _f(lvl.get("price", 0)),
+                                "quantity": _i(lvl.get("size", 0)),
+                            }
+                        )
                     # Pad to exactly n levels
                     while len(out) < n:
                         out.append({"price": 0.0, "quantity": 0})
@@ -321,7 +338,7 @@ class BrokerData:
                 bids = _parse_level(buy_levels)
                 asks = _parse_level(sell_levels)
 
-                totalbuyqty  = sum(lvl["quantity"] for lvl in bids)
+                totalbuyqty = sum(lvl["quantity"] for lvl in bids)
                 totalsellqty = sum(lvl["quantity"] for lvl in asks)
 
             except Exception as book_err:
@@ -336,15 +353,15 @@ class BrokerData:
             result = {
                 "bids": bids,
                 "asks": asks,
-                "ltp":          ltp,
-                "ltq":          0,      # last traded qty not in ticker response
-                "volume":       volume,
-                "open":         open_p,
-                "high":         high_p,
-                "low":          low_p,
-                "prev_close":   prev_close,
-                "oi":           oi,
-                "totalbuyqty":  totalbuyqty,
+                "ltp": ltp,
+                "ltq": 0,  # last traded qty not in ticker response
+                "volume": volume,
+                "open": open_p,
+                "high": high_p,
+                "low": low_p,
+                "prev_close": prev_close,
+                "oi": oi,
+                "totalbuyqty": totalbuyqty,
                 "totalsellqty": totalsellqty,
             }
 
@@ -372,17 +389,17 @@ class BrokerData:
     #   1h+:   24/day → cap=83d+  → 60 days
     #   1d/1w: unlimited          → 0 (no chunking)
     CHUNK_DAYS = {
-        "1m":  1,
-        "3m":  7,
-        "5m":  12,
+        "1m": 1,
+        "3m": 7,
+        "5m": 12,
         "15m": 30,
         "30m": 60,
-        "1h":  90,
-        "2h":  90,
-        "4h":  90,
-        "6h":  90,
-        "1d":  0,   # 0 = no chunking
-        "1w":  0,
+        "1h": 90,
+        "2h": 90,
+        "4h": 90,
+        "6h": 90,
+        "1d": 0,  # 0 = no chunking
+        "1w": 0,
     }
 
     def get_history(
@@ -423,15 +440,15 @@ class BrokerData:
             if interval not in self.TIMEFRAME_MAP:
                 supported = list(self.TIMEFRAME_MAP.keys())
                 raise Exception(
-                    f"Unsupported interval '{interval}'. "
-                    f"Supported: {', '.join(supported)}"
+                    f"Unsupported interval '{interval}'. Supported: {', '.join(supported)}"
                 )
 
             resolution = self.TIMEFRAME_MAP[interval]
-            br_symbol  = self._get_br_symbol(symbol, exchange)
+            br_symbol = self._get_br_symbol(symbol, exchange)
 
             # Normalize: accept datetime.date/datetime or str, avoid string roundtrip
             from datetime import date as _date, time as _time
+
             if isinstance(start_date, str):
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             else:
@@ -443,7 +460,7 @@ class BrokerData:
                 end_dt = datetime.combine(end_date, _time.min)
 
             start_date = start_dt.strftime("%Y-%m-%d")
-            end_date   = end_dt.strftime("%Y-%m-%d")
+            end_date = end_dt.strftime("%Y-%m-%d")
 
             # Build list of (chunk_start_str, chunk_end_str) date pairs
             chunk_days = self.CHUNK_DAYS.get(resolution, 30)
@@ -455,10 +472,12 @@ class BrokerData:
                 cursor = start_dt
                 while cursor <= end_dt:
                     chunk_end = min(cursor + timedelta(days=chunk_days - 1), end_dt)
-                    chunks.append((
-                        cursor.strftime("%Y-%m-%d"),
-                        chunk_end.strftime("%Y-%m-%d"),
-                    ))
+                    chunks.append(
+                        (
+                            cursor.strftime("%Y-%m-%d"),
+                            chunk_end.strftime("%Y-%m-%d"),
+                        )
+                    )
                     cursor = chunk_end + timedelta(days=1)
 
             logger.info(
@@ -467,25 +486,25 @@ class BrokerData:
             )
 
             all_candles = []
-            url    = f"{BASE_URL}/v2/history/candles"
+            url = f"{BASE_URL}/v2/history/candles"
 
             for chunk_start, chunk_end in chunks:
                 start_ts = self._to_epoch(chunk_start, end_of_day=False)
-                end_ts   = self._to_epoch(chunk_end,   end_of_day=True)
+                end_ts = self._to_epoch(chunk_end, end_of_day=True)
 
                 params = {
-                    "symbol":     br_symbol,
+                    "symbol": br_symbol,
                     "resolution": resolution,
-                    "start":      str(start_ts),
-                    "end":        str(end_ts),
+                    "start": str(start_ts),
+                    "end": str(end_ts),
                 }
 
                 logger.debug(
-                    f"[DeltaExchange] Chunk {chunk_start} → {chunk_end} "
-                    f"({start_ts} → {end_ts})"
+                    f"[DeltaExchange] Chunk {chunk_start} → {chunk_end} ({start_ts} → {end_ts})"
                 )
 
-                resp = request_with_circuit_breaker("GET", 
+                resp = request_with_circuit_breaker(
+                    "GET",
                     url,
                     params=params,
                     headers={"Accept": "application/json"},
@@ -499,41 +518,41 @@ class BrokerData:
 
                 data = resp.json()
                 if not data.get("success", False):
-                    raise Exception(
-                        f"History API error for {br_symbol}: {data.get('error', data)}"
-                    )
+                    raise Exception(f"History API error for {br_symbol}: {data.get('error', data)}")
 
                 raw_candles = data.get("result", [])
                 if not isinstance(raw_candles, list):
-                    raise Exception(
-                        f"Unexpected history result type: {type(raw_candles).__name__}"
-                    )
+                    raise Exception(f"Unexpected history result type: {type(raw_candles).__name__}")
 
                 for candle in raw_candles:
                     try:
                         if isinstance(candle, list) and len(candle) >= 6:
                             # Array format: [timestamp, open, high, low, close, volume]
-                            all_candles.append({
-                                "timestamp": int(candle[0]),
-                                "open":      _f(candle[1]),
-                                "high":      _f(candle[2]),
-                                "low":       _f(candle[3]),
-                                "close":     _f(candle[4]),
-                                "volume":    _i(candle[5]),
-                                "oi":        _i(candle[6]) if len(candle) > 6 else 0,
-                            })
+                            all_candles.append(
+                                {
+                                    "timestamp": int(candle[0]),
+                                    "open": _f(candle[1]),
+                                    "high": _f(candle[2]),
+                                    "low": _f(candle[3]),
+                                    "close": _f(candle[4]),
+                                    "volume": _i(candle[5]),
+                                    "oi": _i(candle[6]) if len(candle) > 6 else 0,
+                                }
+                            )
                         elif isinstance(candle, dict):
                             # Named-field format (defensive fallback)
                             ts = candle.get("time", candle.get("timestamp", candle.get("t", 0)))
-                            all_candles.append({
-                                "timestamp": int(ts),
-                                "open":      _f(candle.get("open",   candle.get("o", 0))),
-                                "high":      _f(candle.get("high",   candle.get("h", 0))),
-                                "low":       _f(candle.get("low",    candle.get("l", 0))),
-                                "close":     _f(candle.get("close",  candle.get("c", 0))),
-                                "volume":    _i(candle.get("volume", candle.get("v", 0))),
-                                "oi":        _i(candle.get("oi", 0)),
-                            })
+                            all_candles.append(
+                                {
+                                    "timestamp": int(ts),
+                                    "open": _f(candle.get("open", candle.get("o", 0))),
+                                    "high": _f(candle.get("high", candle.get("h", 0))),
+                                    "low": _f(candle.get("low", candle.get("l", 0))),
+                                    "close": _f(candle.get("close", candle.get("c", 0))),
+                                    "volume": _i(candle.get("volume", candle.get("v", 0))),
+                                    "oi": _i(candle.get("oi", 0)),
+                                }
+                            )
                         else:
                             logger.warning(f"Unknown candle format: {candle}")
                     except Exception as candle_err:
@@ -617,14 +636,14 @@ class BrokerData:
 
             result = [
                 {
-                    "symbol":         r.symbol,
-                    "brsymbol":       r.brsymbol,
-                    "token":          r.token,
+                    "symbol": r.symbol,
+                    "brsymbol": r.brsymbol,
+                    "token": r.token,
                     "instrumenttype": r.instrumenttype,
-                    "expiry":         r.expiry,
-                    "strike":         r.strike,
-                    "lotsize":        r.lotsize,
-                    "tick_size":      r.tick_size,
+                    "expiry": r.expiry,
+                    "strike": r.strike,
+                    "lotsize": r.lotsize,
+                    "tick_size": r.tick_size,
                 }
                 for r in rows
             ]
@@ -638,12 +657,13 @@ class BrokerData:
                 except (ValueError, TypeError):
                     return datetime.max.date()
 
-            result.sort(key=lambda x: (x["instrumenttype"], _expiry_sort_key(x["expiry"]), x["strike"]))
+            result.sort(
+                key=lambda x: (x["instrumenttype"], _expiry_sort_key(x["expiry"]), x["strike"])
+            )
 
             logger.info(
                 f"[DeltaExchange] get_option_chain: {len(result)} strikes for "
-                f"{underlying} @ {exchange}"
-                + (f" expiry={expiry}" if expiry else "")
+                f"{underlying} @ {exchange}" + (f" expiry={expiry}" if expiry else "")
             )
             return result
 
@@ -672,11 +692,11 @@ class BrokerData:
         Falls back to the symbol itself if not found in the master contract DB.
         """
         from database.token_db import get_br_symbol
+
         br = get_br_symbol(symbol, exchange)
         if not br:
             logger.warning(
-                f"[DeltaExchange] brsymbol not found for {symbol}/{exchange}, "
-                f"using symbol as-is"
+                f"[DeltaExchange] brsymbol not found for {symbol}/{exchange}, using symbol as-is"
             )
             return symbol
         return br
@@ -688,6 +708,7 @@ class BrokerData:
         Uses UTC midnight for start, UTC 23:59:59 for end.
         """
         import calendar
+
         fmt = "%Y-%m-%d %H:%M:%S"
         if end_of_day:
             dt = datetime.strptime(f"{date_str} 23:59:59", fmt)

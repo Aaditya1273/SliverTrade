@@ -56,7 +56,8 @@ def authenticate_broker(userid, broker_pin, totp_code, date_of_birth):
             "browserversion": "120.0",
         }
 
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://openapi.motilaloswal.com/rest/login/v3/authdirectapi",
             headers=headers,
             json=payload,

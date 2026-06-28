@@ -50,23 +50,23 @@ class BrokerData:
 
     # Binance candle interval codes mapped from SilverTrade AI interval codes.
     TIMEFRAME_MAP = {
-        "1m":  "1m",
-        "3m":  "3m",
-        "5m":  "5m",
+        "1m": "1m",
+        "3m": "3m",
+        "5m": "5m",
         "15m": "15m",
         "30m": "30m",
-        "1h":  "1h",
-        "2h":  "2h",
-        "4h":  "4h",
-        "6h":  "6h",
-        "8h":  "8h",
+        "1h": "1h",
+        "2h": "2h",
+        "4h": "4h",
+        "6h": "6h",
+        "8h": "8h",
         "12h": "12h",
-        "1d":  "1d",
-        "D":   "1d",
-        "3d":  "3d",
-        "1w":  "1w",
-        "W":   "1w",
-        "1M":  "1M",
+        "1d": "1d",
+        "D": "1d",
+        "3d": "3d",
+        "1w": "1w",
+        "W": "1w",
+        "1M": "1M",
     }
 
     def __init__(self, auth_token: str):
@@ -101,10 +101,7 @@ class BrokerData:
             br_symbol = self._get_br_symbol(symbol, exchange)
             logger.info(f"[Binance] get_quotes: {symbol} → {br_symbol}")
 
-            result = get_api_response(
-                "/api/v3/ticker/24hr",
-                params={"symbol": br_symbol}
-            )
+            result = get_api_response("/api/v3/ticker/24hr", params={"symbol": br_symbol})
 
             if not result.get("success"):
                 raise Exception(f"Ticker API error: {result.get('error', {})}")
@@ -112,15 +109,15 @@ class BrokerData:
             ticker = result.get("result", {})
 
             return {
-                "ltp":        _f(ticker.get("lastPrice", 0)),
-                "open":       _f(ticker.get("openPrice", 0)),
-                "high":       _f(ticker.get("highPrice", 0)),
-                "low":        _f(ticker.get("lowPrice", 0)),
-                "volume":     _f(ticker.get("volume", 0)),
+                "ltp": _f(ticker.get("lastPrice", 0)),
+                "open": _f(ticker.get("openPrice", 0)),
+                "high": _f(ticker.get("highPrice", 0)),
+                "low": _f(ticker.get("lowPrice", 0)),
+                "volume": _f(ticker.get("volume", 0)),
                 "prev_close": _f(ticker.get("prevClosePrice", 0)),
-                "oi":         0.0,  # Binance Spot doesn't have OI
-                "bid":        _f(ticker.get("bidPrice", 0)),
-                "ask":        _f(ticker.get("askPrice", 0)),
+                "oi": 0.0,  # Binance Spot doesn't have OI
+                "bid": _f(ticker.get("bidPrice", 0)),
+                "ask": _f(ticker.get("askPrice", 0)),
             }
 
         except Exception as e:
@@ -150,9 +147,7 @@ class BrokerData:
             logger.info(f"[Binance] get_depth: {symbol} → {br_symbol}")
 
             # Also fetch ticker for LTP / OHLCV
-            ticker_result = get_api_response(
-                "/api/v3/ticker/24hr", params={"symbol": br_symbol}
-            )
+            ticker_result = get_api_response("/api/v3/ticker/24hr", params={"symbol": br_symbol})
             ticker = ticker_result.get("result", {}) if ticker_result.get("success") else {}
 
             ltp = _f(ticker.get("lastPrice", 0))
@@ -173,10 +168,12 @@ class BrokerData:
                 out = []
                 for lvl in levels[:n]:
                     if len(lvl) >= 2:
-                        out.append({
-                            "price":    _f(lvl[0]),
-                            "quantity": _f(lvl[1]),
-                        })
+                        out.append(
+                            {
+                                "price": _f(lvl[0]),
+                                "quantity": _f(lvl[1]),
+                            }
+                        )
                 while len(out) < n:
                     out.append({"price": 0.0, "quantity": 0})
                 return out
@@ -187,15 +184,15 @@ class BrokerData:
             return {
                 "bids": bids,
                 "asks": asks,
-                "ltp":          ltp,
-                "ltq":          0,
-                "volume":       _f(ticker.get("volume", 0)),
-                "open":         _f(ticker.get("openPrice", 0)),
-                "high":         _f(ticker.get("highPrice", 0)),
-                "low":          _f(ticker.get("lowPrice", 0)),
-                "prev_close":   _f(ticker.get("prevClosePrice", 0)),
-                "oi":           0.0,
-                "totalbuyqty":  sum(lvl["quantity"] for lvl in bids),
+                "ltp": ltp,
+                "ltq": 0,
+                "volume": _f(ticker.get("volume", 0)),
+                "open": _f(ticker.get("openPrice", 0)),
+                "high": _f(ticker.get("highPrice", 0)),
+                "low": _f(ticker.get("lowPrice", 0)),
+                "prev_close": _f(ticker.get("prevClosePrice", 0)),
+                "oi": 0.0,
+                "totalbuyqty": sum(lvl["quantity"] for lvl in bids),
                 "totalsellqty": sum(lvl["quantity"] for lvl in asks),
             }
 
@@ -241,13 +238,16 @@ class BrokerData:
         try:
             if interval not in self.TIMEFRAME_MAP:
                 supported = list(self.TIMEFRAME_MAP.keys())
-                raise Exception(f"Unsupported interval '{interval}'. Supported: {', '.join(supported)}")
+                raise Exception(
+                    f"Unsupported interval '{interval}'. Supported: {', '.join(supported)}"
+                )
 
             resolution = self.TIMEFRAME_MAP[interval]
             br_symbol = self._get_br_symbol(symbol, exchange)
 
             # Parse dates
             from datetime import date as _date, time as _time
+
             if isinstance(start_date, str):
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             else:
@@ -264,10 +264,21 @@ class BrokerData:
             # Binance limit is 1000 per request; chunk if needed
             # Calculate chunk size in ms
             resolution_ms = {
-                "1m": 60000, "3m": 180000, "5m": 300000, "15m": 900000,
-                "30m": 1800000, "1h": 3600000, "2h": 7200000, "4h": 14400000,
-                "6h": 21600000, "8h": 28800000, "12h": 43200000,
-                "1d": 86400000, "3d": 259200000, "1w": 604800000, "1M": 2592000000,
+                "1m": 60000,
+                "3m": 180000,
+                "5m": 300000,
+                "15m": 900000,
+                "30m": 1800000,
+                "1h": 3600000,
+                "2h": 7200000,
+                "4h": 14400000,
+                "6h": 21600000,
+                "8h": 28800000,
+                "12h": 43200000,
+                "1d": 86400000,
+                "3d": 259200000,
+                "1w": 604800000,
+                "1M": 2592000000,
             }
             chunk_ms = resolution_ms.get(resolution, 86400000) * 1000  # 1000 candles per chunk
             if chunk_ms <= 0:
@@ -280,8 +291,7 @@ class BrokerData:
                 chunks.append((cursor, chunk_end))
                 cursor = chunk_end + 1
 
-            logger.info(f"[Binance] get_history: {br_symbol} {resolution} "
-                       f"({len(chunks)} chunk(s))")
+            logger.info(f"[Binance] get_history: {br_symbol} {resolution} ({len(chunks)} chunk(s))")
 
             all_candles = []
 
@@ -301,22 +311,30 @@ class BrokerData:
                 raw_klines = kline_result.get("result", [])
                 for kline in raw_klines:
                     if isinstance(kline, list) and len(kline) >= 6:
-                        all_candles.append({
-                            "timestamp": int(kline[0]) // 1000,  # ms → seconds
-                            "open":      _f(kline[1]),
-                            "high":      _f(kline[2]),
-                            "low":       _f(kline[3]),
-                            "close":     _f(kline[4]),
-                            "volume":    _f(kline[5]),
-                            "oi":        0,
-                        })
+                        all_candles.append(
+                            {
+                                "timestamp": int(kline[0]) // 1000,  # ms → seconds
+                                "open": _f(kline[1]),
+                                "high": _f(kline[2]),
+                                "low": _f(kline[3]),
+                                "close": _f(kline[4]),
+                                "volume": _f(kline[5]),
+                                "oi": 0,
+                            }
+                        )
 
             if all_candles:
                 df = pd.DataFrame(all_candles)
-                df = df.sort_values("timestamp").drop_duplicates(subset=["timestamp"]).reset_index(drop=True)
+                df = (
+                    df.sort_values("timestamp")
+                    .drop_duplicates(subset=["timestamp"])
+                    .reset_index(drop=True)
+                )
                 logger.info(f"[Binance] History: {len(df)} candles for {br_symbol} @ {resolution}")
             else:
-                df = pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume", "oi"])
+                df = pd.DataFrame(
+                    columns=["timestamp", "open", "high", "low", "close", "volume", "oi"]
+                )
                 logger.warning(f"[Binance] No candles for {br_symbol} @ {resolution}")
 
             return df
@@ -343,8 +361,11 @@ class BrokerData:
     def _get_br_symbol(self, symbol: str, exchange: str) -> str:
         """Resolve SilverTrade AI symbol → Binance symbol."""
         from database.token_db import get_br_symbol
+
         br = get_br_symbol(symbol, exchange)
         if not br:
-            logger.warning(f"[Binance] brsymbol not found for {symbol}/{exchange}, using symbol as-is")
+            logger.warning(
+                f"[Binance] brsymbol not found for {symbol}/{exchange}, using symbol as-is"
+            )
             return symbol
         return br

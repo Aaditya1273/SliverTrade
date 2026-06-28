@@ -55,7 +55,6 @@ def authenticate_broker(totp_code):
     device_id = get_device_id()
 
     try:
-
         # Step 1: Login via TOTP
         logger.info(f"Nubra TOTP login initiated for phone: {phone[:5]}***")
 
@@ -63,8 +62,8 @@ def authenticate_broker(totp_code):
 
         totp_login_headers = {"Content-Type": "application/json", "x-device-id": device_id}
 
-        totp_response = request_with_circuit_breaker("POST", 
-            f"{base_url}/totp/login", json=totp_login_payload, headers=totp_login_headers
+        totp_response = request_with_circuit_breaker(
+            "POST", f"{base_url}/totp/login", json=totp_login_payload, headers=totp_login_headers
         )
 
         totp_data = totp_response.json()
@@ -91,8 +90,8 @@ def authenticate_broker(totp_code):
             "Authorization": f"Bearer {auth_token}",
         }
 
-        pin_response = request_with_circuit_breaker("POST", 
-            f"{base_url}/verifypin", json=verify_pin_payload, headers=verify_pin_headers
+        pin_response = request_with_circuit_breaker(
+            "POST", f"{base_url}/verifypin", json=verify_pin_payload, headers=verify_pin_headers
         )
 
         pin_data = pin_response.json()

@@ -70,9 +70,7 @@ def get_margin_data(auth_token):
 
     try:
         # Fetch account info
-        result = get_api_response(
-            "/api/v3/account", api_key, api_secret, method="GET", signed=True
-        )
+        result = get_api_response("/api/v3/account", api_key, api_secret, method="GET", signed=True)
         if not result.get("success"):
             error = result.get("error", {})
             logger.error(f"[Binance] Account API error: {error}")
@@ -133,8 +131,10 @@ def get_margin_data(auth_token):
             "utiliseddebits": f"{total_locked_usdt:.2f}",
         }
 
-        logger.debug(f"[Binance] Wallet: available={result_data['availablecash']} "
-                    f"locked={result_data['utiliseddebits']}")
+        logger.debug(
+            f"[Binance] Wallet: available={result_data['availablecash']} "
+            f"locked={result_data['utiliseddebits']}"
+        )
         return result_data
 
     except Exception as e:

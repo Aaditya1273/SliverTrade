@@ -20,6 +20,7 @@ import pytest
 
 class MockUser:
     """Simulates a ``database.user_db.User`` instance for billing tests."""
+
     def __init__(self, **kwargs):
         self.id = kwargs.get("id", 1)
         self.username = kwargs.get("username", "test_user")
@@ -46,9 +47,7 @@ def _mock_stripe_module():
     mock_stripe.Webhook.construct_event = MagicMock(
         return_value=MagicMock(type="customer.subscription.created")
     )
-    mock_stripe.Customer.create = MagicMock(
-        return_value=MagicMock(id="cus_mock_test_123")
-    )
+    mock_stripe.Customer.create = MagicMock(return_value=MagicMock(id="cus_mock_test_123"))
     mock_stripe.Customer.retrieve = MagicMock(
         return_value=MagicMock(
             id="cus_mock_test_123",
@@ -89,8 +88,10 @@ def _mock_user_lookup(user_to_return):
 
     mock_db = MagicMock()
 
-    with patch("database.user_db.User", mock_user_class), \
-         patch("database.user_db.db_session", mock_db):
+    with (
+        patch("database.user_db.User", mock_user_class),
+        patch("database.user_db.db_session", mock_db),
+    ):
         yield {"db_session": mock_db}
 
 
@@ -100,9 +101,7 @@ def _make_mock_subscription(price_id="price_mock_pro_monthly", user_id="1"):
     sub.id = "sub_mock_test_123"
     sub.customer = "cus_mock_test_123"
     sub.metadata = {"user_id": user_id}
-    sub.current_period_end = (
-        int(datetime.now(timezone.utc).timestamp()) + 2592000
-    )
+    sub.current_period_end = int(datetime.now(timezone.utc).timestamp()) + 2592000
 
     mock_price = MagicMock()
     mock_price.id = price_id
@@ -154,12 +153,16 @@ def _patch_env(monkeypatch, overrides=None):
     for key, value in defaults.items():
         monkeypatch.setattr(bs, key, value)
 
-    monkeypatch.setattr(bs, "PRICE_ID_TO_PLAN", {
-        defaults["STRIPE_PRO_PRICE_ID"]: "pro",
-        defaults["STRIPE_ENTERPRISE_PRICE_ID"]: "enterprise",
-        defaults["STRIPE_PRO_YEARLY_PRICE_ID"]: "pro",
-        defaults["STRIPE_ENTERPRISE_YEARLY_PRICE_ID"]: "enterprise",
-    })
+    monkeypatch.setattr(
+        bs,
+        "PRICE_ID_TO_PLAN",
+        {
+            defaults["STRIPE_PRO_PRICE_ID"]: "pro",
+            defaults["STRIPE_ENTERPRISE_PRICE_ID"]: "enterprise",
+            defaults["STRIPE_PRO_YEARLY_PRICE_ID"]: "pro",
+            defaults["STRIPE_ENTERPRISE_YEARLY_PRICE_ID"]: "enterprise",
+        },
+    )
 
     return bs
 
@@ -168,6 +171,7 @@ def _make_service(monkeypatch, env_overrides=None):
     """Helper: patch env & return a fresh BillingService instance."""
     _patch_env(monkeypatch, env_overrides)
     from services.billing_service import BillingService
+
     return BillingService()
 
 
@@ -198,6 +202,7 @@ class TestInit:
 
         try:
             from services.billing_service import BillingService
+
             service = BillingService()
             assert service.is_available() is False
             assert service._stripe is None
@@ -258,8 +263,7 @@ class TestCreateCustomer:
 class TestCreateCheckoutSession:
     """Tests for all 4 plan/interval combos and edge cases."""
 
-    def _checkout(self, monkeypatch, plan, interval,
-                  user_kwargs=None, expected_url=True):
+    def _checkout(self, monkeypatch, plan, interval, user_kwargs=None, expected_url=True):
         """Helper: create a checkout session for a plan/interval and assert url."""
         service = _make_service(monkeypatch)
         kwargs = {"id": 1, "email": "c@test.com", "stripe_customer_id": "cus_existing_123"}
@@ -295,8 +299,7 @@ class TestCreateCheckoutSession:
         assert result is None
 
     def test_unknown_plan(self, monkeypatch):
-        self._checkout(monkeypatch, "ultimate_mega_plan", "month",
-                       expected_url=False)
+        self._checkout(monkeypatch, "ultimate_mega_plan", "month", expected_url=False)
 
     def test_service_unavailable(self, monkeypatch):
         service = _make_service(monkeypatch, {"STRIPE_SECRET_KEY": ""})
@@ -304,8 +307,9 @@ class TestCreateCheckoutSession:
 
     def test_existing_stripe_customer_reused(self, monkeypatch):
         """Should reuse existing stripe_customer_id without creating a new customer."""
-        self._checkout(monkeypatch, "pro", "month",
-                       user_kwargs={"stripe_customer_id": "cus_existing_123"})
+        self._checkout(
+            monkeypatch, "pro", "month", user_kwargs={"stripe_customer_id": "cus_existing_123"}
+        )
         assert sys.modules["stripe"].Customer.create.call_count == 0
 
     def test_auto_create_customer_when_missing(self, monkeypatch):
@@ -351,8 +355,9 @@ class TestHandleWebhook:
 
     def test_webhook_unhandled_event(self, monkeypatch):
         """Should return True even for unhandled event types (no crash)."""
-        sys.modules["stripe"].Webhook.construct_event.return_value = \
-            _make_mock_event("charge.refunded")
+        sys.modules["stripe"].Webhook.construct_event.return_value = _make_mock_event(
+            "charge.refunded"
+        )
         service = _make_service(monkeypatch)
         result = service.handle_webhook(b"{}", "test_sig")
         assert result is True
@@ -375,7 +380,8 @@ class TestActivateSubscription:
         user = self._activate(
             monkeypatch,
             {"id": 10, "email": "act_1@test.com", "stripe_customer_id": "cus_mock"},
-            "price_mock_pro_monthly", "10",
+            "price_mock_pro_monthly",
+            "10",
         )
         assert user.plan == "pro"
         assert user.plan_expires_at is not None
@@ -385,7 +391,8 @@ class TestActivateSubscription:
         user = self._activate(
             monkeypatch,
             {"id": 11, "email": "act_2@test.com", "stripe_customer_id": "cus_mock"},
-            "price_mock_enterprise_monthly", "11",
+            "price_mock_enterprise_monthly",
+            "11",
         )
         assert user.plan == "enterprise"
 
@@ -399,7 +406,8 @@ class TestActivateSubscription:
         user = self._activate(
             monkeypatch,
             {"id": 42, "email": "act_3@test.com", "stripe_customer_id": "cus_mock"},
-            "price_mock_pro_monthly", "",  # No user_id in subscription
+            "price_mock_pro_monthly",
+            "",  # No user_id in subscription
         )
         sys.modules["stripe"].Customer.retrieve.assert_called_once_with("cus_mock_test_123")
         assert user.plan == "pro"
@@ -417,7 +425,8 @@ class TestActivateSubscription:
         user = self._activate(
             monkeypatch,
             {"id": 13, "email": "act_4@test.com", "stripe_customer_id": "cus_mock"},
-            "price_unknown_xyz", "13",
+            "price_unknown_xyz",
+            "13",
         )
         assert user.plan == "pro"  # Default
 
@@ -492,8 +501,7 @@ class TestCreateCustomerPortalSession:
     def test_portal_success(self, monkeypatch):
         """Should create a Customer Portal session URL."""
         service = _make_service(monkeypatch)
-        user = MockUser(id=1, email="portal_1@test.com",
-                        stripe_customer_id="cus_mock_test_123")
+        user = MockUser(id=1, email="portal_1@test.com", stripe_customer_id="cus_mock_test_123")
 
         with _mock_user_lookup(user):
             url = service.create_customer_portal_session(user.id)

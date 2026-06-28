@@ -562,7 +562,12 @@ class BrokerData:
             symbol_keys.append(symbol_key)
 
             # Store mapping for response processing
-            symbol_map[symbol_key] = {"symbol": symbol, "exchange": exchange, "ws_exchange": ws_exchange, "token": token}
+            symbol_map[symbol_key] = {
+                "symbol": symbol,
+                "exchange": exchange,
+                "ws_exchange": ws_exchange,
+                "token": token,
+            }
 
         if not symbol_keys:
             logger.warning("No valid symbols to fetch quotes for")
@@ -967,7 +972,9 @@ class BrokerData:
             # Get the shared httpx client
 
             # Make the GET request
-            response = request_with_circuit_breaker("GET", url, params=params, headers=headers, timeout=30.0)
+            response = request_with_circuit_breaker(
+                "GET", url, params=params, headers=headers, timeout=30.0
+            )
 
             logger.debug(f"Response status: {response.status_code}")
             response.raise_for_status()

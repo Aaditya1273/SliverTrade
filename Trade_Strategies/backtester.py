@@ -160,6 +160,23 @@ class BacktestResult:
         }
 
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "total_trades": self.total_trades,
+            "closed_trades": len(self.closed_trades),
+            "win_rate": round(self.win_rate, 4),
+            "total_pnl": round(self.total_pnl, 2),
+            "total_pnl_pct": round(self.total_pnl_pct, 2),
+            "avg_win": round(self.avg_win, 2),
+            "avg_loss": round(self.avg_loss, 2),
+            "max_drawdown_pct": self.max_drawdown,
+            "sharpe_ratio": self.sharpe_ratio,
+            "profit_factor": self.profit_factor,
+            "calmar_ratio": self.calmar_ratio,
+            "equity_curve": [round(v, 2) for v in self.equity_curve],
+        }
+
+
 class Backtester:
     """Runs the strategy engine against historical OHLCV data.
 
@@ -280,3 +297,38 @@ class Backtester:
             result.add_trade(open_trade)
 
         return result
+
+    def run_walk_forward(
+        self,
+        ohlcv: List[Dict[str, Any]],
+        symbol: str = "BACKTEST",
+        exchange: str = "CRYPTO",
+        initial_capital: float = 100000.0,
+        position_size_pct: float = 10.0,
+        stop_loss_pct: float = 2.0,
+        take_profit_pct: float = 5.0,
+    ) -> "WalkForwardResult":
+        """Walk-forward backtest with in-sample + out-of-sample validation.
+
+        Splits data 70/30. Trains on first 70%, tests on last 30%.
+        This prevents look-ahead bias in reported metrics.
+        """
+        if not ohlcv or len(ohlcv) < 200:
+            logger.warning("Need at least 200 candles for walk-forward (got %d)", len(ohlcv or []))
+            return WalkForwardResult(BacktestResult(), BacktestResult())
+
+        split = int(len(ohlcv) * 0.7)
+        insample = ohlcv[:split]
+        outsample = ohlcv[split:]
+
+        logger.info("Walk-forward: %d in-sample, %d out-of-sample candles",
+                    len(insample), len(outsample))
+
+        insample_result = self.run(insample, symbol, exchange,
+                                   initial_capital, position_size_pct,
+                                   stop_loss_pct, take_profit_pct)
+        outsample_result = self.run(outsample, symbol, exchange,
+                                    initial_capital, position_size_pct,
+                                    stop_loss_pct, take_profit_pct)
+
+        return WalkForwardResult(insample_result, outsample_result)

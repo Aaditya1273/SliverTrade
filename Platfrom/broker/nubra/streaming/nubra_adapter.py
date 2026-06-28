@@ -134,9 +134,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
             # Get auth token from database
             auth_token = get_auth_token(user_id)
             if not auth_token:
-                return self._create_error_response(
-                    "AUTH_ERROR", "Authentication token not found"
-                )
+                return self._create_error_response("AUTH_ERROR", "Authentication token not found")
 
             # Create streaming WebSocket client (extends existing NubraWebSocket)
             self.ws_client = _StreamingNubraWebSocket(
@@ -157,9 +155,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
     def connect(self) -> dict[str, Any]:
         """Connect to Nubra WebSocket."""
         if not self.ws_client:
-            return self._create_error_response(
-                "NOT_INITIALIZED", "Call initialize() first"
-            )
+            return self._create_error_response("NOT_INITIALIZED", "Call initialize() first")
 
         try:
             with self.lock:
@@ -232,9 +228,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
             depth_level: Market depth level (5 for Nubra orderbook)
         """
         if not self.ws_client:
-            return self._create_error_response(
-                "NOT_INITIALIZED", "WebSocket not initialized"
-            )
+            return self._create_error_response("NOT_INITIALIZED", "WebSocket not initialized")
 
         if not self.running:
             return self._create_error_response(
@@ -260,9 +254,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
             if mode in (1, 2):
                 # LTP / Quote -> use index channel for ALL symbols
-                return self._subscribe_via_index_channel(
-                    symbol, exchange, mode, key, is_index
-                )
+                return self._subscribe_via_index_channel(symbol, exchange, mode, key, is_index)
             else:
                 # Depth -> use orderbook channel
                 return self._subscribe_via_orderbook_channel(
@@ -308,9 +300,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
         # Hold lock for entire subscribe + tracking to prevent race with callbacks
         with self.lock:
             if not self.ws_client:
-                return self._create_error_response(
-                    "NOT_CONNECTED", "WebSocket client disconnected"
-                )
+                return self._create_error_response("NOT_CONNECTED", "WebSocket client disconnected")
 
             # Only send WebSocket subscription if not already on index channel
             if key not in self.index_channel_subscribed:
@@ -319,9 +309,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
             # Also subscribe to index_bucket (OHLCV) to get open/close values
             if key not in self.ohlcv_channel_subscribed:
-                self.ws_client.subscribe_ohlcv(
-                    [sub_name], interval="1d", exchange=nubra_exchange
-                )
+                self.ws_client.subscribe_ohlcv([sub_name], interval="1d", exchange=nubra_exchange)
                 self.ohlcv_channel_subscribed.add(key)
 
             # Register the subscription name for data routing
@@ -395,17 +383,13 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
         is_fallback = False
         actual_depth = depth_level
         if not NubraCapabilityRegistry.is_depth_level_supported(exchange, depth_level):
-            actual_depth = NubraCapabilityRegistry.get_fallback_depth_level(
-                exchange, depth_level
-            )
+            actual_depth = NubraCapabilityRegistry.get_fallback_depth_level(exchange, depth_level)
             is_fallback = True
 
         # Hold lock for entire subscribe + tracking to prevent race with callbacks
         with self.lock:
             if not self.ws_client:
-                return self._create_error_response(
-                    "NOT_CONNECTED", "WebSocket client disconnected"
-                )
+                return self._create_error_response("NOT_CONNECTED", "WebSocket client disconnected")
 
             # Subscribe to orderbook channel if not already
             if ref_id not in self.orderbook_subscribed:
@@ -442,9 +426,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
             is_fallback=is_fallback,
         )
 
-    def unsubscribe(
-        self, symbol: str, exchange: str, mode: int = 2
-    ) -> dict[str, Any]:
+    def unsubscribe(self, symbol: str, exchange: str, mode: int = 2) -> dict[str, Any]:
         """Unsubscribe from market data."""
         try:
             key = f"{exchange}:{symbol}"
@@ -478,9 +460,7 @@ class NubraWebSocketAdapter(BaseBrokerWebSocketAdapter):
                                 NubraExchangeMapper.to_nubra_exchange(exchange),
                             )
                             if ws:
-                                ws.unsubscribe_index(
-                                    [sub_name], exchange=nubra_exchange
-                                )
+                                ws.unsubscribe_index([sub_name], exchange=nubra_exchange)
                             self.index_channel_subscribed.discard(key)
 
                         # Unsubscribe from index_bucket (OHLCV) channel

@@ -61,9 +61,13 @@ def _request(endpoint: str, auth: str, method: str = "GET", payload=None, params
     elif method == "PUT":
         response = request_with_circuit_breaker("PUT", url, headers=_headers(auth), json=payload)
     elif method == "DELETE":
-        response = request_with_circuit_breaker("DELETE", url, headers=_headers(auth), params=params)
+        response = request_with_circuit_breaker(
+            "DELETE", url, headers=_headers(auth), params=params
+        )
     else:
-        response = request_with_circuit_breaker(method, url, headers=_headers(auth), json=payload, params=params)
+        response = request_with_circuit_breaker(
+            method, url, headers=_headers(auth), json=payload, params=params
+        )
 
     try:
         data = response.json()
@@ -131,7 +135,9 @@ def _first_result(payload: Any) -> dict:
 
 def _is_direct_order_payload(data: Any) -> bool:
     if isinstance(data, list):
-        return bool(data) and all(isinstance(item, dict) and _DIRECT_ORDER_KEYS.issubset(item) for item in data)
+        return bool(data) and all(
+            isinstance(item, dict) and _DIRECT_ORDER_KEYS.issubset(item) for item in data
+        )
     return isinstance(data, dict) and _DIRECT_ORDER_KEYS.issubset(data)
 
 
@@ -303,7 +309,11 @@ def place_smartorder_api(data, auth):
         quantity = current_position - position_size
 
     if not action or quantity <= 0:
-        return None, {"status": "success", "message": "No action needed. Position already aligned"}, None
+        return (
+            None,
+            {"status": "success", "message": "No action needed. Position already aligned"},
+            None,
+        )
 
     order_data = data.copy()
     order_data["action"] = action

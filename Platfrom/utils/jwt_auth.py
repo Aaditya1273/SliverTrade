@@ -41,6 +41,7 @@ REFRESH_TOKEN_EXPIRY_DAYS = int(os.getenv("JWT_REFRESH_EXPIRY", "7"))
 # Token Creation
 # ---------------------------------------------------------------------------
 
+
 def create_access_token(
     user_id: str,
     organization_id: Optional[str] = None,
@@ -97,6 +98,7 @@ def create_refresh_token(user_id: str) -> Tuple[str, datetime.datetime]:
 # ---------------------------------------------------------------------------
 # Token Verification
 # ---------------------------------------------------------------------------
+
 
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
     """Decode and verify a JWT token.
@@ -155,6 +157,7 @@ def refresh_access_token(refresh_token: str) -> Optional[Dict[str, str]]:
 # Flask Middleware
 # ---------------------------------------------------------------------------
 
+
 def jwt_required(f):
     """Decorator to require a valid JWT access token.
 
@@ -167,30 +170,37 @@ def jwt_required(f):
         def protected_route():
             return jsonify({"user_id": g.user_id})
     """
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token = _extract_token()
         if not token:
-            return jsonify({
-                "status": "error",
-                "message": "Authentication required. Provide a Bearer token in the Authorization header.",
-                "error_code": "AUTH_REQUIRED",
-            }), 401
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "Authentication required. Provide a Bearer token in the Authorization header.",
+                    "error_code": "AUTH_REQUIRED",
+                }
+            ), 401
 
         payload = decode_token(token)
         if not payload:
-            return jsonify({
-                "status": "error",
-                "message": "Invalid or expired token. Use /api/v1/auth/refresh to obtain a new token.",
-                "error_code": "TOKEN_INVALID",
-            }), 401
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "Invalid or expired token. Use /api/v1/auth/refresh to obtain a new token.",
+                    "error_code": "TOKEN_INVALID",
+                }
+            ), 401
 
         if payload.get("type") != "access":
-            return jsonify({
-                "status": "error",
-                "message": "Invalid token type. Use an access token, not a refresh token.",
-                "error_code": "TOKEN_TYPE_INVALID",
-            }), 401
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "Invalid token type. Use an access token, not a refresh token.",
+                    "error_code": "TOKEN_TYPE_INVALID",
+                }
+            ), 401
 
         # Populate Flask g object for downstream use
         g.user_id = payload.get("sub")
@@ -209,6 +219,7 @@ def optional_jwt(f):
     If a valid token is present, populates g.user_id etc.
     If not, leaves them as None and continues execution.
     """
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token = _extract_token()
@@ -227,6 +238,7 @@ def optional_jwt(f):
 # ---------------------------------------------------------------------------
 # Helper Functions
 # ---------------------------------------------------------------------------
+
 
 def get_current_user() -> Optional[Dict[str, Any]]:
     """Get the currently authenticated user from g.
@@ -269,12 +281,14 @@ def _extract_token() -> Optional[str]:
 def _generate_token_id() -> str:
     """Generate a unique token ID for refresh token tracking."""
     import secrets
+
     return secrets.token_hex(16)
 
 
 # ---------------------------------------------------------------------------
 # Token Blacklisting (Redis-backed)
 # ---------------------------------------------------------------------------
+
 
 def _is_token_blacklisted(token_jti: str) -> bool:
     """Check if a token has been blacklisted.
@@ -288,6 +302,7 @@ def _is_token_blacklisted(token_jti: str) -> bool:
         True if the token is blacklisted, False otherwise.
     """
     from extensions import redis_client
+
     if redis_client is None:
         return False
     try:
@@ -304,6 +319,7 @@ def blacklist_token(token_jti: str, expires_at: Optional[datetime.datetime] = No
         expires_at: When the token naturally expires (used for TTL).
     """
     from extensions import redis_client
+
     if redis_client is None:
         return
 
@@ -327,6 +343,7 @@ def blacklist_token(token_jti: str, expires_at: Optional[datetime.datetime] = No
 # ---------------------------------------------------------------------------
 # Legacy Session Compatibility
 # ---------------------------------------------------------------------------
+
 
 def add_deprecation_header(response):
     """Add a deprecation warning header to session-based auth responses.

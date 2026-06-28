@@ -162,8 +162,13 @@ class TestExecuteWithFailover:
         fn = MagicMock(return_value=(True, {"orderid": "123"}, 200))
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={"sym": "R"}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={"sym": "R"},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         fn.assert_called_once_with({"sym": "R"}, "tok", "zerodha", {})
@@ -173,8 +178,13 @@ class TestExecuteWithFailover:
         fn = MagicMock(return_value=(True, {}, 200))
 
         result = mgr.execute_with_failover(
-            user_id="unknown", operation="test", fn=fn,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="unknown",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         fn.assert_called_once()
@@ -184,8 +194,13 @@ class TestExecuteWithFailover:
         fn = MagicMock(return_value=(True, {"orderid": "123"}, 200))
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok_z", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok_z",
+            broker="zerodha",
+            original_data={},
         )
 
         fn.assert_called_once_with({}, "tok_z", "zerodha", {})
@@ -203,8 +218,13 @@ class TestExecuteWithFailover:
         fn = MagicMock(return_value=(True, {}, 200))
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok_z", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok_z",
+            broker="zerodha",
+            original_data={},
         )
 
         # Must skip zerodha and call angel instead
@@ -219,8 +239,13 @@ class TestExecuteWithFailover:
             raise ConnectionError(f"{br} is down")
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=failing_fn,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=failing_fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         assert result == (False, {"status": "error", "message": "angel is down"}, 503)
@@ -231,8 +256,13 @@ class TestExecuteWithFailover:
         fn = MagicMock(return_value=(False, {"message": "Insufficient margin"}, 400))
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         # Current implementation retries on any failure (business errors included).
@@ -252,8 +282,13 @@ class TestExecuteWithFailover:
             return (True, {"orderid": "123"}, 200)
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn_with_retry,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn_with_retry,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         assert call_log == ["zerodha", "angel"]
@@ -271,8 +306,13 @@ class TestExecuteWithFailover:
             return (True, {}, 200)
 
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn_timeout,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn_timeout,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         assert call_log == ["zerodha", "angel"]
@@ -289,8 +329,13 @@ class TestExecuteWithFailover:
             return (True, {"orderid": "123"}, 200)
 
         mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         assert mgr.get_active_broker("u1") == "angel"
@@ -310,9 +355,14 @@ class TestExecuteWithFailover:
             return (True, {}, 200)
 
         mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok_zerodha", broker="zerodha",
-            original_data={}, token_resolver=token_resolver,
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok_zerodha",
+            broker="zerodha",
+            original_data={},
+            token_resolver=token_resolver,
         )
 
         assert call_log == [("tok_zerodha", "zerodha"), ("tok_angel", "angel")]
@@ -333,9 +383,14 @@ class TestExecuteWithFailover:
 
         # Both fail: zerodha connection error, angel token resolve failure
         result = mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok", broker="zerodha",
-            original_data={}, token_resolver=token_resolver,
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
+            token_resolver=token_resolver,
         )
 
         assert result[2] == 503  # all exhausted
@@ -352,8 +407,13 @@ class TestExecuteWithFailover:
             return (True, {}, 200)
 
         mgr.execute_with_failover(
-            user_id="u1", operation="test", fn=fn,
-            order_data={}, auth_token="tok", broker="zerodha", original_data={},
+            user_id="u1",
+            operation="test",
+            fn=fn,
+            order_data={},
+            auth_token="tok",
+            broker="zerodha",
+            original_data={},
         )
 
         # Angel's breaker succeeds (at least 1 lifetime success)
@@ -550,7 +610,6 @@ class TestModifyOrderIntegration:
             patch("database.auth_db.get_order_mode", return_value="auto") as mock_mode,
             patch("database.settings_db.get_analyze_mode", return_value=False) as mock_analyze,
         ):
-
             mock_auth.return_value = ("tok_modify", "zerodha")
             mock_verify.return_value = "user_modify"
 
@@ -587,8 +646,12 @@ class TestPlaceSmartOrderIntegration:
             mock_get_fm.return_value = mock_fm
 
             order_data = {
-                "symbol": "RELIANCE", "exchange": "NSE", "action": "BUY",
-                "quantity": "10", "pricetype": "MARKET", "product": "MIS",
+                "symbol": "RELIANCE",
+                "exchange": "NSE",
+                "action": "BUY",
+                "quantity": "10",
+                "pricetype": "MARKET",
+                "product": "MIS",
             }
             result = place_smart_order(order_data, api_key="test_api_key")
 
@@ -619,7 +682,9 @@ class TestBasketOrderIntegration:
             mock_get_fm.return_value = mock_fm
 
             basket_data = {
-                "orders": [{"symbol": "RELIANCE", "exchange": "NSE", "action": "BUY", "quantity": "1"}],
+                "orders": [
+                    {"symbol": "RELIANCE", "exchange": "NSE", "action": "BUY", "quantity": "1"}
+                ],
                 "strategy": "test",
             }
             result = place_basket_order(basket_data, api_key="test_api_key")
@@ -651,9 +716,14 @@ class TestSplitOrderIntegration:
             mock_get_fm.return_value = mock_fm
 
             split_data = {
-                "symbol": "RELIANCE", "exchange": "NSE", "action": "BUY",
-                "quantity": "100", "splitsize": "10", "strategy": "test",
-                "pricetype": "MARKET", "product": "MIS",
+                "symbol": "RELIANCE",
+                "exchange": "NSE",
+                "action": "BUY",
+                "quantity": "100",
+                "splitsize": "10",
+                "strategy": "test",
+                "pricetype": "MARKET",
+                "product": "MIS",
             }
             result = split_order(split_data, api_key="test_api_key")
 
@@ -684,9 +754,14 @@ class TestGTTOrderIntegration:
             mock_get_fm.return_value = mock_fm
 
             gtt_data = {
-                "symbol": "RELIANCE", "exchange": "NSE", "action": "BUY",
-                "quantity": "10", "trigger_type": "SINGLE", "trigger_price": "2500",
-                "product": "MIS", "strategy": "test",
+                "symbol": "RELIANCE",
+                "exchange": "NSE",
+                "action": "BUY",
+                "quantity": "10",
+                "trigger_type": "SINGLE",
+                "trigger_price": "2500",
+                "product": "MIS",
+                "strategy": "test",
             }
             result = place_gtt_order(gtt_data, api_key="test_api_key")
 

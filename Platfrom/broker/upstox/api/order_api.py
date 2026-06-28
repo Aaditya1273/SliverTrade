@@ -95,14 +95,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -135,7 +135,6 @@ def _invalidate_position_cache(auth):
     """Invalidate the position cache so the next queued order fetches fresh data."""
     with _position_cache_lock:
         _position_cache.pop(auth, None)
-
 
 
 def get_open_position(tradingsymbol, exchange, product, auth):
@@ -210,8 +209,8 @@ def place_order_api(data, auth):
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        response = request_with_circuit_breaker("POST", 
-            "https://api.upstox.com/v2/order/place", headers=headers, content=payload
+        response = request_with_circuit_breaker(
+            "POST", "https://api.upstox.com/v2/order/place", headers=headers, content=payload
         )
         response.raise_for_status()
 
@@ -254,7 +253,9 @@ def place_smartorder_api(data, auth):
         with symbol_lock:
             position_size = int(data.get("position_size", "0"))
 
-            current_position = int(get_open_position(symbol, exchange, map_product_type(product), auth))
+            current_position = int(
+                get_open_position(symbol, exchange, map_product_type(product), auth)
+            )
             logger.debug(
                 f"Desired position size: {position_size}, Current position: {current_position}"
             )

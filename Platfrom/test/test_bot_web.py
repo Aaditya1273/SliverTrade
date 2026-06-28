@@ -3,7 +3,6 @@
 Test script to verify bot starts properly from web UI
 """
 
-
 """
 Test script to verify bot starts properly from web UI.
 
@@ -27,6 +26,7 @@ from services.telegram_bot_service import (
 def test_bot_imports():
     """Verify that bot service imports work correctly (pytest-compatible)."""
     from services.telegram_bot_service import TelegramBotService
+
     assert TelegramBotService is not None
 
 

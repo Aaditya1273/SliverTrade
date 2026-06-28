@@ -31,6 +31,7 @@ def calculate_margin_api(positions, auth):
     Returns:
         Tuple of (MockResponse, response_data)
     """
+
     class MockResponse:
         def __init__(self, code):
             self.status_code = code

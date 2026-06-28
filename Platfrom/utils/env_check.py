@@ -39,22 +39,22 @@ def configure_llvmlite_paths() -> None:
         None
     """
     # Only configure on Linux (Windows/macOS don't have this issue)
-    if sys.platform != 'linux':
+    if sys.platform != "linux":
         return
 
     # Get the base directory (project root)
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     # Create cache directories in project folder
-    numba_cache = os.path.join(base_dir, '.numba_cache')
-    llvm_tmp = os.path.join(base_dir, '.llvm_tmp')
+    numba_cache = os.path.join(base_dir, ".numba_cache")
+    llvm_tmp = os.path.join(base_dir, ".llvm_tmp")
 
     # Set environment variables if not already set
-    if 'NUMBA_CACHE_DIR' not in os.environ:
-        os.environ['NUMBA_CACHE_DIR'] = numba_cache
+    if "NUMBA_CACHE_DIR" not in os.environ:
+        os.environ["NUMBA_CACHE_DIR"] = numba_cache
 
-    if 'LLVMLITE_TMPDIR' not in os.environ:
-        os.environ['LLVMLITE_TMPDIR'] = llvm_tmp
+    if "LLVMLITE_TMPDIR" not in os.environ:
+        os.environ["LLVMLITE_TMPDIR"] = llvm_tmp
 
     # Create directories if they don't exist
     for dir_path in [numba_cache, llvm_tmp]:
@@ -74,23 +74,27 @@ def check_tmp_noexec() -> None:
 
     This helps users understand why llvmlite might fail to load.
     """
-    if sys.platform != 'linux':
+    if sys.platform != "linux":
         return
 
     try:
-        with open('/proc/mounts', 'r') as f:
+        with open("/proc/mounts", "r") as f:
             for line in f:
                 parts = line.split()
-                if len(parts) >= 4 and parts[1] == '/tmp':  # nosec B108: reading /proc/mounts, not using /tmp
-                    mount_options = parts[3].split(',')
-                    if 'noexec' in mount_options:
+                if len(parts) >= 4 and parts[1] == "/tmp":  # nosec B108: reading /proc/mounts, not using /tmp
+                    mount_options = parts[3].split(",")
+                    if "noexec" in mount_options:
                         print("\n" + "=" * 70)
                         print("⚠️  WARNING: /tmp is mounted with 'noexec' flag")
                         print("   This can cause issues with Python libraries like numba/llvmlite.")
                         print("")
                         print("   SilverTrade AI has auto-configured alternative paths:")
-                        print(f"   - NUMBA_CACHE_DIR={os.environ.get('NUMBA_CACHE_DIR', 'not set')}")
-                        print(f"   - LLVMLITE_TMPDIR={os.environ.get('LLVMLITE_TMPDIR', 'not set')}")
+                        print(
+                            f"   - NUMBA_CACHE_DIR={os.environ.get('NUMBA_CACHE_DIR', 'not set')}"
+                        )
+                        print(
+                            f"   - LLVMLITE_TMPDIR={os.environ.get('LLVMLITE_TMPDIR', 'not set')}"
+                        )
                         print("")
                         print("   If you still see 'failed to map segment' errors, either:")
                         print("   1. Remount /tmp: sudo mount -o remount,exec /tmp")
@@ -166,14 +170,14 @@ def check_env_version_compatibility() -> bool:
         def version_tuple(v: str) -> tuple:
             """
             Convert version string to tuple of integers for comparison.
-            
+
             Args:
                 v (str): Version string (e.g. '1.5.0').
-            
+
             Returns:
                 tuple: Tuple of integers (e.g. (1, 5, 0)).
             """
-            return tuple(int(x) for x in v.split('.'))
+            return tuple(int(x) for x in v.split("."))
 
         env_ver = version_tuple(env_version)
         sample_ver = version_tuple(sample_version)
@@ -261,9 +265,7 @@ def _db_has_user_data(env_dir: str) -> bool:
 
     try:
         with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as conn:
-            cur = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
-            )
+            cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
             if cur.fetchone() is None:
                 return False
             cur = conn.execute("SELECT 1 FROM users LIMIT 1")
@@ -706,9 +708,7 @@ def load_and_check_env_variables() -> None:
     # Single: "10 per second"
     # Compound (Flask-Limiter syntax): "10 per second;40 per minute"
     single_limit = r"\d+\s+per\s+(second|minute|hour|day)"
-    rate_limit_pattern = re.compile(
-        rf"^{single_limit}(;{single_limit})*$"
-    )
+    rate_limit_pattern = re.compile(rf"^{single_limit}(;{single_limit})*$")
 
     for var in rate_limit_vars:
         value = os.getenv(var, "")

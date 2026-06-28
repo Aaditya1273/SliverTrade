@@ -38,7 +38,19 @@ _initialised = False
 _outcome_tracker = None
 
 PLATFORM_HOST = os.getenv("SILVERTRADE_HOST", "http://platform:5000")
-PLATFORM_API_KEY = os.getenv("SILVERTRADE_API_KEY", "")
+
+# Auto-detect API key: env var > shared volume > empty
+_api_key = os.getenv("SILVERTRADE_API_KEY", "")
+if not _api_key:
+    for _key_path in ["/app/shared-keys/strategy_api_key.txt", "/app/keys/strategy_api_key.txt"]:
+        try:
+            with open(_key_path) as f:
+                _api_key = f.read().strip()
+                if _api_key:
+                    break
+        except (FileNotFoundError, PermissionError, OSError):
+            continue
+PLATFORM_API_KEY = _api_key
 
 
 def _ensure_initialised():
@@ -672,6 +684,95 @@ def train_lstm():
         return jsonify({"status": "error", "message": "PyTorch not installed. Install with: pip install torch"}), 500
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ── Drift Monitoring ─────────────────────────────────────────────────
+
+@app.route("/api/v1/drift", methods=["GET"])
+def drift_report():
+    """Get the drift monitoring report: accuracy, freeze status, regime."""
+    report = engine.get_drift_report()
+    return jsonify({"status": "success", "data": report})
+
+
+@app.route("/api/v1/prediction-freeze", methods=["GET"])
+def freeze_status():
+    """Check if predictions are currently frozen."""
+    return jsonify({"status": "success", "data": engine.get_freeze_status()})
+
+
+@app.route("/api/v1/prediction-freeze", methods=["DELETE"])
+def unfreeze():
+    """Manually unfreeze predictions."""
+    return jsonify(engine.unfreeze())
+
+
+# ── Shadow Mode (A/B Testing) ───────────────────────────────────────
+
+@app.route("/api/v1/shadow/enable", methods=["POST"])
+def enable_shadow():
+    """Enable shadow mode — trains a secondary model in background for A/B comparison."""
+    return jsonify(engine.enable_shadow_mode())
+
+
+@app.route("/api/v1/shadow/disable", methods=["POST"])
+def disable_shadow():
+    """Disable shadow mode."""
+    return jsonify(engine.disable_shadow_mode())
+
+
+@app.route("/api/v1/shadow/status", methods=["GET"])
+def shadow_status():
+    """Check if shadow mode is active and get comparison metrics."""
+    if not engine._shadow_enabled:
+        return jsonify({"status": "ok", "data": {"enabled": False}})
+    shadow = engine._shadow_model
+    primary = engine._rf_model
+    comparison = {}
+    if shadow and shadow.is_trained:
+        comparison["shadow_oos_accuracy"] = getattr(shadow, "_out_of_sample_score", 0)
+    if primary and primary.is_trained:
+        comparison["primary_oos_accuracy"] = getattr(primary, "_out_of_sample_score", 0)
+    return jsonify({"status": "ok", "data": {"enabled": True, "comparison": comparison}})
+
+
+# ── Record Outcome (for drift tracking) ─────────────────────────────
+
+@app.route("/api/v1/record-outcome", methods=["POST"])
+def record_outcome():
+    """Record whether a prediction was correct.
+
+    Body:
+      - decision: BUY | SELL | HOLD
+      - was_correct: boolean
+    """
+    data = request.get_json(silent=True) or {}
+    decision = data.get("decision", "")
+    was_correct = data.get("was_correct", False)
+    engine.record_outcome(decision, bool(was_correct))
+    return jsonify({"status": "ok"})
+
+
+# ── Model Training (force re-train) ─────────────────────────────────
+
+@app.route("/api/v1/train/rf/force", methods=["POST"])
+def train_rf_force():
+    """Force re-train the Random Forest model with realistic synthetic data."""
+    _ensure_initialised()
+    result = engine.train_rf(force=True)
+    if result.get("status") == "error":
+        return jsonify(result), 500
+    return jsonify(result)
+
+
+@app.route("/api/v1/train/lstm/auto", methods=["POST"])
+def train_lstm_auto():
+    """Auto-train LSTM on realistic synthetic data (if PyTorch installed)."""
+    _ensure_initialised()
+    result = engine.train_lstm(force=True)
+    if result.get("status") == "error":
+        return jsonify(result), 500
+    return jsonify(result)
 
 
 # ── Health ───────────────────────────────────────────────────────────

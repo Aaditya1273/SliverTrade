@@ -190,7 +190,10 @@ def transform_positions_data(positions_data):
             if api_key_obj:
                 api_key = decrypt_token(api_key_obj.api_key_encrypted)
                 symbols_payload = [
-                    {"symbol": pos.get("tradingSymbol", ""), "exchange": pos.get("exchangeSegment", "")}
+                    {
+                        "symbol": pos.get("tradingSymbol", ""),
+                        "exchange": pos.get("exchangeSegment", ""),
+                    }
                     for pos in positions_data
                     if pos.get("tradingSymbol") and pos.get("exchangeSegment")
                 ]

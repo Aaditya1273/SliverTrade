@@ -8,6 +8,7 @@ Revision ID: 0005
 Revises: None
 Create Date: 2026-06-05
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -39,14 +40,21 @@ def upgrade() -> None:
         sa.Column("filled_quantity", sa.Integer(), server_default=sa.text("0")),
         sa.Column("pending_quantity", sa.Integer(), nullable=False),
         sa.Column("rejection_reason", sa.Text(), nullable=True),
-        sa.Column("margin_blocked", sa.DECIMAL(10, 2), nullable=True, server_default=sa.text("0.00")),
+        sa.Column(
+            "margin_blocked", sa.DECIMAL(10, 2), nullable=True, server_default=sa.text("0.00")
+        ),
         sa.Column("order_timestamp", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("update_timestamp", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
         # Check constraints mirroring sandbox_db.py models
-        sa.CheckConstraint("order_status IN ('open', 'complete', 'cancelled', 'rejected')", name="check_order_status"),
+        sa.CheckConstraint(
+            "order_status IN ('open', 'complete', 'cancelled', 'rejected')",
+            name="check_order_status",
+        ),
         sa.CheckConstraint("action IN ('BUY', 'SELL')", name="check_action"),
-        sa.CheckConstraint("price_type IN ('MARKET', 'LIMIT', 'SL', 'SL-M')", name="check_price_type"),
+        sa.CheckConstraint(
+            "price_type IN ('MARKET', 'LIMIT', 'SL', 'SL-M')", name="check_price_type"
+        ),
         sa.CheckConstraint("product IN ('CNC', 'NRML', 'MIS')", name="check_product"),
     )
     op.create_index("ix_sandbox_orders_orderid", "sandbox_orders", ["orderid"])
@@ -188,14 +196,19 @@ def upgrade() -> None:
         sa.Column("exchange", sa.String(20), nullable=False),
         sa.Column("last_price", sa.DECIMAL(10, 2), nullable=False),
         sa.Column("gtt_status", sa.String(20), nullable=False, server_default=sa.text("'active'")),
-        sa.Column("margin_blocked", sa.DECIMAL(15, 2), nullable=False, server_default=sa.text("0.00")),
+        sa.Column(
+            "margin_blocked", sa.DECIMAL(15, 2), nullable=False, server_default=sa.text("0.00")
+        ),
         sa.Column("expires_at", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
         # Check constraints mirroring sandbox_db.py models
         sa.CheckConstraint("trigger_type IN ('single', 'two-leg')", name="check_gtt_trigger_type"),
-        sa.CheckConstraint("gtt_status IN ('active', 'triggered', 'cancelled', 'expired', 'rejected')", name="check_gtt_status"),
+        sa.CheckConstraint(
+            "gtt_status IN ('active', 'triggered', 'cancelled', 'expired', 'rejected')",
+            name="check_gtt_status",
+        ),
     )
     op.create_index("ix_sandbox_gtt_gtt_id", "sandbox_gtt", ["gtt_id"])
     op.create_index("ix_sandbox_gtt_user_id", "sandbox_gtt", ["user_id"])
@@ -224,7 +237,10 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["gtt_id"], ["sandbox_gtt.gtt_id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         # Check constraints mirroring sandbox_db.py models
-        sa.CheckConstraint("leg_status IN ('pending', 'triggering', 'triggered', 'cancelled')", name="check_gtt_leg_status"),
+        sa.CheckConstraint(
+            "leg_status IN ('pending', 'triggering', 'triggered', 'cancelled')",
+            name="check_gtt_leg_status",
+        ),
         sa.CheckConstraint("action IN ('BUY', 'SELL')", name="check_gtt_leg_action"),
         sa.CheckConstraint("product IN ('CNC', 'NRML', 'MIS')", name="check_gtt_leg_product"),
     )

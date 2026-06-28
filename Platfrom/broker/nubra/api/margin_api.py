@@ -9,6 +9,7 @@ logger = get_logger(__name__)
 
 NUBRA_BASE_URL = "https://api.nubra.io"
 
+
 def calculate_margin_api(positions, auth):
     """
     Calculate margin requirement for a basket of positions using Nubra API.
@@ -58,7 +59,8 @@ def calculate_margin_api(positions, auth):
 
     try:
         # Make the request using the shared client
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{NUBRA_BASE_URL}/orders/v2/margin_required",
             headers=headers,
             content=payload,
@@ -66,7 +68,7 @@ def calculate_margin_api(positions, auth):
 
         # Add status attribute for compatibility with the existing codebase
         response.status = response.status_code
-        
+
         # Log raw response for debugging
         logger.debug(f"Nubra margin raw response: {response.text}")
 

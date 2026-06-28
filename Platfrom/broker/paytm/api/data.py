@@ -35,10 +35,12 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         # Use a longer timeout for Paytm API requests
         timeout = httpx.Timeout(60.0, connect=30.0)
         if method == "GET":
-            response = request_with_circuit_breaker("GET", f"{base_url}{endpoint}", headers=headers, timeout=timeout)
+            response = request_with_circuit_breaker(
+                "GET", f"{base_url}{endpoint}", headers=headers, timeout=timeout
+            )
         else:
-            response = request_with_circuit_breaker("POST", 
-                f"{base_url}{endpoint}", headers=headers, content=payload, timeout=timeout
+            response = request_with_circuit_breaker(
+                "POST", f"{base_url}{endpoint}", headers=headers, content=payload, timeout=timeout
             )
 
         # Log the complete response

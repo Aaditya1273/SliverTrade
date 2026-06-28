@@ -2,6 +2,7 @@
 Shoonya-specific mapping utilities for the WebSocket adapter
 """
 
+
 class ShoonyaExchangeMapper:
     """Maps between SilverTrade AI exchange names and Shoonya exchange codes"""
 

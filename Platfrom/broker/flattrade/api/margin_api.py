@@ -58,7 +58,8 @@ def calculate_margin_api(positions, auth):
     logger.info(f"Flattrade basket margin payload: {safe_payload}")
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             "https://piconnect.flattrade.in/PiConnectAPI/GetBasketMargin",
             headers=headers,
             content=payload,

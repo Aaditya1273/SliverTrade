@@ -32,6 +32,7 @@ from database.token_db import get_br_symbol
 
 import sys
 import os as _os
+
 sys.path.append(_os.path.join(_os.path.dirname(__file__), "../../../"))
 
 from websocket_proxy.base_adapter import BaseBrokerWebSocketAdapter
@@ -129,11 +130,11 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
 
         with self._lock:
             self.subscriptions[corr_id] = {
-                "symbol":     symbol,
-                "exchange":   exchange,
-                "br_symbol":  br_symbol,
-                "mode":       mode,
-                "stream":     stream,
+                "symbol": symbol,
+                "exchange": exchange,
+                "br_symbol": br_symbol,
+                "mode": mode,
+                "stream": stream,
                 "depth_level": depth_level,
                 "stream_name": stream_name,
             }
@@ -141,14 +142,19 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
         if self.ws_client:
             try:
                 self.ws_client.subscribe([stream_name])
-                self.logger.info("Subscribed: %s.%s mode=%s stream=%s", symbol, exchange, mode, stream_name)
+                self.logger.info(
+                    "Subscribed: %s.%s mode=%s stream=%s", symbol, exchange, mode, stream_name
+                )
             except Exception as exc:
                 self.logger.error("subscribe error %s.%s: %s", symbol, exchange, exc)
                 return self._create_error_response("SUBSCRIPTION_ERROR", str(exc))
 
         return self._create_success_response(
             f"Subscription requested for {symbol}.{exchange}",
-            symbol=symbol, exchange=exchange, mode=mode, stream=stream_name,
+            symbol=symbol,
+            exchange=exchange,
+            mode=mode,
+            stream=stream_name,
         )
 
     def unsubscribe(self, symbol: str, exchange: str, mode: int = 2) -> dict[str, Any]:
@@ -168,7 +174,9 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
             remaining_for_stream = [s for s in remaining if s.get("stream_name") == stream_name]
 
             cache_key = f"{symbol}_{exchange}"
-            if not any(s.get("symbol") == symbol and s.get("exchange") == exchange for s in remaining):
+            if not any(
+                s.get("symbol") == symbol and s.get("exchange") == exchange for s in remaining
+            ):
                 self.last_values.pop(cache_key, None)
 
             if not remaining:
@@ -249,30 +257,32 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
             return
 
         base_data = {
-            "ltp":           float(data.get("c", 0)),
-            "open":          float(data.get("o", 0)),
-            "high":          float(data.get("h", 0)),
-            "low":           float(data.get("l", 0)),
-            "close":         float(data.get("c", 0)),
-            "volume":        float(data.get("v", 0)),
-            "oi":            0.0,
-            "bid_price":     float(data.get("b", 0)),
-            "ask_price":     float(data.get("a", 0)),
-            "bid_qty":       float(data.get("B", 0)),
-            "ask_qty":       float(data.get("A", 0)),
+            "ltp": float(data.get("c", 0)),
+            "open": float(data.get("o", 0)),
+            "high": float(data.get("h", 0)),
+            "low": float(data.get("l", 0)),
+            "close": float(data.get("c", 0)),
+            "volume": float(data.get("v", 0)),
+            "oi": 0.0,
+            "bid_price": float(data.get("b", 0)),
+            "ask_price": float(data.get("a", 0)),
+            "bid_qty": float(data.get("B", 0)),
+            "ask_qty": float(data.get("A", 0)),
             "average_price": 0,
-            "oi_change":     0,
+            "oi_change": 0,
         }
 
         ts = int(time.time() * 1000)
         for subscription in subscriptions:
             market_data = dict(base_data)
-            market_data.update({
-                "symbol":    subscription["symbol"],
-                "exchange":  subscription["exchange"],
-                "mode":      subscription["mode"],
-                "timestamp": ts,
-            })
+            market_data.update(
+                {
+                    "symbol": subscription["symbol"],
+                    "exchange": subscription["exchange"],
+                    "mode": subscription["mode"],
+                    "timestamp": ts,
+                }
+            )
             topic = f"{subscription['exchange']}_{subscription['symbol']}_LTP"
             self.publish_market_data(topic, market_data)
 
@@ -283,22 +293,24 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
             return
 
         base_data = {
-            "ltp":           0.0,
-            "bid_price":     float(data.get("b", 0)),
-            "ask_price":     float(data.get("a", 0)),
-            "bid_qty":       float(data.get("B", 0)),
-            "ask_qty":       float(data.get("A", 0)),
+            "ltp": 0.0,
+            "bid_price": float(data.get("b", 0)),
+            "ask_price": float(data.get("a", 0)),
+            "bid_qty": float(data.get("B", 0)),
+            "ask_qty": float(data.get("A", 0)),
         }
 
         ts = int(time.time() * 1000)
         for subscription in subscriptions:
             market_data = dict(base_data)
-            market_data.update({
-                "symbol":    subscription["symbol"],
-                "exchange":  subscription["exchange"],
-                "mode":      subscription["mode"],
-                "timestamp": ts,
-            })
+            market_data.update(
+                {
+                    "symbol": subscription["symbol"],
+                    "exchange": subscription["exchange"],
+                    "mode": subscription["mode"],
+                    "timestamp": ts,
+                }
+            )
             topic = f"{subscription['exchange']}_{subscription['symbol']}_QUOTE"
             self.publish_market_data(topic, market_data)
 
@@ -333,12 +345,14 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
         ts = int(time.time() * 1000)
         for subscription in subscriptions:
             market_data = dict(base_data)
-            market_data.update({
-                "symbol":    subscription["symbol"],
-                "exchange":  subscription["exchange"],
-                "mode":      subscription["mode"],
-                "timestamp": ts,
-            })
+            market_data.update(
+                {
+                    "symbol": subscription["symbol"],
+                    "exchange": subscription["exchange"],
+                    "mode": subscription["mode"],
+                    "timestamp": ts,
+                }
+            )
             topic = f"{subscription['exchange']}_{subscription['symbol']}_DEPTH"
             self.publish_market_data(topic, market_data)
 
@@ -348,6 +362,5 @@ class BinanceWebSocketAdapter(BaseBrokerWebSocketAdapter):
         """Return ALL subscriptions matching a stream name."""
         with self._lock:
             return [
-                sub for sub in self.subscriptions.values()
-                if sub.get("stream_name") == stream_name
+                sub for sub in self.subscriptions.values() if sub.get("stream_name") == stream_name
             ]

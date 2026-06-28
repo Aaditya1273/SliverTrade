@@ -128,9 +128,7 @@ def _looks_like_market_row(value: Any) -> bool:
 def _extract_row_error(row: dict) -> str | None:
     status = str(_first(row, ("status", "Status"), "")).lower()
     if status in ("error", "failed", "failure", "false", "ko"):
-        return str(
-            _first(row, ("message", "error", "description", "emsg"), "Request failed")
-        )
+        return str(_first(row, ("message", "error", "description", "emsg"), "Request failed"))
     return None
 
 
@@ -441,7 +439,9 @@ class BrokerData:
             "Accept": "application/json",
         }
 
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}{endpoint}", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}{endpoint}", headers=headers, json=payload
+        )
         try:
             data = response.json()
         except Exception as exc:
@@ -453,12 +453,10 @@ class BrokerData:
 
         if not _is_success(response.status_code, data):
             message = (
-                data.get("message")
-                if isinstance(data, dict)
-                else None
-            ) or (
-                data.get("error") if isinstance(data, dict) else None
-            ) or f"Request failed with HTTP {response.status_code}"
+                (data.get("message") if isinstance(data, dict) else None)
+                or (data.get("error") if isinstance(data, dict) else None)
+                or f"Request failed with HTTP {response.status_code}"
+            )
             raise Exception(message)
 
         return data
@@ -573,7 +571,9 @@ class BrokerData:
             original_exchange_key = f"{original['exchange'].upper()}:{instrument['instrumentId']}"
 
             if use_identity_lookup:
-                row = rows_by_identity.get(identity_key) or rows_by_identity.get(original_exchange_key)
+                row = rows_by_identity.get(identity_key) or rows_by_identity.get(
+                    original_exchange_key
+                )
             else:
                 row = parsed_rows[idx] if idx < len(parsed_rows) else None
 
@@ -669,7 +669,9 @@ class BrokerData:
             "totalsellqty": total_sell_qty,
         }
 
-    def get_history(self, symbol: str, exchange: str, interval: str, start_date: str, end_date: str):
+    def get_history(
+        self, symbol: str, exchange: str, interval: str, start_date: str, end_date: str
+    ):
         broker_interval = self.timeframe_map.get(interval)
         if not broker_interval:
             raise Exception(f"Unsupported timeframe: {interval}")

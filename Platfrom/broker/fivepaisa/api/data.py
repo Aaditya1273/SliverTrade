@@ -81,7 +81,8 @@ def get_api_response(endpoint: str, auth: str, method: str = "GET", payload: str
         if method.upper() == "GET":
             response = request_with_circuit_breaker("GET", f"{BASE_URL}{endpoint}", headers=headers)
         else:  # POST
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}{endpoint}",
                 content=payload,  # Use content since payload is already JSON string
                 headers=headers,
@@ -158,7 +159,8 @@ class BrokerData:
                 "Authorization": f"bearer {self.auth_token}",
                 "Content-Type": "application/json",
             }
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/V2/MarketDepth",
                 json=json_data,
                 headers=headers,
@@ -238,7 +240,8 @@ class BrokerData:
                 "Authorization": f"bearer {self.auth_token}",
                 "Content-Type": "application/json",
             }
-            snapshot_response = request_with_circuit_breaker("POST", 
+            snapshot_response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/MarketSnapshot",
                 json=snapshot_data,
                 headers=headers,
@@ -272,7 +275,8 @@ class BrokerData:
                 },
             }
 
-            depth_response = request_with_circuit_breaker("POST", 
+            depth_response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/V2/MarketDepth",
                 json=depth_data,
                 headers=headers,
@@ -391,7 +395,8 @@ class BrokerData:
                 "Authorization": f"bearer {self.auth_token}",
                 "Content-Type": "application/json",
             }
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/MarketSnapshot",
                 json=json_data,
                 headers=headers,
@@ -559,7 +564,8 @@ class BrokerData:
         headers = {"Authorization": f"bearer {self.auth_token}", "Content-Type": "application/json"}
 
         try:
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 f"{BASE_URL}/VendorsAPI/Service1.svc/MarketSnapshot",
                 json=json_data,
                 headers=headers,
@@ -764,7 +770,9 @@ class BrokerData:
                         "Authorization": f"bearer {self.auth_token}",
                         "Content-Type": "application/json",
                     }
-                    response = request_with_circuit_breaker("GET", f"{BASE_URL}{url}", headers=headers)
+                    response = request_with_circuit_breaker(
+                        "GET", f"{BASE_URL}{url}", headers=headers
+                    )
                     response.raise_for_status()
                     response = response.json()
 
@@ -948,9 +956,7 @@ class BrokerData:
 
         except Exception as e:
             error_msg = str(e)
-            logger.exception(
-                f"Error in get_history: {error_msg}"
-            )  # Debug log
+            logger.exception(f"Error in get_history: {error_msg}")  # Debug log
 
             # Check if this is the timestamp conversion error with raw_data available
             if (

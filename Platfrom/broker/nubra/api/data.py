@@ -45,13 +45,17 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
             if method == "GET":
                 response = request_with_circuit_breaker("GET", url, headers=headers)
             elif method == "POST":
-                response = request_with_circuit_breaker("POST", url, headers=headers, content=payload)
+                response = request_with_circuit_breaker(
+                    "POST", url, headers=headers, content=payload
+                )
             else:
-                response = request_with_circuit_breaker(method, url, headers=headers, content=payload)
+                response = request_with_circuit_breaker(
+                    method, url, headers=headers, content=payload
+                )
 
             # Handle rate limiting with exponential backoff
             if response.status_code == 429:
-                delay = base_delay * (2 ** attempt)
+                delay = base_delay * (2**attempt)
                 logger.warning(
                     f"Rate limit hit (429) on {endpoint}, retrying in {delay:.1f}s "
                     f"(attempt {attempt + 1}/{max_retries})"
@@ -61,7 +65,9 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
                     continue
                 else:
                     logger.error(f"Rate limit exceeded after {max_retries} retries on {endpoint}")
-                    raise Exception(f"Rate limit exceeded on {endpoint}. Please reduce request frequency.")
+                    raise Exception(
+                        f"Rate limit exceeded on {endpoint}. Please reduce request frequency."
+                    )
 
             # Add status attribute for compatibility with the existing codebase
             response.status = response.status_code
@@ -176,12 +182,12 @@ class BrokerData:
     def get_quotes(self, symbol: str, exchange: str) -> dict:
         """
         Get real-time quotes for given symbol.
-        
+
         Strategy:
         1. Try WebSocket index channel first (works for indices AND instruments)
         2. Fall back to REST API /orderbooks/{ref_id} for instruments
         3. Return zeros if nothing works (e.g. index with no WS)
-        
+
         Args:
             symbol: Trading symbol
             exchange: Exchange (e.g., NSE, BSE, NFO, BFO, CDS, MCX, NSE_INDEX, BSE_INDEX)
@@ -195,7 +201,7 @@ class BrokerData:
                 return ws_quote
 
             # --- Attempt 2: REST API (only for non-index symbols) ---
-            if not exchange.endswith('_INDEX'):
+            if not exchange.endswith("_INDEX"):
                 rest_quote = self._get_quotes_via_rest(symbol, exchange)
                 if rest_quote:
                     return rest_quote
@@ -349,42 +355,42 @@ class BrokerData:
         """
         Get quotes via Nubra's REST orderbooks API.
         Original REST implementation preserved as fallback.
-        
+
         Nubra API: GET /orderbooks/{ref_id}?levels=1
-        
-        Note: Nubra's orderbook API requires numeric ref_id. Index symbols 
+
+        Note: Nubra's orderbook API requires numeric ref_id. Index symbols
         don't have ref_id in Nubra's API, so quotes are not available for indices.
-        
+
         Returns:
             dict: Quote data in SilverTrade AI format, or None if failed
         """
         try:
             # Indices not supported by REST orderbook API
-            if exchange.endswith('_INDEX'):
+            if exchange.endswith("_INDEX"):
                 return None
 
             # Get token (ref_id) for the symbol
             token = get_token(symbol, exchange)
-            
+
             if not token:
                 logger.warning(f"Could not find token for symbol {symbol} on {exchange}")
                 return None
 
             # Verify token is numeric (ref_id)
             if not str(token).isdigit():
-                logger.warning(f"Invalid token '{token}' for {symbol}. REST API requires numeric ref_id.")
+                logger.warning(
+                    f"Invalid token '{token}' for {symbol}. REST API requires numeric ref_id."
+                )
                 return None
 
             logger.info(f"Fetching REST quotes for {symbol} on {exchange} with token {token}")
 
             # Call Nubra's orderbooks API with 1 level of depth for quotes
-            response = get_api_response(
-                f"/orderbooks/{token}?levels=1", self.auth_token, "GET"
-            )
-            
+            response = get_api_response(f"/orderbooks/{token}?levels=1", self.auth_token, "GET")
+
             # Extract orderBook data from response
             orderbook = response.get("orderBook", {})
-            
+
             if not orderbook:
                 logger.warning(f"Empty orderbook response for {symbol} on {exchange}")
                 return None
@@ -393,7 +399,7 @@ class BrokerData:
             # Prices are in paise, need to convert to rupees (divide by 100)
             bids = orderbook.get("bid", [])
             asks = orderbook.get("ask", [])
-            
+
             bid_price = float(bids[0].get("p", 0)) / 100 if bids else 0
             ask_price = float(asks[0].get("p", 0)) / 100 if asks else 0
             ltp = float(orderbook.get("ltp", 0)) / 100
@@ -414,7 +420,7 @@ class BrokerData:
             # Propagate authentication errors
             if "Authentication failed" in str(e):
                 raise
-            
+
             logger.error(f"REST quote error for {symbol} on {exchange}: {str(e)}")
             return None
 
@@ -449,7 +455,7 @@ class BrokerData:
 
             # Classify symbols: orderbook (instruments) vs OHLCV (indices)
             orderbook_items = []  # (symbol, exchange, token_int)
-            index_items = []      # (symbol, exchange, br_symbol, ws_exchange)
+            index_items = []  # (symbol, exchange, br_symbol, ws_exchange)
 
             for item in symbols:
                 symbol = item["symbol"]
@@ -491,21 +497,23 @@ class BrokerData:
                 if depth and depth.get("ltp", 0) > 0:
                     best_bid = depth["bids"][0]["price"] if depth.get("bids") else 0
                     best_ask = depth["asks"][0]["price"] if depth.get("asks") else 0
-                    results.append({
-                        "symbol": symbol,
-                        "exchange": exchange,
-                        "data": {
-                            "bid": best_bid,
-                            "ask": best_ask,
-                            "open": float(depth.get("open", 0)),
-                            "high": float(depth.get("high", 0)),
-                            "low": float(depth.get("low", 0)),
-                            "ltp": float(depth.get("ltp", 0)),
-                            "prev_close": float(depth.get("prev_close", 0)),
-                            "volume": int(depth.get("volume", 0)),
-                            "oi": int(depth.get("oi", 0)),
+                    results.append(
+                        {
+                            "symbol": symbol,
+                            "exchange": exchange,
+                            "data": {
+                                "bid": best_bid,
+                                "ask": best_ask,
+                                "open": float(depth.get("open", 0)),
+                                "high": float(depth.get("high", 0)),
+                                "low": float(depth.get("low", 0)),
+                                "ltp": float(depth.get("ltp", 0)),
+                                "prev_close": float(depth.get("prev_close", 0)),
+                                "volume": int(depth.get("volume", 0)),
+                                "oi": int(depth.get("oi", 0)),
+                            },
                         }
-                    })
+                    )
                 else:
                     failed_symbols.append({"symbol": symbol, "exchange": exchange})
 
@@ -514,50 +522,77 @@ class BrokerData:
                 for symbol, exchange, br_symbol in syms:
                     quote = websocket.get_quote(ws_exchange, br_symbol)
                     if quote and quote.get("ltp", 0) > 0:
-                        results.append({
-                            "symbol": symbol,
-                            "exchange": exchange,
-                            "data": {
-                                "bid": float(quote.get("bid", 0)),
-                                "ask": float(quote.get("ask", 0)),
-                                "open": float(quote.get("open", 0)),
-                                "high": float(quote.get("high", 0)),
-                                "low": float(quote.get("low", 0)),
-                                "ltp": float(quote.get("ltp", 0)),
-                                "prev_close": float(quote.get("prev_close", 0)),
-                                "volume": int(quote.get("volume", 0)),
-                                "oi": int(quote.get("volume_oi", 0)),
+                        results.append(
+                            {
+                                "symbol": symbol,
+                                "exchange": exchange,
+                                "data": {
+                                    "bid": float(quote.get("bid", 0)),
+                                    "ask": float(quote.get("ask", 0)),
+                                    "open": float(quote.get("open", 0)),
+                                    "high": float(quote.get("high", 0)),
+                                    "low": float(quote.get("low", 0)),
+                                    "ltp": float(quote.get("ltp", 0)),
+                                    "prev_close": float(quote.get("prev_close", 0)),
+                                    "volume": int(quote.get("volume", 0)),
+                                    "oi": int(quote.get("volume_oi", 0)),
+                                },
                             }
-                        })
+                        )
                     else:
                         failed_symbols.append({"symbol": symbol, "exchange": exchange})
 
             # --- REST fallback for any symbols that didn't get WS data ---
             if failed_symbols:
-                logger.info(f"Batch WS: {len(failed_symbols)}/{len(symbols)} symbols need REST fallback")
+                logger.info(
+                    f"Batch WS: {len(failed_symbols)}/{len(symbols)} symbols need REST fallback"
+                )
                 for item in failed_symbols:
                     sym = item["symbol"]
                     exch = item["exchange"]
                     try:
-                        rest_quote = self._get_quotes_via_rest(sym, exch) if not exch.endswith("_INDEX") else None
-                        results.append({
-                            "symbol": sym,
-                            "exchange": exch,
-                            "data": rest_quote or {
-                                "bid": 0, "ask": 0, "open": 0, "high": 0,
-                                "low": 0, "ltp": 0, "prev_close": 0, "volume": 0, "oi": 0,
+                        rest_quote = (
+                            self._get_quotes_via_rest(sym, exch)
+                            if not exch.endswith("_INDEX")
+                            else None
+                        )
+                        results.append(
+                            {
+                                "symbol": sym,
+                                "exchange": exch,
+                                "data": rest_quote
+                                or {
+                                    "bid": 0,
+                                    "ask": 0,
+                                    "open": 0,
+                                    "high": 0,
+                                    "low": 0,
+                                    "ltp": 0,
+                                    "prev_close": 0,
+                                    "volume": 0,
+                                    "oi": 0,
+                                },
                             }
-                        })
+                        )
                     except Exception as e:
                         logger.warning(f"REST fallback failed for {sym}: {e}")
-                        results.append({
-                            "symbol": sym,
-                            "exchange": exch,
-                            "data": {
-                                "bid": 0, "ask": 0, "open": 0, "high": 0,
-                                "low": 0, "ltp": 0, "prev_close": 0, "volume": 0, "oi": 0,
+                        results.append(
+                            {
+                                "symbol": sym,
+                                "exchange": exch,
+                                "data": {
+                                    "bid": 0,
+                                    "ask": 0,
+                                    "open": 0,
+                                    "high": 0,
+                                    "low": 0,
+                                    "ltp": 0,
+                                    "prev_close": 0,
+                                    "volume": 0,
+                                    "oi": 0,
+                                },
                             }
-                        })
+                        )
 
             logger.info(f"Batch multiquotes: {len(results)} results for {len(symbols)} symbols")
             return results
@@ -620,12 +655,12 @@ class BrokerData:
     ) -> pd.DataFrame:
         """
         Get historical data for given symbol using Nubra's timeseries API.
-        
+
         Data is fetched in chunks based on interval:
         - Intraday (1s to 1h): 30-day chunks (API limit: 3 months)
         - Daily: 365-day chunks (API limit: 10 years)
         - Weekly/Monthly: 1000-day chunks (API limit: 10 years)
-        
+
         Args:
             symbol: Trading symbol
             exchange: Exchange (e.g., NSE, BSE, NFO, BFO, CDS, MCX, NSE_INDEX, BSE_INDEX)
@@ -674,7 +709,9 @@ class BrokerData:
                 instrument_type = "STOCK"
                 api_exchange = exchange
             else:
-                raise Exception(f"Exchange '{exchange}' is not supported by Nubra. Supported exchanges: NSE, BSE, NFO, BFO, NSE_INDEX, BSE_INDEX")
+                raise Exception(
+                    f"Exchange '{exchange}' is not supported by Nubra. Supported exchanges: NSE, BSE, NFO, BFO, NSE_INDEX, BSE_INDEX"
+                )
 
             # Convert dates to datetime objects
             from_date = pd.to_datetime(start_date)
@@ -683,17 +720,17 @@ class BrokerData:
             # Set chunk size based on interval
             # Nubra limits: intraday = 3 months, daily+ = 10 years
             chunk_limits = {
-                "1s": 7,      # 7 days for second data
-                "1m": 30,     # 30 days for minute data
+                "1s": 7,  # 7 days for second data
+                "1m": 30,  # 30 days for minute data
                 "2m": 30,
                 "3m": 60,
                 "5m": 60,
                 "15m": 60,
                 "30m": 90,
-                "1h": 90,     # 90 days for hourly
-                "D": 365,     # 1 year chunks for daily
-                "W": 1000,    # ~3 years for weekly
-                "M": 1500,    # ~4 years for monthly
+                "1h": 90,  # 90 days for hourly
+                "D": 365,  # 1 year chunks for daily
+                "W": 1000,  # ~3 years for weekly
+                "M": 1500,  # ~4 years for monthly
             }
             chunk_days = chunk_limits.get(interval, 30)
 
@@ -708,7 +745,7 @@ class BrokerData:
 
                 # Set start time to market open (09:15 IST -> 03:45 UTC)
                 chunk_start = current_start.replace(hour=3, minute=45, second=0, microsecond=0)
-                
+
                 # Set end time
                 current_time = pd.Timestamp.now()
                 if current_end.date() == current_time.date():
@@ -736,7 +773,7 @@ class BrokerData:
                             "endDate": end_iso,
                             "interval": self.timeframe_map[interval],
                             "intraDay": False,
-                            "realTime": False
+                            "realTime": False,
                         }
                     ]
                 }
@@ -750,7 +787,9 @@ class BrokerData:
                         payload,
                     )
 
-                    logger.debug(f"Nubra timeseries raw response: {json.dumps(response, indent=2) if isinstance(response, dict) else response}")
+                    logger.debug(
+                        f"Nubra timeseries raw response: {json.dumps(response, indent=2) if isinstance(response, dict) else response}"
+                    )
 
                     # Parse response
                     if response and response.get("message") == "charts":
@@ -769,31 +808,61 @@ class BrokerData:
                                 high_data = symbol_data.get("high", [])
                                 low_data = symbol_data.get("low", [])
                                 close_data = symbol_data.get("close", [])
-                                volume_data = symbol_data.get("tick_volume", []) or symbol_data.get("cumulative_volume", [])
+                                volume_data = symbol_data.get("tick_volume", []) or symbol_data.get(
+                                    "cumulative_volume", []
+                                )
 
                                 # Process each field and merge into all_candles
                                 for item in open_data:
                                     ts = item.get("ts", 0)
                                     if ts not in all_candles:
-                                        all_candles[ts] = {"timestamp": ts, "open": 0, "high": 0, "low": 0, "close": 0, "volume": 0}
+                                        all_candles[ts] = {
+                                            "timestamp": ts,
+                                            "open": 0,
+                                            "high": 0,
+                                            "low": 0,
+                                            "close": 0,
+                                            "volume": 0,
+                                        }
                                     all_candles[ts]["open"] = float(item.get("v", 0)) / 100
 
                                 for item in high_data:
                                     ts = item.get("ts", 0)
                                     if ts not in all_candles:
-                                        all_candles[ts] = {"timestamp": ts, "open": 0, "high": 0, "low": 0, "close": 0, "volume": 0}
+                                        all_candles[ts] = {
+                                            "timestamp": ts,
+                                            "open": 0,
+                                            "high": 0,
+                                            "low": 0,
+                                            "close": 0,
+                                            "volume": 0,
+                                        }
                                     all_candles[ts]["high"] = float(item.get("v", 0)) / 100
 
                                 for item in low_data:
                                     ts = item.get("ts", 0)
                                     if ts not in all_candles:
-                                        all_candles[ts] = {"timestamp": ts, "open": 0, "high": 0, "low": 0, "close": 0, "volume": 0}
+                                        all_candles[ts] = {
+                                            "timestamp": ts,
+                                            "open": 0,
+                                            "high": 0,
+                                            "low": 0,
+                                            "close": 0,
+                                            "volume": 0,
+                                        }
                                     all_candles[ts]["low"] = float(item.get("v", 0)) / 100
 
                                 for item in close_data:
                                     ts = item.get("ts", 0)
                                     if ts not in all_candles:
-                                        all_candles[ts] = {"timestamp": ts, "open": 0, "high": 0, "low": 0, "close": 0, "volume": 0}
+                                        all_candles[ts] = {
+                                            "timestamp": ts,
+                                            "open": 0,
+                                            "high": 0,
+                                            "low": 0,
+                                            "close": 0,
+                                            "volume": 0,
+                                        }
                                     all_candles[ts]["close"] = float(item.get("v", 0)) / 100
 
                                 for item in volume_data:
@@ -804,7 +873,9 @@ class BrokerData:
                                 logger.debug(f"Debug - Chunk received {len(close_data)} candles")
 
                 except Exception as chunk_error:
-                    logger.error(f"Debug - Error fetching chunk {current_start} to {current_end}: {str(chunk_error)}")
+                    logger.error(
+                        f"Debug - Error fetching chunk {current_start} to {current_end}: {str(chunk_error)}"
+                    )
 
                 # Move to next chunk
                 current_start = current_end + timedelta(days=1)
@@ -816,7 +887,9 @@ class BrokerData:
             # If no data was found, return empty DataFrame
             if not all_candles:
                 logger.debug("Debug - No data received from API")
-                return pd.DataFrame(columns=["close", "high", "low", "open", "timestamp", "volume", "oi"])
+                return pd.DataFrame(
+                    columns=["close", "high", "low", "open", "timestamp", "volume", "oi"]
+                )
 
             # Convert dictionary to list and sort by timestamp
             candles = list(all_candles.values())
@@ -865,10 +938,10 @@ class BrokerData:
     ) -> pd.DataFrame:
         """
         Get historical OI data for given symbol.
-        
+
         Note: Nubra's API does not provide a separate OI data endpoint.
         This method returns an empty DataFrame to maintain API compatibility.
-        
+
         Args:
             symbol: Trading symbol
             exchange: Exchange (e.g., NFO, BFO, CDS, MCX)
@@ -884,12 +957,12 @@ class BrokerData:
     def get_depth(self, symbol: str, exchange: str) -> dict:
         """
         Get market depth for given symbol.
-        
+
         Strategy:
         1. Try WebSocket orderbook channel first (works for instruments)
         2. Fall back to REST API /orderbooks/{ref_id}?levels=5
         3. Return zeros for indices (no depth available)
-        
+
         Args:
             symbol: Trading symbol
             exchange: Exchange (e.g., NSE, BSE, NFO, BFO, CDS, MCX, NSE_INDEX, BSE_INDEX)
@@ -898,7 +971,7 @@ class BrokerData:
         """
         try:
             # --- Attempt 1: WebSocket orderbook channel (non-index only) ---
-            if not exchange.endswith('_INDEX'):
+            if not exchange.endswith("_INDEX"):
                 ws_depth = self._get_depth_via_websocket(symbol, exchange)
                 if ws_depth:
                     return ws_depth
@@ -909,7 +982,7 @@ class BrokerData:
                     return rest_depth
 
             # --- Fallback: return zeros (indices or no data) ---
-            if exchange.endswith('_INDEX'):
+            if exchange.endswith("_INDEX"):
                 logger.info(f"Index depth not available for {symbol} on {exchange}")
             return {
                 "bids": [{"price": 0, "quantity": 0} for _ in range(5)],
@@ -978,8 +1051,14 @@ class BrokerData:
                 bids = depth.get("bids", [{"price": 0, "quantity": 0}] * 5)
                 asks = depth.get("asks", [{"price": 0, "quantity": 0}] * 5)
 
-                formatted_bids = [{"price": float(b.get("price", 0)), "quantity": int(b.get("quantity", 0))} for b in bids[:5]]
-                formatted_asks = [{"price": float(a.get("price", 0)), "quantity": int(a.get("quantity", 0))} for a in asks[:5]]
+                formatted_bids = [
+                    {"price": float(b.get("price", 0)), "quantity": int(b.get("quantity", 0))}
+                    for b in bids[:5]
+                ]
+                formatted_asks = [
+                    {"price": float(a.get("price", 0)), "quantity": int(a.get("quantity", 0))}
+                    for a in asks[:5]
+                ]
 
                 return {
                     "bids": formatted_bids,
@@ -1016,33 +1095,35 @@ class BrokerData:
         """
         Get market depth via Nubra's REST orderbooks API.
         Original REST implementation preserved as fallback.
-        
+
         Nubra API: GET /orderbooks/{ref_id}?levels=5
-        
+
         Returns:
             dict: Depth data in SilverTrade AI format, or None if failed
         """
         try:
-            if exchange.endswith('_INDEX'):
+            if exchange.endswith("_INDEX"):
                 return None
 
             token = get_token(symbol, exchange)
-            
+
             if not token:
                 logger.warning(f"Could not find token for symbol {symbol} on {exchange}")
                 return None
 
             if not str(token).isdigit():
-                logger.warning(f"Invalid token '{token}' for {symbol}. REST requires numeric ref_id.")
+                logger.warning(
+                    f"Invalid token '{token}' for {symbol}. REST requires numeric ref_id."
+                )
                 return None
 
             logger.info(f"Fetching REST depth for {symbol} on {exchange} with token {token}")
 
-            response = get_api_response(
-                f"/orderbooks/{token}?levels=5", self.auth_token, "GET"
-            )
+            response = get_api_response(f"/orderbooks/{token}?levels=5", self.auth_token, "GET")
 
-            logger.debug(f"Nubra REST depth raw response: {json.dumps(response, indent=2) if isinstance(response, dict) else response}")
+            logger.debug(
+                f"Nubra REST depth raw response: {json.dumps(response, indent=2) if isinstance(response, dict) else response}"
+            )
 
             orderbook = response.get("orderBook", {})
             if not orderbook:
@@ -1053,33 +1134,31 @@ class BrokerData:
             # Nubra format: {"p": price in paise, "q": quantity, "o": num_orders}
             bid_orders = orderbook.get("bid", [])
             ask_orders = orderbook.get("ask", [])
-            
+
             bids = []
             asks = []
 
             for i in range(5):
                 if i < len(bid_orders):
                     bid = bid_orders[i]
-                    bids.append({
-                        "price": float(bid.get("p", 0)) / 100,
-                        "quantity": int(bid.get("q", 0))
-                    })
+                    bids.append(
+                        {"price": float(bid.get("p", 0)) / 100, "quantity": int(bid.get("q", 0))}
+                    )
                 else:
                     bids.append({"price": 0, "quantity": 0})
 
             for i in range(5):
                 if i < len(ask_orders):
                     ask = ask_orders[i]
-                    asks.append({
-                        "price": float(ask.get("p", 0)) / 100,
-                        "quantity": int(ask.get("q", 0))
-                    })
+                    asks.append(
+                        {"price": float(ask.get("p", 0)) / 100, "quantity": int(ask.get("q", 0))}
+                    )
                 else:
                     asks.append({"price": 0, "quantity": 0})
 
             totalbuyqty = sum(bid.get("q", 0) for bid in bid_orders)
             totalsellqty = sum(ask.get("q", 0) for ask in ask_orders)
-            
+
             ltp = float(orderbook.get("ltp", 0)) / 100
             ltq = int(orderbook.get("ltq", 0))
             volume = int(orderbook.get("volume", 0))
@@ -1106,13 +1185,11 @@ class BrokerData:
     def get_intervals(self) -> list:
         """
         Get list of supported intervals for historical data.
-        
+
         Based on Nubra API: 1s, 1m, 2m, 3m, 5m, 15m, 30m, 1h, 1d, 1w
         SilverTrade AI supported: 1m, 3m, 5m, 15m, 30m, 1h, D
-        
+
         Returns:
             list: List of supported interval strings
         """
         return list(self.timeframe_map.keys())
-
-

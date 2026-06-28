@@ -269,9 +269,7 @@ def api_get_data():
         )
     except Exception as e:
         logger.exception(f"Error getting analyzer data: {str(e)}")
-        return jsonify(
-            {"status": "error", "message": "Failed to load analyzer data"}
-        ), 500
+        return jsonify({"status": "error", "message": "Failed to load analyzer data"}), 500
 
 
 @analyzer_bp.route("/stats")

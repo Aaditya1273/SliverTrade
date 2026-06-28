@@ -444,8 +444,7 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
             with self.lock:
                 # M7 fix: Use trailing underscore in prefix match to avoid false positives
                 already_ws_subscribed = any(
-                    cid.startswith(f"{base_correlation_id}_")
-                    for cid in self.subscriptions.keys()
+                    cid.startswith(f"{base_correlation_id}_") for cid in self.subscriptions.keys()
                 )
 
                 if already_ws_subscribed:
@@ -695,9 +694,7 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
     def _on_open(self, ws):
         """Handle WebSocket connection open — set connected under lock, then resubscribe"""
         self.logger.info("Connected to Shoonya WebSocket")
-        resub = threading.Thread(
-            target=self._resubscribe_all, daemon=True, name="ShoonyaResub"
-        )
+        resub = threading.Thread(target=self._resubscribe_all, daemon=True, name="ShoonyaResub")
         should_start = False
         with self.lock:
             self.connected = True
@@ -744,7 +741,7 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 return
 
             delay = min(
-                Config.BASE_RECONNECT_DELAY * (2 ** self.reconnect_attempts),
+                Config.BASE_RECONNECT_DELAY * (2**self.reconnect_attempts),
                 Config.MAX_RECONNECT_DELAY,
             )
 
@@ -834,9 +831,7 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
                         self._reconnecting = True
 
                 if connection_lost:
-                    self.logger.warning(
-                        "Connection lost during reconnection handoff, retrying"
-                    )
+                    self.logger.warning("Connection lost during reconnection handoff, retrying")
                     self._schedule_reconnection()
                     scheduled_retry = True
                 else:
@@ -959,9 +954,7 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
                 if not cids:
                     return
                 matching_subscriptions = [
-                    self.subscriptions[cid].copy()
-                    for cid in cids
-                    if cid in self.subscriptions
+                    self.subscriptions[cid].copy() for cid in cids if cid in self.subscriptions
                 ]
 
             for subscription in matching_subscriptions:
@@ -1103,7 +1096,9 @@ class ShoonyaWebSocketAdapter(BaseBrokerWebSocketAdapter):
             )
 
             # SA-R6-10 fix: Include warnings in response when partial failure occurs
-            response_msg = f"Unsubscribed from all {subscription_count} subscriptions. Connection kept alive."
+            response_msg = (
+                f"Unsubscribed from all {subscription_count} subscriptions. Connection kept alive."
+            )
             if unsub_errors:
                 response_msg += f" Warnings: {unsub_errors}"
 

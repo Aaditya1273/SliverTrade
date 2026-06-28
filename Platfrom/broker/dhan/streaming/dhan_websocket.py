@@ -320,11 +320,11 @@ class DhanWebSocket:
         """Check if a WebSocket error is fatal (non-recoverable)"""
         error_lower = error_str.lower()
         fatal_indicators = [
-            "429",                          # HTTP 429 Too Many Requests
-            "too many requests",            # Rate limited / subscription expired
-            "client id is blocked",         # IP/client blocked by Dhan
-            "subscription",                 # Subscription related errors
-            "plan",                         # Plan/subscription expired
+            "429",  # HTTP 429 Too Many Requests
+            "too many requests",  # Rate limited / subscription expired
+            "client id is blocked",  # IP/client blocked by Dhan
+            "subscription",  # Subscription related errors
+            "plan",  # Plan/subscription expired
         ]
         return any(indicator in error_lower for indicator in fatal_indicators)
 
@@ -332,7 +332,11 @@ class DhanWebSocket:
         """Get a user-friendly message for fatal WebSocket errors"""
         error_lower = error_str.lower()
 
-        if "429" in error_lower or "too many requests" in error_lower or "client id is blocked" in error_lower:
+        if (
+            "429" in error_lower
+            or "too many requests" in error_lower
+            or "client id is blocked" in error_lower
+        ):
             return (
                 "Dhan WebSocket connection blocked (HTTP 429 - Too Many Requests). "
                 "This usually means your Dhan data subscription has expired or is inactive. "
@@ -680,11 +684,11 @@ class DhanWebSocket:
     def __del__(self):
         """Destructor to ensure resources are cleaned up"""
         try:
-            if hasattr(self, 'running') and self.running:
+            if hasattr(self, "running") and self.running:
                 self.running = False
                 self.connected = False
                 # Try to close WebSocket if still open
-                if hasattr(self, 'ws') and self.ws:
+                if hasattr(self, "ws") and self.ws:
                     try:
                         self.ws.close()
                     except Exception:

@@ -44,6 +44,7 @@ if _PROJECT_ROOT not in sys.path:
 # Direct (CLI) mode — ramp test
 # ---------------------------------------------------------------------------
 
+
 def _run_direct(args: argparse.Namespace) -> None:
     """Run a direct ramp test using ``requests`` or ``httpx``."""
     try:
@@ -58,13 +59,13 @@ def _run_direct(args: argparse.Namespace) -> None:
     max_users = args.max_users
     ramp_duration = args.ramp_duration or max(60, max_users // 2)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" SilverTrade AI — Concurrency Benchmark")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Base URL      : {base_url}")
     print(f"  Max users     : {max_users}")
     print(f"  Ramp duration : {ramp_duration}s")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # ------------------------------------------------------------------
     # Warmup: hit a lightweight endpoint to verify connectivity & prime
@@ -151,12 +152,12 @@ def _run_direct(args: argparse.Namespace) -> None:
             )
 
     elapsed_total = time.time() - start_ts
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f" BENCHMARK COMPLETE")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Duration      : {elapsed_total:.0f}s")
     print(f"  Total requests: {total_requests}")
-    print(f"  Errors        : {errors}  ({errors/max(1,total_requests)*100:.1f}%)")
+    print(f"  Errors        : {errors}  ({errors / max(1, total_requests) * 100:.1f}%)")
 
     # ------------------------------------------------------------------
     # Latency percentiles
@@ -180,7 +181,9 @@ def _run_direct(args: argparse.Namespace) -> None:
     # ------------------------------------------------------------------
     print(f"\n  Connection Pool Sizing Recommendations:")
     print(f"    Recommended POOL_SIZE  = {min(2 * max_users // max(1, _get_worker_count()), 200)}")
-    print(f"    Recommended MAX_OVERFLOW = {min(4 * max_users // max(1, _get_worker_count()), 400)}")
+    print(
+        f"    Recommended MAX_OVERFLOW = {min(4 * max_users // max(1, _get_worker_count()), 400)}"
+    )
     print(
         f"    Set via: POOL_SIZE={min(2 * max_users // max(1, _get_worker_count()), 200)} "
         f"MAX_OVERFLOW={min(4 * max_users // max(1, _get_worker_count()), 400)}"
@@ -342,6 +345,7 @@ class SilverTradeUser(HttpUser):
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="SilverTrade AI — concurrency benchmark",
@@ -352,19 +356,11 @@ def main():
 
     # --- direct subcommand ---
     direct = sub.add_parser("direct", help="CLI ramp test with terminal report")
-    direct.add_argument(
-        "--base-url", default="http://localhost:5000", help="Server base URL"
-    )
+    direct.add_argument("--base-url", default="http://localhost:5000", help="Server base URL")
     direct.add_argument("--api-key", default="", help="API key for auth")
-    direct.add_argument(
-        "--max-users", type=int, default=200, help="Target concurrency level"
-    )
-    direct.add_argument(
-        "--ramp-duration", type=int, default=0, help="Ramp-up duration in seconds"
-    )
-    direct.add_argument(
-        "--output", default="", help="Path to save JSON report (optional)"
-    )
+    direct.add_argument("--max-users", type=int, default=200, help="Target concurrency level")
+    direct.add_argument("--ramp-duration", type=int, default=0, help="Ramp-up duration in seconds")
+    direct.add_argument("--output", default="", help="Path to save JSON report (optional)")
 
     # --- locust subcommand ---
     locust_parser = sub.add_parser("locust", help="Interactive Locust web UI")
@@ -372,9 +368,7 @@ def main():
         "--base-url", default="http://localhost:5000", help="Server base URL"
     )
     locust_parser.add_argument("--api-key", default="", help="API key for auth")
-    locust_parser.add_argument(
-        "--locust-web-host", default="127.0.0.1", help="Locust web UI host"
-    )
+    locust_parser.add_argument("--locust-web-host", default="127.0.0.1", help="Locust web UI host")
     locust_parser.add_argument(
         "--locust-web-port", type=int, default=8089, help="Locust web UI port"
     )
@@ -386,18 +380,12 @@ def main():
     )
 
     # Headless mode (CI use)
-    locust_parser.add_argument(
-        "--headless", action="store_true", help="Run headless (no web UI)"
-    )
-    locust_parser.add_argument(
-        "--max-users", type=int, default=200, help="Target users (headless)"
-    )
+    locust_parser.add_argument("--headless", action="store_true", help="Run headless (no web UI)")
+    locust_parser.add_argument("--max-users", type=int, default=200, help="Target users (headless)")
     locust_parser.add_argument(
         "--spawn-rate", type=int, default=10, help="Users spawned per second"
     )
-    locust_parser.add_argument(
-        "--run-time", default="5m", help="Test duration (e.g. 5m, 30s)"
-    )
+    locust_parser.add_argument("--run-time", default="5m", help="Test duration (e.g. 5m, 30s)")
     locust_parser.add_argument(
         "--html-report", default="benchmark_report.html", help="HTML report path"
     )

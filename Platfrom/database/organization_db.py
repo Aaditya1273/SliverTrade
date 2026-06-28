@@ -18,7 +18,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import (
-    Boolean, Column, DateTime, ForeignKey, Integer, String, Text,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID
@@ -38,12 +44,14 @@ Base = declarative_base()
 # Models
 # ---------------------------------------------------------------------------
 
+
 class Organization(Base):
     """Multi-tenant organization — the top-level entity in the system.
 
     Every user, API key, strategy, and order belongs to an organization.
     Organizations have a subscription tier that controls feature access.
     """
+
     __tablename__ = "organizations"
 
     id = Column(Integer, primary_key=True)
@@ -51,17 +59,19 @@ class Organization(Base):
     name = Column(String(255), nullable=False)
     slug = Column(String(100), unique=True, nullable=False, index=True)
     tier = Column(String(50), default="free", index=True)  # free, pro, enterprise
-    
+
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
-    
+
     # Billing (Stripe/LemonSqueezy)
     stripe_customer_id = Column(String(255), unique=True, nullable=True)
     subscription_id = Column(String(255), unique=True, nullable=True)
-    subscription_status = Column(String(50), default="inactive")  # active, past_due, canceled, unpaid, inactive
-    
+    subscription_status = Column(
+        String(50), default="inactive"
+    )  # active, past_due, canceled, unpaid, inactive
+
     # Feature limits
     max_users = Column(Integer, default=1)
     max_api_keys = Column(Integer, default=5)
@@ -69,11 +79,13 @@ class Organization(Base):
     max_strategies = Column(Integer, default=3)
     max_flows = Column(Integer, default=3)
     rate_limit_per_second = Column(Integer, default=10)
-    
+
     # Relationships
-    members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
+    members = relationship(
+        "OrganizationMember", back_populates="organization", cascade="all, delete-orphan"
+    )
     roles = relationship("Role", back_populates="organization", cascade="all, delete-orphan")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.uuid,
@@ -95,23 +107,24 @@ class Organization(Base):
 
 class OrganizationMember(Base):
     """Links a user to an organization with a specific role."""
+
     __tablename__ = "organization_members"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "user_id", name="uq_org_member"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "user_id", name="uq_org_member"),)
 
     id = Column(Integer, primary_key=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
     user_id = Column(String(255), nullable=False, index=True)
     role_name = Column(String(50), nullable=False, default="member")  # admin, trader, viewer
     invited_by = Column(String(255), nullable=True)
     invited_at = Column(DateTime, default=datetime.utcnow)
     joined_at = Column(DateTime, nullable=True)
     is_active = Column(Boolean, default=True)
-    
+
     # Relationships
     organization = relationship("Organization", back_populates="members")
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -127,15 +140,18 @@ class OrganizationMember(Base):
 
 class Role(Base):
     """Custom roles within an organization with associated permissions."""
+
     __tablename__ = "roles"
 
     id = Column(Integer, primary_key=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False)
+    organization_id = Column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+    )
     name = Column(String(100), nullable=False)
     description = Column(Text, nullable=True)
     is_system_role = Column(Boolean, default=False)  # System roles cannot be modified
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     organization = relationship("Organization", back_populates="roles")
     permissions = relationship("Permission", back_populates="role", cascade="all, delete-orphan")
@@ -143,13 +159,14 @@ class Role(Base):
 
 class Permission(Base):
     """Granular permissions assigned to roles."""
+
     __tablename__ = "permissions"
 
     id = Column(Integer, primary_key=True)
     role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False)
     resource = Column(String(100), nullable=False)  # e.g. "orders", "strategies", "api_keys"
-    action = Column(String(50), nullable=False)     # e.g. "create", "read", "update", "delete", "*"
-    
+    action = Column(String(50), nullable=False)  # e.g. "create", "read", "update", "delete", "*"
+
     # Relationships
     role = relationship("Role", back_populates="permissions")
 
@@ -257,6 +274,7 @@ TIER_CONFIGS = {
 # CRUD Operations
 # ---------------------------------------------------------------------------
 
+
 def create_organization(
     name: str,
     slug: str,
@@ -275,18 +293,18 @@ def create_organization(
     # Import session
     from sqlalchemy.orm import scoped_session, sessionmaker
     from database.db_config import get_db_engine
-    
+
     engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
-    
+
     try:
         org = Organization(
             name=name,
             slug=slug,
             tier=tier,
         )
-        
+
         # Set tier limits
         config = TIER_CONFIGS.get(tier, TIER_CONFIGS["free"])
         org.max_users = config["max_users"]
@@ -295,10 +313,10 @@ def create_organization(
         org.max_strategies = config["max_strategies"]
         org.max_flows = config["max_flows"]
         org.rate_limit_per_second = config["rate_limit_per_second"]
-        
+
         session.add(org)
         session.flush()  # Get the ID
-        
+
         # Create system roles
         for role_name, role_config in SYSTEM_ROLES.items():
             role = Role(
@@ -309,7 +327,7 @@ def create_organization(
             )
             session.add(role)
             session.flush()
-            
+
             # Create permissions
             if role_config["permissions"] == "*":
                 # Wildcard: create a single permission with "*" action
@@ -328,7 +346,7 @@ def create_organization(
                             action=action,
                         )
                         session.add(perm)
-        
+
         session.commit()
         return org
     except Exception:
@@ -348,16 +366,20 @@ def get_organization(org_id: str) -> Optional[Organization]:
         Organization instance or None.
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
-    
+
     engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
-    
+
     try:
-        return session.query(Organization).filter(
-            Organization.uuid == org_id,
-            Organization.is_active == True,
-        ).first()
+        return (
+            session.query(Organization)
+            .filter(
+                Organization.uuid == org_id,
+                Organization.is_active == True,
+            )
+            .first()
+        )
     finally:
         session.close()
 
@@ -380,28 +402,32 @@ def add_member(
         The created OrganizationMember instance.
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
-    
+
     engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
-    
+
     try:
         org = session.query(Organization).filter(Organization.uuid == organization_id).first()
         if not org:
             raise ValueError(f"Organization {organization_id} not found")
-        
+
         # Check member limit
-        current_members = session.query(OrganizationMember).filter(
-            OrganizationMember.organization_id == org.id,
-            OrganizationMember.is_active == True,
-        ).count()
-        
+        current_members = (
+            session.query(OrganizationMember)
+            .filter(
+                OrganizationMember.organization_id == org.id,
+                OrganizationMember.is_active == True,
+            )
+            .count()
+        )
+
         if current_members >= org.max_users:
             raise ValueError(
                 f"Organization has reached its member limit ({org.max_users}). "
                 f"Upgrade your plan to add more members."
             )
-        
+
         member = OrganizationMember(
             organization_id=org.id,
             user_id=user_id,
@@ -447,14 +473,14 @@ def is_feature_allowed(org_id: str, feature: str) -> bool:
     org = get_organization(org_id)
     if not org:
         return False
-    
+
     config = TIER_CONFIGS.get(org.tier, TIER_CONFIGS["free"])
     features = config.get("features", {})
-    
+
     # Check if the feature is explicitly set
     if feature in features:
         return bool(features[feature])
-    
+
     # Unknown features are not allowed by default
     return False
 
@@ -462,6 +488,7 @@ def is_feature_allowed(org_id: str, feature: str) -> bool:
 # ---------------------------------------------------------------------------
 # Database Initialization
 # ---------------------------------------------------------------------------
+
 
 def init_db():
     """Create all organization-related tables."""
@@ -471,6 +498,7 @@ def init_db():
 # ---------------------------------------------------------------------------
 # Cleanup
 # ---------------------------------------------------------------------------
+
 
 def delete_organization(org_id: str) -> bool:
     """Soft-delete an organization by marking it inactive.
@@ -482,16 +510,16 @@ def delete_organization(org_id: str) -> bool:
         True if successful, False if organization not found.
     """
     from sqlalchemy.orm import scoped_session, sessionmaker
-    
+
     engine = get_db_engine()
     Session = scoped_session(sessionmaker(bind=engine))
     session = Session()
-    
+
     try:
         org = session.query(Organization).filter(Organization.uuid == org_id).first()
         if not org:
             return False
-        
+
         org.is_active = False
         org.updated_at = datetime.utcnow()
         session.commit()

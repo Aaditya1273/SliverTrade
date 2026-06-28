@@ -7,6 +7,7 @@ Revision ID: 0002
 Revises: None
 Create Date: 2026-06-05
 """
+
 from alembic import op
 import sqlalchemy as sa
 
@@ -79,8 +80,12 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_api_tracker_attempt_count", "invalid_api_key_tracker", ["attempt_count"])
-    op.create_index("idx_api_tracker_first_attempt_at", "invalid_api_key_tracker", ["first_attempt_at"])
-    op.create_index("ix_invalid_api_key_tracker_ip_address", "invalid_api_key_tracker", ["ip_address"])
+    op.create_index(
+        "idx_api_tracker_first_attempt_at", "invalid_api_key_tracker", ["first_attempt_at"]
+    )
+    op.create_index(
+        "ix_invalid_api_key_tracker_ip_address", "invalid_api_key_tracker", ["ip_address"]
+    )
 
 
 def downgrade() -> None:

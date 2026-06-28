@@ -5,7 +5,10 @@
 import os
 
 from broker.deltaexchange.api.baseurl import BASE_URL, get_auth_headers
-from broker.deltaexchange.mapping.margin_data import parse_margin_response, transform_margin_positions
+from broker.deltaexchange.mapping.margin_data import (
+    parse_margin_response,
+    transform_margin_positions,
+)
 from utils.httpx_client import request_with_circuit_breaker
 from utils.logging import get_logger
 
@@ -28,7 +31,7 @@ def get_margin_mode(auth: str) -> str:
     positions combined, whereas in isolated mode each position has a
     separate margin allocation.
     """
-    api_key    = auth
+    api_key = auth
     api_secret = os.getenv("BROKER_API_SECRET", "")
     if not api_key or not api_secret:
         return "unknown"

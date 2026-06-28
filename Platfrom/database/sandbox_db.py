@@ -36,7 +36,9 @@ SANDBOX_DATABASE_URL = os.getenv("SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.d
 
 from database.db_config import get_db_engine
 
-engine = get_db_engine("SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.db", pool_size=20, max_overflow=40)
+engine = get_db_engine(
+    "SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.db", pool_size=20, max_overflow=40
+)
 
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()
@@ -518,7 +520,9 @@ def init_default_config():
             err_msg = str(e).lower()
             # Sandbox DB tables may not exist yet on first Postgres setup.
             if "does not exist" in err_msg:
-                logger.warning(f"Sandbox DB: sandbox_config table not available — delaying config init ({e})")
+                logger.warning(
+                    f"Sandbox DB: sandbox_config table not available — delaying config init ({e})"
+                )
                 return  # Stop trying — tables will be created on next restart
             logger.exception(f"Error adding config {config['config_key']}: {e}")
         except Exception as e:

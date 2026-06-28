@@ -16,7 +16,6 @@ KnowledgeChunk = dict  # {text: str, category: str, tags: list[str]}
 
 KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
     # ── Candlestick Patterns ───────────────────────────────────────────
-
     {
         "text": (
             "Bullish Engulfing Pattern: A two-candle reversal pattern that appears "
@@ -130,9 +129,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "candlestick",
         "tags": ["harami", "candlestick", "reversal", "inside candle"],
     },
-
     # ── Indian Market Rules ────────────────────────────────────────────
-
     {
         "text": (
             "SEBI (Securities and Exchange Board of India) is the regulatory body "
@@ -279,9 +276,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "india_market",
         "tags": ["pms", "aif", "portfolio", "hni", "sebi", "investment management"],
     },
-
     # ── Options Greeks ─────────────────────────────────────────────────
-
     {
         "text": (
             "Delta (Δ) measures the rate of change of an option's price relative "
@@ -400,9 +395,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "options_greeks",
         "tags": ["expected move", "straddle", "option pricing", "volatility"],
     },
-
     # ── Trading Strategies ─────────────────────────────────────────────
-
     {
         "text": (
             "Iron Condor: A four-leg options strategy designed to profit from "
@@ -523,9 +516,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "strategy",
         "tags": ["delta hedging", "gamma scalping", "neutral", "options", "advanced"],
     },
-
     # ── Technical Analysis ────────────────────────────────────────────
-
     {
         "text": (
             "Support and Resistance: Support is a price level where buying is "
@@ -570,7 +561,14 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
             "with price is a common entry signal."
         ),
         "category": "technical_analysis",
-        "tags": ["moving average", "ema", "sma", "golden cross", "death cross", "technical analysis"],
+        "tags": [
+            "moving average",
+            "ema",
+            "sma",
+            "golden cross",
+            "death cross",
+            "technical analysis",
+        ],
     },
     {
         "text": (
@@ -585,7 +583,14 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
             "above 30 then back below) can signal entry points."
         ),
         "category": "technical_analysis",
-        "tags": ["rsi", "relative strength index", "momentum", "overbought", "oversold", "divergence"],
+        "tags": [
+            "rsi",
+            "relative strength index",
+            "momentum",
+            "overbought",
+            "oversold",
+            "divergence",
+        ],
     },
     {
         "text": (
@@ -680,9 +685,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "technical_analysis",
         "tags": ["head and shoulders", "double top", "double bottom", "reversal", "chart pattern"],
     },
-
     # ── Risk Management ────────────────────────────────────────────────
-
     {
         "text": (
             "Position Sizing (Kelly Criterion and Fixed %): Never risk more than "
@@ -756,9 +759,7 @@ KNOWLEDGE_CHUNKS: list[KnowledgeChunk] = [
         "category": "risk_management",
         "tags": ["1% rule", "daily loss limit", "trading psychology", "risk management"],
     },
-
     # ── Broker-Specific ────────────────────────────────────────────────
-
     {
         "text": (
             "Zerodha (largest Indian broker): Kite platform. API access available "

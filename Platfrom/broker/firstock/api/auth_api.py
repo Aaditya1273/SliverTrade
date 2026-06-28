@@ -78,7 +78,9 @@ def authenticate_broker(userid, password, totp_code):
         logger.info(f"Vendor Code: {vendor_code}")
 
         # Send the POST request to Firstock's API using shared httpx client
-        response = request_with_circuit_breaker("POST", url, json=payload, headers=headers, timeout=30)
+        response = request_with_circuit_breaker(
+            "POST", url, json=payload, headers=headers, timeout=30
+        )
 
         # Add status attribute for compatibility with existing codebase
         response.status = response.status_code

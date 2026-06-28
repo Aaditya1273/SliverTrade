@@ -35,6 +35,7 @@ def _get_redis():
     """Get Redis client from extensions (or None if unavailable)."""
     try:
         from extensions import redis_client
+
         return redis_client
     except ImportError:
         return None
@@ -64,12 +65,14 @@ def _sync_bans_to_redis() -> int:
         synced = 0
         for ban in bans:
             key = _ban_cache_key(ban.ip_address)
-            payload = json.dumps({
-                "ip": ban.ip_address,
-                "reason": ban.ban_reason or "",
-                "permanent": ban.is_permanent,
-                "expires_at": ban.expires_at.isoformat() if ban.expires_at else None,
-            })
+            payload = json.dumps(
+                {
+                    "ip": ban.ip_address,
+                    "reason": ban.ban_reason or "",
+                    "permanent": ban.is_permanent,
+                    "expires_at": ban.expires_at.isoformat() if ban.expires_at else None,
+                }
+            )
             if ban.is_permanent:
                 redis.set(key, payload)
             elif ban.expires_at:
@@ -82,6 +85,7 @@ def _sync_bans_to_redis() -> int:
     except Exception:
         logger.exception("Failed to sync IP bans to Redis")
         return 0
+
 
 # Use a separate database for logs
 LOGS_DATABASE_URL = os.getenv("LOGS_DATABASE_URL", "sqlite:///db/logs.db")
@@ -221,12 +225,17 @@ class IPBan(LogBase):
                 if redis:
                     try:
                         key = _ban_cache_key(ip_address)
-                        redis.set(key, json.dumps({
-                            "ip": ip_address,
-                            "reason": ban.ban_reason or "",
-                            "permanent": True,
-                            "expires_at": None,
-                        }))
+                        redis.set(
+                            key,
+                            json.dumps(
+                                {
+                                    "ip": ip_address,
+                                    "reason": ban.ban_reason or "",
+                                    "permanent": True,
+                                    "expires_at": None,
+                                }
+                            ),
+                        )
                     except Exception:
                         pass
                 return True
@@ -240,12 +249,18 @@ class IPBan(LogBase):
                             key = _ban_cache_key(ip_address)
                             ttl = int((ban.expires_at - datetime.utcnow()).total_seconds())
                             if ttl > 0:
-                                redis.setex(key, ttl, json.dumps({
-                                    "ip": ip_address,
-                                    "reason": ban.ban_reason or "",
-                                    "permanent": False,
-                                    "expires_at": ban.expires_at.isoformat(),
-                                }))
+                                redis.setex(
+                                    key,
+                                    ttl,
+                                    json.dumps(
+                                        {
+                                            "ip": ip_address,
+                                            "reason": ban.ban_reason or "",
+                                            "permanent": False,
+                                            "expires_at": ban.expires_at.isoformat(),
+                                        }
+                                    ),
+                                )
                         except Exception:
                             pass
                     return True
@@ -287,7 +302,9 @@ class IPBan(LogBase):
             existing_ban = IPBan.query.filter_by(ip_address=ip_address).first()
 
             is_permanent = permanent
-            expires_at_dt = None if is_permanent else datetime.utcnow() + timedelta(hours=duration_hours)
+            expires_at_dt = (
+                None if is_permanent else datetime.utcnow() + timedelta(hours=duration_hours)
+            )
 
             if existing_ban:
                 # Increment ban count for repeat offender
@@ -325,12 +342,14 @@ class IPBan(LogBase):
             if redis:
                 try:
                     key = _ban_cache_key(ip_address)
-                    payload = json.dumps({
-                        "ip": ip_address,
-                        "reason": reason,
-                        "permanent": is_permanent,
-                        "expires_at": expires_at_dt.isoformat() if expires_at_dt else None,
-                    })
+                    payload = json.dumps(
+                        {
+                            "ip": ip_address,
+                            "reason": reason,
+                            "permanent": is_permanent,
+                            "expires_at": expires_at_dt.isoformat() if expires_at_dt else None,
+                        }
+                    )
                     if is_permanent:
                         redis.set(key, payload)
                     elif expires_at_dt:
@@ -459,16 +478,19 @@ class Error404Tracker(LogBase):
                 tracker.last_error_at = now
 
                 # Auto-ban if enabled and threshold reached (configurable via Security Dashboard)
-                if security_settings.get("auto_ban_enabled", False) and tracker.error_count >= threshold_404:
+                if (
+                    security_settings.get("auto_ban_enabled", False)
+                    and tracker.error_count >= threshold_404
+                ):
                     # Don't ban localhost IPs
-                    if ip_address not in ['127.0.0.1', '::1', 'localhost']:
+                    if ip_address not in ["127.0.0.1", "::1", "localhost"]:
                         # Ban the IP (duration 0 = permanent)
                         IPBan.ban_ip(
                             ip_address=ip_address,
                             reason=f"Exceeded 404 threshold: {tracker.error_count} errors in 24 hours",
                             duration_hours=ban_duration_404,
                             permanent=(ban_duration_404 == 0),
-                            created_by='404_detector'
+                            created_by="404_detector",
                         )
 
                         # Clean up tracker entry
@@ -575,16 +597,19 @@ class InvalidAPIKeyTracker(LogBase):
                 tracker.last_attempt_at = now
 
                 # Auto-ban if enabled and threshold reached (configurable via Security Dashboard)
-                if security_settings.get("auto_ban_enabled", False) and tracker.attempt_count >= threshold_api:
+                if (
+                    security_settings.get("auto_ban_enabled", False)
+                    and tracker.attempt_count >= threshold_api
+                ):
                     # Don't ban localhost IPs but keep tracking
-                    if ip_address not in ['127.0.0.1', '::1', 'localhost']:
+                    if ip_address not in ["127.0.0.1", "::1", "localhost"]:
                         # Ban the IP (duration 0 = permanent)
                         success = IPBan.ban_ip(
                             ip_address=ip_address,
                             reason=f"Exceeded invalid API key threshold: {tracker.attempt_count} attempts in 24 hours",
                             duration_hours=ban_duration_api,
                             permanent=(ban_duration_api == 0),
-                            created_by='api_key_detector'
+                            created_by="api_key_detector",
                         )
 
                         # Only delete tracker if ban was successful

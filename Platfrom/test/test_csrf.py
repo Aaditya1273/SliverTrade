@@ -130,8 +130,7 @@ class CSRFTester:
             data = {"username": "test_user", "password": "test_pass"}
 
             response = requests.post(
-                urljoin(self.base_url, "/auth/login"), data=data, allow_redirects=False,
-                timeout=10
+                urljoin(self.base_url, "/auth/login"), data=data, allow_redirects=False, timeout=10
             )
 
             # Should get 400 Bad Request without CSRF
@@ -157,7 +156,9 @@ class CSRFTester:
                 "X-API-KEY": "test_key",  # Would need valid key in production
             }
 
-            response = requests.get(urljoin(self.base_url, "/api/v1/orders"), headers=headers, timeout=10)
+            response = requests.get(
+                urljoin(self.base_url, "/api/v1/orders"), headers=headers, timeout=10
+            )
 
             # Should not get CSRF error (might get auth error which is fine)
             is_exempt = response.status_code != 400 or "CSRF" not in response.text

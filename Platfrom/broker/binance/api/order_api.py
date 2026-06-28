@@ -34,7 +34,7 @@ logger = get_logger(__name__)
 
 
 # --- In-memory orderId → symbol mapping for cancel (Binance requires symbol) ---
-_order_symbol_map = {}          # {orderId_str: symbol}
+_order_symbol_map = {}  # {orderId_str: symbol}
 _order_symbol_map_lock = threading.Lock()
 
 # --- Per-Symbol Smart Order Lock ---
@@ -55,6 +55,7 @@ def _get_symbol_lock(symbol, exchange, product):
 # Order book / trade book
 # ---------------------------------------------------------------------------
 
+
 def get_order_book(auth):
     """Fetch all recent orders (open + recent history) for the account.
 
@@ -66,19 +67,21 @@ def get_order_book(auth):
         all_orders = []
 
         # 1. Fetch open orders
-        open_result = get_api_response(
-            "/api/v3/openOrders", auth, method="GET", signed=True
-        )
+        open_result = get_api_response("/api/v3/openOrders", auth, method="GET", signed=True)
         if open_result.get("success"):
             all_orders.extend(open_result.get("result", []))
 
         # 2. Fetch recent order history (last 50 orders)
         from datetime import datetime, timezone
+
         one_day_ago = int((datetime.now(timezone.utc).timestamp() - 86400) * 1000)
 
         hist_result = get_api_response(
-            "/api/v3/allOrders", auth, method="GET", signed=True,
-            params={"limit": 50, "startTime": one_day_ago}
+            "/api/v3/allOrders",
+            auth,
+            method="GET",
+            signed=True,
+            params={"limit": 50, "startTime": one_day_ago},
         )
         if hist_result.get("success"):
             # Merge, preferring allOrders entries (authoritative final status)
@@ -87,7 +90,8 @@ def get_order_book(auth):
             hist_by_id = {o.get("orderId"): o for o in hist_orders if isinstance(o, dict)}
             # Remove open orders that also appear in history, then add history versions
             all_orders = [
-                o for o in all_orders
+                o
+                for o in all_orders
                 if not (isinstance(o, dict) and o.get("orderId") in hist_by_id)
             ]
             all_orders.extend(hist_orders)
@@ -104,8 +108,7 @@ def get_trade_book(auth):
     """Fetch today's filled trades (fills)."""
     try:
         result = get_api_response(
-            "/api/v3/myTrades", auth, method="GET", signed=True,
-            params={"limit": 500}
+            "/api/v3/myTrades", auth, method="GET", signed=True, params={"limit": 500}
         )
         if result.get("success"):
             return result.get("result", [])
@@ -118,6 +121,7 @@ def get_trade_book(auth):
 # ---------------------------------------------------------------------------
 # Positions / holdings
 # ---------------------------------------------------------------------------
+
 
 def get_positions(auth):
     """
@@ -148,22 +152,27 @@ def get_positions(auth):
                 if total <= 0:
                     continue
 
-                positions.append({
-                    "symbol": asset,
-                    "asset": asset,
-                    "free": free,
-                    "locked": locked,
-                    "total": total,
-                    "product_symbol": f"{asset}USDT",
-                    "_is_spot": True,
-                })
+                positions.append(
+                    {
+                        "symbol": asset,
+                        "asset": asset,
+                        "free": free,
+                        "locked": locked,
+                        "total": total,
+                        "product_symbol": f"{asset}USDT",
+                        "_is_spot": True,
+                    }
+                )
         else:
             logger.warning(f"[Binance] Spot account fetch failed: {result.get('error')}")
 
         # ── 2. Fetch USD-M futures positions ──────────────────────────────────
         try:
             futures_result = get_api_response(
-                "/fapi/v2/account", auth, method="GET", signed=True,
+                "/fapi/v2/account",
+                auth,
+                method="GET",
+                signed=True,
                 trade_type=TRADE_TYPE_FUTURES,
             )
             if futures_result.get("success"):
@@ -184,24 +193,32 @@ def get_positions(auth):
                     leverage = int(float(pos.get("leverage", 1)))
                     liquidation_price = float(pos.get("liquidationPrice", 0))
 
-                    positions.append({
-                        "symbol": symbol,
-                        "asset": symbol.replace("USDT", "").replace("BUSD", ""),
-                        "product_symbol": symbol,
-                        "size": size,
-                        "entry_price": entry_price,
-                        "unrealized_pnl": unrealized_pnl,
-                        "leverage": leverage,
-                        "liquidation_price": liquidation_price,
-                        "_is_futures": True,
-                    })
+                    positions.append(
+                        {
+                            "symbol": symbol,
+                            "asset": symbol.replace("USDT", "").replace("BUSD", ""),
+                            "product_symbol": symbol,
+                            "size": size,
+                            "entry_price": entry_price,
+                            "unrealized_pnl": unrealized_pnl,
+                            "leverage": leverage,
+                            "liquidation_price": liquidation_price,
+                            "_is_futures": True,
+                        }
+                    )
 
-                logger.debug(f"[Binance] Futures positions: {len(fut_positions)} raw, "
-                           f"{sum(1 for p in fut_positions if isinstance(p, dict) and float(p.get('positionAmt', 0)) != 0)} non-zero")
+                logger.debug(
+                    f"[Binance] Futures positions: {len(fut_positions)} raw, "
+                    f"{sum(1 for p in fut_positions if isinstance(p, dict) and float(p.get('positionAmt', 0)) != 0)} non-zero"
+                )
             else:
-                logger.debug(f"[Binance] Futures account fetch skipped or failed: {futures_result.get('error')}")
+                logger.debug(
+                    f"[Binance] Futures account fetch skipped or failed: {futures_result.get('error')}"
+                )
         except Exception as fut_err:
-            logger.debug(f"[Binance] Futures position fetch optional (may not be enabled): {fut_err}")
+            logger.debug(
+                f"[Binance] Futures position fetch optional (may not be enabled): {fut_err}"
+            )
 
         logger.debug(f"[Binance] get_positions: {len(positions)} total (spot + futures)")
         return positions
@@ -234,6 +251,7 @@ def get_open_position(tradingsymbol, exchange, product, auth):
 # Order placement
 # ---------------------------------------------------------------------------
 
+
 def place_order_api(data, auth):
     """
     Place a new order on Binance via POST /api/v3/order.
@@ -245,13 +263,16 @@ def place_order_api(data, auth):
     logger.info(f"[Binance] place_order: symbol={data['symbol']} token={token}")
 
     if not token:
-        msg = (f"[Binance] Symbol '{data['symbol']}' not found in master contract DB "
-               f"for exchange '{data['exchange']}'. Run master contract sync first.")
+        msg = (
+            f"[Binance] Symbol '{data['symbol']}' not found in master contract DB "
+            f"for exchange '{data['exchange']}'. Run master contract sync first."
+        )
         logger.error(msg)
 
         class _ErrResp:
             status_code = 400
             status = 400
+
         return _ErrResp(), {"status": "error", "message": msg}, None
 
     # Transform SilverTrade data → Binance API params
@@ -266,8 +287,7 @@ def place_order_api(data, auth):
         endpoint = "/fapi/v1/order"
 
     result = get_api_response(
-        endpoint, auth, method="POST",
-        params=order_params, signed=True, trade_type=trade_type
+        endpoint, auth, method="POST", params=order_params, signed=True, trade_type=trade_type
     )
     logger.debug(f"[Binance] place_order response: {result}")
 
@@ -300,10 +320,16 @@ def place_bracket_order_api(data, auth):
     token = get_token(data["symbol"], data["exchange"])
 
     if not token:
+
         class _ErrResp:
             status_code = 400
             status = 400
-        return _ErrResp(), {"status": "error", "message": "Symbol not found in master contract DB"}, None
+
+        return (
+            _ErrResp(),
+            {"status": "error", "message": "Symbol not found in master contract DB"},
+            None,
+        )
 
     has_stop_loss = data.get("bracket_stop_loss_price") is not None
     has_take_profit = data.get("bracket_take_profit_price") is not None
@@ -339,8 +365,7 @@ def place_bracket_order_api(data, auth):
     }
 
     result = get_api_response(
-        "/api/v3/order/oco", auth, method="POST",
-        params=oco_params, signed=True
+        "/api/v3/order/oco", auth, method="POST", params=oco_params, signed=True
     )
 
     order_id = None
@@ -384,9 +409,11 @@ def place_smartorder_api(data, auth):
             return result
 
         if position_size == current_position:
-            msg = ("No OpenPosition Found. Not placing Exit order."
-                   if float(data["quantity"]) == 0
-                   else "No action needed. Position size matches current position")
+            msg = (
+                "No OpenPosition Found. Not placing Exit order."
+                if float(data["quantity"]) == 0
+                else "No action needed. Position size matches current position"
+            )
             return res, {"status": "success", "message": msg}, None
 
         action = None
@@ -417,6 +444,7 @@ def place_smartorder_api(data, auth):
 # Order cancellation
 # ---------------------------------------------------------------------------
 
+
 def cancel_order(orderid, auth):
     """Cancel an open order via DELETE /api/v3/order.
 
@@ -436,7 +464,9 @@ def cancel_order(orderid, auth):
 
         # Fallback: fetch from open orders if not in local map
         if not symbol:
-            logger.warning(f"[Binance] Symbol for order {orderid} not in local map; fetching from API")
+            logger.warning(
+                f"[Binance] Symbol for order {orderid} not in local map; fetching from API"
+            )
             open_orders_result = get_api_response(
                 "/api/v3/openOrders", auth, method="GET", signed=True
             )
@@ -447,12 +477,14 @@ def cancel_order(orderid, auth):
                         break
 
         if not symbol:
-            return {"status": "error", "message": "Could not determine symbol for order cancellation. Order may already be filled or cancelled."}, 400
+            return {
+                "status": "error",
+                "message": "Could not determine symbol for order cancellation. Order may already be filled or cancelled.",
+            }, 400
 
         params = {"symbol": symbol, "orderId": int(orderid_str)}
         result = get_api_response(
-            "/api/v3/order", auth, method="DELETE",
-            params=params, signed=True
+            "/api/v3/order", auth, method="DELETE", params=params, signed=True
         )
 
         if result.get("success"):
@@ -475,9 +507,7 @@ def cancel_all_orders_api(data, auth):
     """Cancel all currently open orders."""
     try:
         # Binance supports DELETE /api/v3/openOrders to cancel all
-        result = get_api_response(
-            "/api/v3/openOrders", auth, method="DELETE", signed=True
-        )
+        result = get_api_response("/api/v3/openOrders", auth, method="DELETE", signed=True)
         if result.get("success"):
             cancelled = result.get("result", [])
             logger.info(f"[Binance] Cancelled {len(cancelled)} open orders")
@@ -492,6 +522,7 @@ def cancel_all_orders_api(data, auth):
 # ---------------------------------------------------------------------------
 # Order modification
 # ---------------------------------------------------------------------------
+
 
 def modify_order(data, auth):
     """
@@ -516,6 +547,7 @@ def modify_order(data, auth):
 # ---------------------------------------------------------------------------
 # Close all positions
 # ---------------------------------------------------------------------------
+
 
 def close_all_positions(current_api_key, auth):
     """Close all open positions using market orders."""

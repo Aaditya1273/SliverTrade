@@ -43,7 +43,8 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
         if method == "GET":
             response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method == "POST":
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 url,
                 headers=headers,
                 json=payload if isinstance(payload, dict) else json.loads(payload),
@@ -247,9 +248,7 @@ class BrokerData:
             self._last_depth_call_at = time.monotonic()
 
         if response.get("s") != "ok":
-            logger.debug(
-                f"Depth fetch for OI failed for {br_symbol}: {response.get('message')}"
-            )
+            logger.debug(f"Depth fetch for OI failed for {br_symbol}: {response.get('message')}")
             return 0
 
         depth_data = response.get("d", {}).get(br_symbol, {})

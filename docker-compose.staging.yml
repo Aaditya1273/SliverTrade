@@ -86,8 +86,10 @@ services:
       - REDIRECT_URL=${STAGING_HOST:-https://staging.silvertrade.ai}/zerodha/callback
       - DATA_FETCH_URL=http://data_fetch:5005
       - TRADE_STRATEGIES_URL=http://trade_strategies:5007
-      - APP_KEY=${APP_KEY:-staging-app-key-not-secure}
-      - API_KEY_PEPPER=${API_KEY_PEPPER:-staging-pepper-not-secure}
+      ## ⚠️ MUST be set via .env or export — no fallback (security risk)
+      #  Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
+      - APP_KEY=${APP_KEY:?APP_KEY is required — generate with secrets.token_hex(32)}
+      - API_KEY_PEPPER=${API_KEY_PEPPER:?API_KEY_PEPPER is required — generate with secrets.token_hex(32)}
     volumes:
       - ./Platfrom/.env:/app/.env:ro
     depends_on:

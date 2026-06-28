@@ -22,7 +22,10 @@ def _parse_response(step, response):
     try:
         return response.json()
     except Exception:
-        return {"status": "Failure", "statusMessage": f"HTTP {response.status_code}: {step} failed - {response.text[:200]}"}
+        return {
+            "status": "Failure",
+            "statusMessage": f"HTTP {response.status_code}: {step} failed - {response.text[:200]}",
+        }
 
 
 def get_client_id():
@@ -50,7 +53,9 @@ def generate_otp(uid):
         payload = {"uid": uid}
 
         logger.info(f"Generating OTP for user: {uid}")
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/otp/generateOtp", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/otp/generateOtp", headers=headers, json=payload
+        )
         data = _parse_response("generateOtp", response)
 
         if data.get("status") == "Success":
@@ -83,8 +88,8 @@ def generate_secret_key(uid, otp):
         payload = {"uid": uid, "otp": otp}
 
         logger.info(f"Generating secret API key for user: {uid}")
-        response = request_with_circuit_breaker("POST", 
-            f"{BASE_URL}/otp/secretKeyGenerator", headers=headers, json=payload
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/otp/secretKeyGenerator", headers=headers, json=payload
         )
         data = _parse_response("secretKeyGenerator", response)
 
@@ -118,7 +123,9 @@ def generate_access_token(uid, secret_api_key):
         payload = {"uid": uid, "secretApiKey": secret_api_key}
 
         logger.info(f"Generating access token for user: {uid}")
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/accessToken/token", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/accessToken/token", headers=headers, json=payload
+        )
         data = _parse_response("accessToken", response)
 
         if data.get("status") == "Success" and data.get("accessToken"):
@@ -155,7 +162,9 @@ def login(uid, password, access_token):
         }
 
         logger.info(f"Attempting Samco login for user: {uid}")
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/login", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/login", headers=headers, json=payload
+        )
         data = _parse_response("login", response)
 
         if data.get("status") == "Success" and data.get("sessionToken"):
@@ -196,7 +205,9 @@ def register_ip(client_id, password, primary_ip, secondary_ip=None):
             payload["secondaryIp"] = secondary_ip
 
         logger.info(f"Registering IP for user: {client_id}")
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/ip/ipRegistration", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/ip/ipRegistration", headers=headers, json=payload
+        )
         data = _parse_response("ipRegistration", response)
 
         if data.get("status") == "Success":
@@ -236,7 +247,9 @@ def update_ip(client_id, password, primary_ip, secondary_ip=None):
             payload["secondaryIp"] = secondary_ip
 
         logger.info(f"Updating IP for user: {client_id}")
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/ip/ipUpdate", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/ip/ipUpdate", headers=headers, json=payload
+        )
         data = _parse_response("ipUpdate", response)
 
         if data.get("status") == "Success":

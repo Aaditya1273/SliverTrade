@@ -55,6 +55,7 @@ def _detect_broker(url: str) -> str:
             return name
     return "broker_http"
 
+
 # Global httpx client for connection pooling
 _httpx_client = None
 
@@ -332,7 +333,9 @@ def request_with_circuit_breaker(
 
     # Check if the circuit is OPEN before even attempting
     if breaker.is_open():
-        raise CircuitBreakerOpenError(breaker.name, breaker.state, breaker.stats().get("retry_after"))
+        raise CircuitBreakerOpenError(
+            breaker.name, breaker.state, breaker.stats().get("retry_after")
+        )
 
     def _do_request() -> httpx.Response:
         # The breaker's call() will record success/failure

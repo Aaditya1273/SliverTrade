@@ -183,6 +183,7 @@ class SignalGenerationUser(HttpUser):
 
 # ── Event hooks for reporting ─────────────────────────────────────────────────
 
+
 @events.test_stop.add_listener
 def on_test_stop(environment, **kwargs):
     """Print pass/fail summary after test completes."""

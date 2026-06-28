@@ -42,7 +42,8 @@ def calculate_margin_api(positions, auth):
     logger.info(f"IIFL Capital margin calculation payload: {transformed_positions}")
 
     try:
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{BASE_URL}/spanexposure",
             headers=headers,
             json=transformed_positions,

@@ -52,7 +52,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 
         # Handle rate limiting with exponential backoff
         if response.status_code == 429:
-            delay = _RATE_LIMIT_BASE_DELAY * (2 ** attempt)
+            delay = _RATE_LIMIT_BASE_DELAY * (2**attempt)
             logger.warning(
                 f"Rate limit hit (429) on {endpoint}, retrying in {delay:.1f}s "
                 f"(attempt {attempt + 1}/{_MAX_RETRIES})"
@@ -83,7 +83,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
 def get_order_book(auth):
     """
     Fetch all orders for the day from Nubra API.
-    
+
     Nubra API: GET /orders/v2
     Returns list of orders with their current status.
     """
@@ -93,10 +93,10 @@ def get_order_book(auth):
 def get_trade_book(auth):
     """
     Fetch trade book from Nubra's API.
-    
+
     Nubra doesn't have a separate tradebook endpoint.
     Trades are derived from the orders endpoint (filled orders).
-    
+
     Nubra API: GET /orders/v2
     """
     return get_api_response("/orders/v2", auth)
@@ -105,7 +105,7 @@ def get_trade_book(auth):
 def get_positions(auth):
     """
     Fetch positions from Nubra's API.
-    
+
     Nubra API: GET /portfolio/positions
     Returns list of positions with fields like ref_id, ref_data, quantity, etc.
     """
@@ -117,7 +117,7 @@ def get_positions(auth):
 def get_holdings(auth):
     """
     Fetch portfolio holdings from Nubra's API.
-    
+
     Nubra API: GET /portfolio/holdings
     Returns portfolio with holdings list and holding_stats.
     Prices are in paise (divide by 100 for rupees).
@@ -128,14 +128,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -170,7 +170,6 @@ def _invalidate_position_cache(auth):
         _position_cache.pop(auth, None)
 
 
-
 def get_open_position(tradingsymbol, exchange, producttype, auth):
     """
     Get the net quantity for a specific position.
@@ -188,11 +187,11 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
     positions = []
     if isinstance(positions_data, dict):
         portfolio = positions_data.get("portfolio", positions_data)
-        
+
         stock_positions = portfolio.get("stock_positions") or []
         fut_positions = portfolio.get("fut_positions") or []
         opt_positions = portfolio.get("opt_positions") or []
-        
+
         positions = stock_positions + fut_positions + opt_positions
     elif isinstance(positions_data, list):
         positions = positions_data
@@ -201,7 +200,7 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
         pos_exchange = position.get("exchange", "")
         pos_symbol = position.get("symbol", position.get("display_name", ""))
         ref_id = str(position.get("ref_id", ""))
-        
+
         # Map product type from Nubra format
         product = position.get("product", "")
         if product == "ORDER_DELIVERY_TYPE_CNC":
@@ -212,12 +211,12 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
             pos_producttype = "NRML"
         else:
             pos_producttype = product
-        
+
         # Check for matching position
         if pos_exchange == exchange and pos_producttype == producttype:
             # Match by symbol or ref_id
             symbol_from_db = get_symbol(ref_id, pos_exchange)
-            
+
             if symbol_from_db == tradingsymbol or pos_symbol == tradingsymbol:
                 # Nubra uses 'qty' for position quantity
                 qty = position.get("qty", position.get("quantity", 0)) or 0
@@ -232,29 +231,31 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
 def place_order_api(data, auth):
     """
     Place a single order using Nubra's API.
-    
+
     Nubra API: POST /orders/v2/single
     """
     AUTH_TOKEN = auth
     device_id = "SILVERTRADE"  # Fixed device ID, same as auth_api.py
-    
+
     # Get token (ref_id) for the symbol
     token = get_token(data["symbol"], data["exchange"])
-    
-    logger.info(f"Nubra order - Symbol: {data['symbol']}, Exchange: {data['exchange']}, Token: {token}")
-    
+
+    logger.info(
+        f"Nubra order - Symbol: {data['symbol']}, Exchange: {data['exchange']}, Token: {token}"
+    )
+
     # Transform SilverTrade AI data to Nubra format
     nubra_data = transform_data(data, token)
-    
+
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
         "Content-Type": "application/json",
         "Accept": "application/json",
         "x-device-id": device_id,
     }
-    
+
     payload = json.dumps(nubra_data)
-    
+
     logger.info(f"Nubra place order payload: {payload}")
 
     # Get the shared httpx client with connection pooling
@@ -262,13 +263,14 @@ def place_order_api(data, auth):
     # Make the request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{NUBRA_BASE_URL}/orders/v2/single",
             headers=headers,
             content=payload,
         )
         if response.status_code == 429:
-            delay = _RATE_LIMIT_BASE_DELAY * (2 ** attempt)
+            delay = _RATE_LIMIT_BASE_DELAY * (2**attempt)
             logger.warning(
                 f"Rate limit hit (429) placing order, retrying in {delay:.1f}s "
                 f"(attempt {attempt + 1}/{_MAX_RETRIES})"
@@ -305,7 +307,7 @@ def place_order_api(data, auth):
         orderid = None
         response_data["status"] = False
         response.status = response.status_code
-        
+
     return response, response_data, orderid
 
 
@@ -326,9 +328,7 @@ def place_smartorder_api(data, auth):
         position_size = int(data.get("position_size", "0"))
 
         # Get current open position for the symbol
-        current_position = int(
-            get_open_position(symbol, exchange, product, AUTH_TOKEN)
-        )
+        current_position = int(get_open_position(symbol, exchange, product, AUTH_TOKEN))
 
         logger.info(f"position_size : {position_size}")
         logger.info(f"Open Position : {current_position}")
@@ -403,28 +403,28 @@ def place_smartorder_api(data, auth):
 def close_all_positions(current_api_key, auth):
     """
     Close all open positions using Nubra's API.
-    
+
     Fetches positions from portfolio.stock_positions, portfolio.fut_positions,
     portfolio.opt_positions and places market orders to close each one.
     """
     AUTH_TOKEN = auth
 
     positions_response = get_positions(AUTH_TOKEN)
-    
+
     logger.info(f"Nubra positions response: {positions_response}")
 
     # Handle Nubra's response format - portfolio contains stock_positions, fut_positions, opt_positions
     positions = []
     if isinstance(positions_response, dict):
         portfolio = positions_response.get("portfolio", positions_response)
-        
+
         # Collect positions from all position types
         stock_positions = portfolio.get("stock_positions") or []
         fut_positions = portfolio.get("fut_positions") or []
         opt_positions = portfolio.get("opt_positions") or []
-        
+
         positions = stock_positions + fut_positions + opt_positions
-        
+
         if positions_response.get("error"):
             logger.warning(f"Nubra positions error: {positions_response}")
             return {"message": "Failed to fetch positions"}, 500
@@ -440,7 +440,7 @@ def close_all_positions(current_api_key, auth):
     for position in positions:
         # Get quantity - Nubra uses 'qty' in position data
         qty = int(position.get("qty", position.get("quantity", 0)) or 0)
-        
+
         # Skip if quantity is zero
         if qty == 0:
             continue
@@ -453,17 +453,19 @@ def close_all_positions(current_api_key, auth):
 
         # Get exchange from position
         exchange = position.get("exchange", "NSE")
-        
+
         # Get symbol from position - use 'symbol' field
         symbol = position.get("symbol", position.get("display_name", ""))
         ref_id = str(position.get("ref_id", ""))
-        
+
         # Try to get SilverTrade AI symbol from database using ref_id
         oa_symbol = get_symbol(ref_id, exchange)
         if oa_symbol:
             symbol = oa_symbol
-        
-        logger.info(f"Closing position - Symbol: {symbol}, Exchange: {exchange}, Qty: {quantity}, Action: {action}")
+
+        logger.info(
+            f"Closing position - Symbol: {symbol}, Exchange: {exchange}, Qty: {quantity}, Action: {action}"
+        )
 
         # Map product type - Nubra uses 'product' like ORDER_DELIVERY_TYPE_CNC
         product_type = position.get("product", "ORDER_DELIVERY_TYPE_IDAY")
@@ -498,7 +500,7 @@ def close_all_positions(current_api_key, auth):
 def cancel_order(orderid, auth):
     """
     Cancel an order using Nubra's API.
-    
+
     Nubra API: DELETE /orders/{order_id}
     """
     AUTH_TOKEN = auth
@@ -517,12 +519,13 @@ def cancel_order(orderid, auth):
     # Make the DELETE request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = request_with_circuit_breaker("DELETE", 
+        response = request_with_circuit_breaker(
+            "DELETE",
             f"{NUBRA_BASE_URL}/orders/{orderid}",
             headers=headers,
         )
         if response.status_code == 429:
-            delay = _RATE_LIMIT_BASE_DELAY * (2 ** attempt)
+            delay = _RATE_LIMIT_BASE_DELAY * (2**attempt)
             logger.warning(
                 f"Rate limit hit (429) cancelling order {orderid}, retrying in {delay:.1f}s "
                 f"(attempt {attempt + 1}/{_MAX_RETRIES})"
@@ -574,9 +577,9 @@ def cancel_order(orderid, auth):
 def modify_order(data, auth):
     """
     Modify an order using Nubra's API.
-    
+
     Nubra API: POST /orders/v2/modify/{order_id}
-    
+
     Compulsory fields: order_price, order_qty, exchange, order_type
     For ORDER_TYPE_STOPLOSS: also requires trigger_price in algo_params
     """
@@ -588,10 +591,10 @@ def modify_order(data, auth):
     # Transform SilverTrade AI data to Nubra modify order format
     # Note: token/ref_id is not needed for modify order
     transformed_data = transform_modify_order_data(data, None)
-    
+
     # Get order_id from the data
     orderid = data.get("orderid", "")
-    
+
     # Set up the request headers
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -600,19 +603,20 @@ def modify_order(data, auth):
         "x-device-id": device_id,
     }
     payload = json.dumps(transformed_data)
-    
+
     logger.info(f"Nubra modify order payload: {payload}")
 
     # Make the POST request with 429 retry
     response = None
     for attempt in range(_MAX_RETRIES):
-        response = request_with_circuit_breaker("POST", 
+        response = request_with_circuit_breaker(
+            "POST",
             f"{NUBRA_BASE_URL}/orders/v2/modify/{orderid}",
             headers=headers,
             content=payload,
         )
         if response.status_code == 429:
-            delay = _RATE_LIMIT_BASE_DELAY * (2 ** attempt)
+            delay = _RATE_LIMIT_BASE_DELAY * (2**attempt)
             logger.warning(
                 f"Rate limit hit (429) modifying order {orderid}, retrying in {delay:.1f}s "
                 f"(attempt {attempt + 1}/{_MAX_RETRIES})"
@@ -656,21 +660,23 @@ def modify_order(data, auth):
     else:
         return {
             "status": "error",
-            "message": response_data.get("message", response_data.get("error", "Failed to modify order")),
+            "message": response_data.get(
+                "message", response_data.get("error", "Failed to modify order")
+            ),
         }, response.status_code
 
 
 def cancel_all_orders_api(data, auth):
     """
     Cancel all open orders using Nubra's API.
-    
+
     Nubra API returns orders as a list with order_id and order_status fields.
     """
     AUTH_TOKEN = auth
 
     order_book_response = get_order_book(AUTH_TOKEN)
     # logger.info(f"{order_book_response}")
-    
+
     # Nubra returns a list directly, or could return error dict
     if isinstance(order_book_response, dict):
         if order_book_response.get("error"):
@@ -687,16 +693,12 @@ def cancel_all_orders_api(data, auth):
     # Filter orders that are in 'open' or 'pending' state
     # Nubra uses ORDER_STATUS_OPEN, ORDER_STATUS_PENDING
     open_statuses = [
-        "ORDER_STATUS_OPEN", 
+        "ORDER_STATUS_OPEN",
         "ORDER_STATUS_PENDING",
         "ORDER_STATUS_TRIGGER_PENDING",
     ]
-    
-    orders_to_cancel = [
-        order
-        for order in orders
-        if order.get("order_status") in open_statuses
-    ]
+
+    orders_to_cancel = [order for order in orders if order.get("order_status") in open_statuses]
     # logger.info(f"{orders_to_cancel}")
     canceled_orders = []
     failed_cancellations = []

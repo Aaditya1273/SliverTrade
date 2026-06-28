@@ -28,6 +28,7 @@ from flask_limiter.util import get_remote_address
 #   RATE_LIMIT_STORAGE_URL=redis+sentinel://localhost:26379/service_name
 #   RATE_LIMIT_STORAGE_URL=memory://                    (default)
 
+
 def get_rate_limit() -> str:
     """Return the default API rate limit string.
 

@@ -76,7 +76,9 @@ def calculate_margin_api(positions, auth, api_key=None):
 
     try:
         # Make the POST request to spanMargin endpoint
-        response = request_with_circuit_breaker("POST", f"{BASE_URL}/spanMargin", headers=headers, json=payload)
+        response = request_with_circuit_breaker(
+            "POST", f"{BASE_URL}/spanMargin", headers=headers, json=payload
+        )
 
         # Add status attribute for compatibility
         response.status = response.status_code

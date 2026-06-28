@@ -65,8 +65,8 @@ def calculate_margin_api(positions, auth):
 
     try:
         # Make the request using the Upstox margin API
-        response = request_with_circuit_breaker("POST", 
-            "https://api.upstox.com/v2/charges/margin", headers=headers, json=payload
+        response = request_with_circuit_breaker(
+            "POST", "https://api.upstox.com/v2/charges/margin", headers=headers, json=payload
         )
 
         # Add status attribute for compatibility with the existing codebase

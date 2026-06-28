@@ -36,9 +36,13 @@ def get_api_response(endpoint, auth, method="GET", payload=None):
         if method.upper() == "GET":
             response = request_with_circuit_breaker("GET", url, headers=headers)
         elif method.upper() == "POST":
-            response = request_with_circuit_breaker("POST", url, json=payload if payload else {}, headers=headers)
+            response = request_with_circuit_breaker(
+                "POST", url, json=payload if payload else {}, headers=headers
+            )
         elif method.upper() == "PUT":
-            response = request_with_circuit_breaker("PUT", url, json=payload if payload else {}, headers=headers)
+            response = request_with_circuit_breaker(
+                "PUT", url, json=payload if payload else {}, headers=headers
+            )
         elif method.upper() == "DELETE":
             response = request_with_circuit_breaker("DELETE", url, headers=headers)
         else:
@@ -85,14 +89,14 @@ def get_holdings(auth):
 # --- Per-Symbol Smart Order Lock ---
 # Ensures only one smart order per symbol executes at a time.
 # Others queue and execute sequentially, each getting a fresh position book.
-_symbol_locks = {}          # {symbol_key: threading.Lock}
+_symbol_locks = {}  # {symbol_key: threading.Lock}
 _symbol_locks_lock = threading.Lock()
 
 # --- Position Book Cache ---
 # Caches get_positions() for 1 second. Invalidated after each smart order placement.
-_position_cache = {}        # {auth_token: {"data": ..., "timestamp": ...}}
+_position_cache = {}  # {auth_token: {"data": ..., "timestamp": ...}}
 _position_cache_lock = threading.Lock()
-_POSITION_CACHE_TTL = 1.0   # seconds
+_POSITION_CACHE_TTL = 1.0  # seconds
 
 
 def _get_symbol_lock(symbol, exchange, product):
@@ -125,7 +129,6 @@ def _invalidate_position_cache(auth):
     """Invalidate the position cache so the next queued order fetches fresh data."""
     with _position_cache_lock:
         _position_cache.pop(auth, None)
-
 
 
 def get_open_position(tradingsymbol, exchange, product, auth):
@@ -311,7 +314,9 @@ def place_smartorder_api(data, auth):
             position_size = int(data.get("position_size", "0"))
 
             # Get current open position for the symbol
-            current_position = int(get_open_position(symbol, exchange, map_product_type(product), auth))
+            current_position = int(
+                get_open_position(symbol, exchange, map_product_type(product), auth)
+            )
 
             logger.info("=== SMART ORDER EXECUTION ===")
             logger.info(f"Symbol: {symbol}, Exchange: {exchange}, Product: {product}")
@@ -644,8 +649,11 @@ def modify_order(data, auth):
     logger.info(f"Final JSON payload being sent: {payload}")
 
     # Make the request using the shared client
-    response = request_with_circuit_breaker("POST", 
-        "https://integrate.definedgesecurities.com/dart/v1/modify", headers=headers, content=payload
+    response = request_with_circuit_breaker(
+        "POST",
+        "https://integrate.definedgesecurities.com/dart/v1/modify",
+        headers=headers,
+        content=payload,
     )
 
     # Add status attribute for compatibility with the existing codebase

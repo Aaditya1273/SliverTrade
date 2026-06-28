@@ -22,7 +22,7 @@ from services.rag_service import rag as rag_service
 
 logger = logging.getLogger(__name__)
 
-chat_bp = Blueprint('chat', __name__)
+chat_bp = Blueprint("chat", __name__)
 limiter = Limiter(key_func=get_remote_address)
 API_RATE_LIMIT = get_rate_limit()
 
@@ -48,9 +48,7 @@ def get_funds(apikey: str) -> Optional[Dict[str, Any]]:
     """Get user's funds/balance."""
     try:
         response = requests.post(
-            f"{STRATEGY_HOST}/api/v1/funds",
-            json={"apikey": apikey},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/funds", json={"apikey": apikey}, timeout=10
         )
         if response.status_code == 200:
             return response.json()
@@ -63,9 +61,7 @@ def get_holdings(apikey: str) -> Optional[List[Dict[str, Any]]]:
     """Get user's holdings."""
     try:
         response = requests.post(
-            f"{STRATEGY_HOST}/api/v1/holdings",
-            json={"apikey": apikey},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/holdings", json={"apikey": apikey}, timeout=10
         )
         if response.status_code == 200:
             return response.json()
@@ -78,9 +74,7 @@ def get_positions(apikey: str) -> Optional[List[Dict[str, Any]]]:
     """Get user's open positions."""
     try:
         response = requests.post(
-            f"{STRATEGY_HOST}/api/v1/positions",
-            json={"apikey": apikey},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/positions", json={"apikey": apikey}, timeout=10
         )
         if response.status_code == 200:
             return response.json()
@@ -93,9 +87,7 @@ def get_orderbook(apikey: str, limit: int = 10) -> Optional[List[Dict[str, Any]]
     """Get user's recent orders."""
     try:
         response = requests.post(
-            f"{STRATEGY_HOST}/api/v1/orderbook",
-            json={"apikey": apikey},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/orderbook", json={"apikey": apikey}, timeout=10
         )
         if response.status_code == 200:
             data = response.json()
@@ -110,9 +102,7 @@ def get_recent_signals(limit: int = 5) -> Optional[List[Dict[str, Any]]]:
     """Get recent AI signals from Strategy Engine."""
     try:
         response = requests.get(
-            f"{STRATEGY_HOST}/api/v1/signals",
-            params={"limit": limit},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/signals", params={"limit": limit}, timeout=10
         )
         if response.status_code == 200:
             data = response.json()
@@ -126,9 +116,7 @@ def get_tradebook(apikey: str, limit: int = 20) -> Optional[List[Dict[str, Any]]
     """Get user's trade history."""
     try:
         response = requests.post(
-            f"{STRATEGY_HOST}/api/v1/tradebook",
-            json={"apikey": apikey},
-            timeout=10
+            f"{STRATEGY_HOST}/api/v1/tradebook", json={"apikey": apikey}, timeout=10
         )
         if response.status_code == 200:
             data = response.json()
@@ -145,23 +133,23 @@ def build_user_context(apikey: str, message: str) -> Dict[str, Any]:
     message_lower = message.lower()
 
     # Always included (cheap):
-    context['current_time'] = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
-    context['market_status'] = get_market_status()
+    context["current_time"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    context["market_status"] = get_market_status()
 
     # Conditionally included based on message keywords:
-    if any(kw in message_lower for kw in ['portfolio', 'balance', 'holding', 'position']):
-        context['funds'] = get_funds(apikey)
-        context['holdings'] = get_holdings(apikey)
-        context['positions'] = get_positions(apikey)
+    if any(kw in message_lower for kw in ["portfolio", "balance", "holding", "position"]):
+        context["funds"] = get_funds(apikey)
+        context["holdings"] = get_holdings(apikey)
+        context["positions"] = get_positions(apikey)
 
-    if any(kw in message_lower for kw in ['order', 'trade', 'buy', 'sell', 'placed']):
-        context['recent_orders'] = get_orderbook(apikey, limit=10)
+    if any(kw in message_lower for kw in ["order", "trade", "buy", "sell", "placed"]):
+        context["recent_orders"] = get_orderbook(apikey, limit=10)
 
-    if any(kw in message_lower for kw in ['signal', 'suggest', 'recommend', 'ai']):
-        context['recent_signals'] = get_recent_signals(limit=5)
+    if any(kw in message_lower for kw in ["signal", "suggest", "recommend", "ai"]):
+        context["recent_signals"] = get_recent_signals(limit=5)
 
-    if any(kw in message_lower for kw in ['profit', 'loss', 'pnl', 'performance']):
-        context['tradebook'] = get_tradebook(apikey, limit=20)
+    if any(kw in message_lower for kw in ["profit", "loss", "pnl", "performance"]):
+        context["tradebook"] = get_tradebook(apikey, limit=20)
 
     return context
 
@@ -188,6 +176,7 @@ def _get_openai_client():
         The model name is adjusted for OpenRouter's vendor-prefixed format.
     """
     import openai
+
     api_key = OPENAI_API_KEY
     kwargs = {"api_key": api_key}
     # If the key is from OpenRouter, use their base URL
@@ -203,13 +192,15 @@ def _get_openai_client():
     return openai.OpenAI(**kwargs), model
 
 
-def call_llm(message: str, history: List[Dict[str, str]], context: Dict[str, Any]) -> Dict[str, Any]:
+def call_llm(
+    message: str, history: List[Dict[str, str]], context: Dict[str, Any]
+) -> Dict[str, Any]:
     """Call OpenAI LLM with user context and RAG knowledge."""
     if not OPENAI_API_KEY:
         return {
             "reply": "AI chat is not configured. Please set OPENAI_API_KEY environment variable.",
             "sources": [],
-            "suggested_actions": []
+            "suggested_actions": [],
         }
 
     try:
@@ -218,7 +209,8 @@ def call_llm(message: str, history: List[Dict[str, str]], context: Dict[str, Any
         # Retrieve relevant knowledge chunks
         knowledge = _retrieve_knowledge(message)
 
-        system_prompt = """You are SilverTrade AI, an expert algorithmic trading assistant specializing in Indian equity markets (NSE, BSE, NFO) and cryptocurrency markets.
+        system_prompt = (
+            """You are SilverTrade AI, an expert algorithmic trading assistant specializing in Indian equity markets (NSE, BSE, NFO) and cryptocurrency markets.
 
 You have access to the user's real-time portfolio, live market prices, and AI-generated trading signals. You give specific, data-driven advice.
 
@@ -232,16 +224,19 @@ Rules you must ALWAYS follow:
 7. Disclaim: "This is not financial advice. Trade responsibly."
 
 User context (real-time data):
-""" + json.dumps(context, indent=2, default=str) + knowledge
+"""
+            + json.dumps(context, indent=2, default=str)
+            + knowledge
+        )
 
         messages = [
             {"role": "system", "content": system_prompt},
         ]
-        
+
         # Add conversation history
         for msg in history[-5:]:  # Last 5 messages
             messages.append({"role": msg["role"], "content": msg["content"]})
-        
+
         # Add current message
         messages.append({"role": "user", "content": message})
 
@@ -254,18 +249,14 @@ User context (real-time data):
 
         reply = response.choices[0].message.content
 
-        return {
-            "reply": reply,
-            "sources": list(context.keys()),
-            "suggested_actions": []
-        }
+        return {"reply": reply, "sources": list(context.keys()), "suggested_actions": []}
 
     except Exception as e:
         logger.error("LLM call failed: %s", e)
         return {
             "reply": f"AI assistant encountered an error: {str(e)}",
             "sources": [],
-            "suggested_actions": []
+            "suggested_actions": [],
         }
 
 
@@ -278,10 +269,10 @@ def chat():
         if not data:
             return jsonify({"status": "error", "message": "No data provided"}), 400
 
-        apikey = data.get('apikey')
-        message = data.get('message')
-        history = data.get('message_history', [])
-        conversation_id = data.get('conversation_id', str(uuid.uuid4()))
+        apikey = data.get("apikey")
+        message = data.get("message")
+        history = data.get("message_history", [])
+        conversation_id = data.get("conversation_id", str(uuid.uuid4()))
 
         if not apikey or not message:
             return jsonify({"status": "error", "message": "Missing apikey or message"}), 400
@@ -295,22 +286,25 @@ def chat():
         # Save conversation to database
         try:
             from database.chat_db import save_conversation_message, hash_apikey
+
             save_conversation_message(
                 apikey_hash=hash_apikey(apikey),
                 conversation_id=conversation_id,
                 user_message=message,
-                assistant_reply=response["reply"]
+                assistant_reply=response["reply"],
             )
         except Exception as e:
             logger.warning("Failed to save conversation: %s", e)
 
-        return jsonify({
-            "status": "success",
-            "reply": response["reply"],
-            "sources": response["sources"],
-            "conversation_id": conversation_id,
-            "suggested_actions": response["suggested_actions"],
-        })
+        return jsonify(
+            {
+                "status": "success",
+                "reply": response["reply"],
+                "sources": response["sources"],
+                "conversation_id": conversation_id,
+                "suggested_actions": response["suggested_actions"],
+            }
+        )
 
     except Exception as e:
         logger.exception("Chat error: %s", e)
@@ -322,17 +316,15 @@ def chat():
 def get_conversations():
     """Get user's chat history."""
     try:
-        apikey = request.args.get('apikey')
+        apikey = request.args.get("apikey")
         if not apikey:
             return jsonify({"status": "error", "message": "Missing apikey"}), 400
 
         from database.chat_db import get_conversations, hash_apikey
+
         conversations = get_conversations(hash_apikey(apikey), limit=20)
 
-        return jsonify({
-            "status": "success",
-            "data": conversations
-        })
+        return jsonify({"status": "success", "data": conversations})
 
     except Exception as e:
         logger.exception("Get conversations error: %s", e)
@@ -344,20 +336,18 @@ def get_conversations():
 def get_conversation():
     """Get a single conversation by ID."""
     try:
-        conversation_id = request.args.get('conversation_id')
+        conversation_id = request.args.get("conversation_id")
         if not conversation_id:
             return jsonify({"status": "error", "message": "Missing conversation_id"}), 400
 
         from database.chat_db import get_conversation
+
         conversation = get_conversation(conversation_id)
 
         if not conversation:
             return jsonify({"status": "error", "message": "Conversation not found"}), 404
 
-        return jsonify({
-            "status": "success",
-            "data": conversation
-        })
+        return jsonify({"status": "success", "data": conversation})
 
     except Exception as e:
         logger.exception("Get conversation error: %s", e)
@@ -369,10 +359,10 @@ def get_conversation():
 def chat_stream():
     """Streams LLM response token by token via SSE."""
     try:
-        message = request.args.get('message')
-        conversation_id = request.args.get('conversation_id', str(uuid.uuid4()))
-        apikey = request.args.get('apikey')
-        message_history_raw = request.args.get('message_history', '[]')
+        message = request.args.get("message")
+        conversation_id = request.args.get("conversation_id", str(uuid.uuid4()))
+        apikey = request.args.get("apikey")
+        message_history_raw = request.args.get("message_history", "[]")
 
         if not apikey or not message:
             return jsonify({"status": "error", "message": "Missing apikey or message"}), 400
@@ -401,9 +391,13 @@ def chat_stream():
                 # Retrieve relevant knowledge chunks
                 knowledge = _retrieve_knowledge(message)
 
-                system_prompt = """You are SilverTrade AI, an expert algorithmic trading assistant.
+                system_prompt = (
+                    """You are SilverTrade AI, an expert algorithmic trading assistant.
 Keep responses under 200 words. Be specific and data-driven.
-""" + json.dumps(context, indent=2, default=str) + knowledge
+"""
+                    + json.dumps(context, indent=2, default=str)
+                    + knowledge
+                )
 
                 messages = [
                     {"role": "system", "content": system_prompt},
@@ -432,6 +426,7 @@ Keep responses under 200 words. Be specific and data-driven.
                 # Save conversation to database after streaming completes
                 try:
                     from database.chat_db import save_conversation_message, hash_apikey
+
                     save_conversation_message(
                         apikey_hash=hash_apikey(apikey),
                         conversation_id=conv_id,
@@ -452,11 +447,11 @@ Keep responses under 200 words. Be specific and data-driven.
 
         return Response(
             stream_with_context(generate()),
-            mimetype='text/event-stream',
+            mimetype="text/event-stream",
             headers={
-                'Cache-Control': 'no-cache',
-                'X-Accel-Buffering': 'no',
-            }
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     except Exception as e:

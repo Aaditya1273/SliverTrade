@@ -11,6 +11,7 @@ Revision ID: 0001
 Revises: None
 Create Date: 2026-06-05
 """
+
 import os
 import sys
 
@@ -125,12 +126,30 @@ def upgrade() -> None:
         sa.Column("smtp_use_tls", sa.Boolean(), nullable=True, server_default=sa.text("true")),
         sa.Column("smtp_from_email", sa.String(255), nullable=True),
         sa.Column("smtp_helo_hostname", sa.String(255), nullable=True),
-        sa.Column("security_auto_ban_enabled", sa.Boolean(), nullable=True, server_default=sa.text("false")),
-        sa.Column("security_404_threshold", sa.Integer(), nullable=True, server_default=sa.text("100")),
-        sa.Column("security_404_ban_duration", sa.Integer(), nullable=True, server_default=sa.text("0")),
-        sa.Column("security_api_threshold", sa.Integer(), nullable=True, server_default=sa.text("100")),
-        sa.Column("security_api_ban_duration", sa.Integer(), nullable=True, server_default=sa.text("0")),
-        sa.Column("security_repeat_offender_limit", sa.Integer(), nullable=True, server_default=sa.text("2")),
+        sa.Column(
+            "security_auto_ban_enabled",
+            sa.Boolean(),
+            nullable=True,
+            server_default=sa.text("false"),
+        ),
+        sa.Column(
+            "security_404_threshold", sa.Integer(), nullable=True, server_default=sa.text("100")
+        ),
+        sa.Column(
+            "security_404_ban_duration", sa.Integer(), nullable=True, server_default=sa.text("0")
+        ),
+        sa.Column(
+            "security_api_threshold", sa.Integer(), nullable=True, server_default=sa.text("100")
+        ),
+        sa.Column(
+            "security_api_ban_duration", sa.Integer(), nullable=True, server_default=sa.text("0")
+        ),
+        sa.Column(
+            "security_repeat_offender_limit",
+            sa.Integer(),
+            nullable=True,
+            server_default=sa.text("2"),
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 
@@ -173,7 +192,9 @@ def upgrade() -> None:
         sa.Column("webhook_token", sa.String(64), nullable=True),
         sa.Column("webhook_secret", sa.String(64), nullable=True),
         sa.Column("webhook_enabled", sa.Boolean(), nullable=True, server_default=sa.text("false")),
-        sa.Column("webhook_auth_type", sa.String(20), nullable=True, server_default=sa.text("'payload'")),
+        sa.Column(
+            "webhook_auth_type", sa.String(20), nullable=True, server_default=sa.text("'payload'")
+        ),
         sa.Column("api_key", sa.String(255), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -209,7 +230,9 @@ def upgrade() -> None:
         sa.Column("telegram_username", sa.String(255), nullable=True),
         sa.Column("broker", sa.String(50), nullable=True, server_default=sa.text("'default'")),
         sa.Column("is_active", sa.Boolean(), nullable=True, server_default=sa.text("true")),
-        sa.Column("notifications_enabled", sa.Boolean(), nullable=True, server_default=sa.text("true")),
+        sa.Column(
+            "notifications_enabled", sa.Boolean(), nullable=True, server_default=sa.text("true")
+        ),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("last_command_at", sa.DateTime(), nullable=True),
@@ -217,7 +240,9 @@ def upgrade() -> None:
         sa.UniqueConstraint("telegram_id"),
     )
     op.create_index("ix_telegram_users_telegram_id", "telegram_users", ["telegram_id"])
-    op.create_index("ix_telegram_users_silvertrade_username", "telegram_users", ["silvertrade_username"])
+    op.create_index(
+        "ix_telegram_users_silvertrade_username", "telegram_users", ["silvertrade_username"]
+    )
 
     op.create_table(
         "bot_config",
@@ -225,8 +250,12 @@ def upgrade() -> None:
         sa.Column("token", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=True, server_default=sa.text("false")),
         sa.Column("bot_username", sa.String(255), nullable=True),
-        sa.Column("max_message_length", sa.Integer(), nullable=True, server_default=sa.text("4096")),
-        sa.Column("rate_limit_per_minute", sa.Integer(), nullable=True, server_default=sa.text("30")),
+        sa.Column(
+            "max_message_length", sa.Integer(), nullable=True, server_default=sa.text("4096")
+        ),
+        sa.Column(
+            "rate_limit_per_minute", sa.Integer(), nullable=True, server_default=sa.text("30")
+        ),
         sa.Column("broadcast_enabled", sa.Boolean(), nullable=True, server_default=sa.text("true")),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
@@ -241,7 +270,10 @@ def upgrade() -> None:
         sa.Column("chat_id", sa.Integer(), nullable=True),
         sa.Column("parameters", sa.Text(), nullable=True),
         sa.Column("executed_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.ForeignKeyConstraint(["telegram_id"], ["telegram_users.telegram_id"], ),
+        sa.ForeignKeyConstraint(
+            ["telegram_id"],
+            ["telegram_users.telegram_id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_command_logs_telegram_id", "command_logs", ["telegram_id"])
@@ -256,7 +288,10 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("sent_at", sa.DateTime(), nullable=True),
         sa.Column("error_message", sa.Text(), nullable=True),
-        sa.ForeignKeyConstraint(["telegram_id"], ["telegram_users.telegram_id"], ),
+        sa.ForeignKeyConstraint(
+            ["telegram_id"],
+            ["telegram_users.telegram_id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_notification_queue_status", "notification_queue", ["status"])
@@ -264,16 +299,25 @@ def upgrade() -> None:
     op.create_table(
         "user_preferences",
         sa.Column("telegram_id", sa.Integer(), nullable=False),
-        sa.Column("order_notifications", sa.Boolean(), nullable=True, server_default=sa.text("true")),
-        sa.Column("trade_notifications", sa.Boolean(), nullable=True, server_default=sa.text("true")),
+        sa.Column(
+            "order_notifications", sa.Boolean(), nullable=True, server_default=sa.text("true")
+        ),
+        sa.Column(
+            "trade_notifications", sa.Boolean(), nullable=True, server_default=sa.text("true")
+        ),
         sa.Column("pnl_notifications", sa.Boolean(), nullable=True, server_default=sa.text("true")),
         sa.Column("daily_summary", sa.Boolean(), nullable=True, server_default=sa.text("true")),
         sa.Column("summary_time", sa.String(10), nullable=True, server_default=sa.text("'18:00'")),
         sa.Column("language", sa.String(10), nullable=True, server_default=sa.text("'en'")),
-        sa.Column("timezone", sa.String(50), nullable=True, server_default=sa.text("'Asia/Kolkata'")),
+        sa.Column(
+            "timezone", sa.String(50), nullable=True, server_default=sa.text("'Asia/Kolkata'")
+        ),
         sa.Column("created_at", sa.DateTime(), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(), server_default=sa.func.now()),
-        sa.ForeignKeyConstraint(["telegram_id"], ["telegram_users.telegram_id"], ),
+        sa.ForeignKeyConstraint(
+            ["telegram_id"],
+            ["telegram_users.telegram_id"],
+        ),
         sa.PrimaryKeyConstraint("telegram_id"),
     )
 
@@ -342,7 +386,10 @@ def upgrade() -> None:
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("permissions", sa.JSON(), nullable=True),
         sa.Column("is_system_role", sa.Boolean(), nullable=True, server_default=sa.text("false")),
-        sa.ForeignKeyConstraint(["organization_id"], ["organizations.id"], ),
+        sa.ForeignKeyConstraint(
+            ["organization_id"],
+            ["organizations.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
 

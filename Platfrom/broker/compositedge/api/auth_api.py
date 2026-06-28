@@ -78,7 +78,9 @@ def get_feed_token():
 
         # Get feed token
         feed_url = f"{MARKET_DATA_URL}/auth/login"
-        feed_response = request_with_circuit_breaker("POST", feed_url, json=feed_payload, headers=feed_headers)
+        feed_response = request_with_circuit_breaker(
+            "POST", feed_url, json=feed_payload, headers=feed_headers
+        )
 
         feed_token = None
         user_id = None

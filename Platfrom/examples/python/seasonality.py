@@ -12,15 +12,14 @@ START_YEAR = 2015
 COLOR_CUTOFF = 10  # max intensity cutoff (%)
 
 # TradingView color theme
-POS_COLOR = (8, 153, 129)    # #089981
-NEG_COLOR = (242, 55, 69)    # #F23745
+POS_COLOR = (8, 153, 129)  # #089981
+NEG_COLOR = (242, 55, 69)  # #F23745
 BG_COLOR = "#1e222d"
 HEADER_BG = "rgba(128,128,128,0.2)"
 TEXT_COLOR = "#d1d4dc"
 LINE_COLOR = "rgba(128,128,128,0.3)"
 
-MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-               "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
 def calc_cell_color(value, cutoff=COLOR_CUTOFF):
@@ -52,11 +51,7 @@ def fetch_monthly_data(client, symbol, exchange, start_year):
     end_date = pd.Timestamp.now().strftime("%Y-%m-%d")
 
     df = client.history(
-        symbol=symbol,
-        exchange=exchange,
-        interval="D",
-        start_date=start_date,
-        end_date=end_date
+        symbol=symbol, exchange=exchange, interval="D", start_date=start_date, end_date=end_date
     )
 
     if df is None or df.empty:
@@ -156,25 +151,29 @@ def build_heatmap_figure(matrix):
         cell_values[m].append(f"{val:.0f}%")
         cell_colors[m].append(calc_pos_pct_color(val))
 
-    fig = go.Figure(data=[go.Table(
-        columnwidth=[80] + [100] * 12,
-        header=dict(
-            values=header,
-            fill_color=HEADER_BG,
-            font=dict(color=TEXT_COLOR, size=15, family="Trebuchet MS, sans-serif"),
-            align="center",
-            line=dict(color=LINE_COLOR, width=1),
-            height=40,
-        ),
-        cells=dict(
-            values=cell_values,
-            fill_color=cell_colors,
-            font=dict(color=TEXT_COLOR, size=14, family="Trebuchet MS, sans-serif"),
-            align="center",
-            line=dict(color=LINE_COLOR, width=1),
-            height=36,
-        ),
-    )])
+    fig = go.Figure(
+        data=[
+            go.Table(
+                columnwidth=[80] + [100] * 12,
+                header=dict(
+                    values=header,
+                    fill_color=HEADER_BG,
+                    font=dict(color=TEXT_COLOR, size=15, family="Trebuchet MS, sans-serif"),
+                    align="center",
+                    line=dict(color=LINE_COLOR, width=1),
+                    height=40,
+                ),
+                cells=dict(
+                    values=cell_values,
+                    fill_color=cell_colors,
+                    font=dict(color=TEXT_COLOR, size=14, family="Trebuchet MS, sans-serif"),
+                    align="center",
+                    line=dict(color=LINE_COLOR, width=1),
+                    height=36,
+                ),
+            )
+        ]
+    )
 
     fig.update_layout(
         title=dict(

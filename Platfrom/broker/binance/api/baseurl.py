@@ -137,8 +137,13 @@ def get_api_response(
 
     if signed:
         if not resolved_key or not resolved_secret:
-            return {"success": False, "error": {"code": "auth_error",
-                    "message": "BROKER_API_KEY / BROKER_API_SECRET not configured"}}
+            return {
+                "success": False,
+                "error": {
+                    "code": "auth_error",
+                    "message": "BROKER_API_KEY / BROKER_API_SECRET not configured",
+                },
+            }
 
         # Add timestamp and optional recvWindow
         query_params["timestamp"] = str(int(time.time() * 1000))
@@ -166,7 +171,8 @@ def get_api_response(
             ct_headers = dict(headers)
             if payload:
                 ct_headers.setdefault("Content-Type", "application/json")
-            response = request_with_circuit_breaker("POST", 
+            response = request_with_circuit_breaker(
+                "POST",
                 full_url if not payload else url,
                 headers=ct_headers,
                 content=payload if payload else None,
@@ -186,8 +192,10 @@ def get_api_response(
     logger.debug(f"[Binance] HTTP {response.status_code} from {endpoint}")
 
     if not response.text.strip():
-        return {"success": False, "error": {"code": "empty_response",
-                "message": f"Empty response from {endpoint}"}}
+        return {
+            "success": False,
+            "error": {"code": "empty_response", "message": f"Empty response from {endpoint}"},
+        }
 
     try:
         data = response.json()
