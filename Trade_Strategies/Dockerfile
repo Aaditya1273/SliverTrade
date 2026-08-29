@@ -14,7 +14,7 @@
 #     silvertrade-strategies
 # =============================================================================
 
-FROM python:3.12-slim AS python-builder
+FROM python:3.14-slim AS python-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -33,7 +33,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # ---------------------------------------------------------------------------
 # Production Stage
 # ---------------------------------------------------------------------------
-FROM python:3.12-slim AS production
+FROM python:3.14-slim AS production
 
 # Install runtime dependencies — BLAS/GCC libs for numpy/scikit-learn
 RUN apt-get update && apt-get install -y --no-install-recommends \
